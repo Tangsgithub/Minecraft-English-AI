@@ -1,0 +1,6 @@
+{
+  "name": "Minecraft English AI",
+  "description": "基于 Minecraft 世界观与新概念英语体系的儿童英语 AI 互动学习与口语练习客户端。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
