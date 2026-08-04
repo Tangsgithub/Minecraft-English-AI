@@ -7,17 +7,17 @@ interface WhitepaperGuideModalProps {
 
 export const WhitepaperGuideModal: React.FC<WhitepaperGuideModalProps> = ({ onClose }) => {
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white border-4 border-[#487E2C] rounded-[2.5rem] w-full max-w-3xl text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
+      <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-3xl text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-auto max-h-[92dvh] flex flex-col">
         
         {/* Header */}
-        <div className="bg-[#487E2C] p-6 border-b-4 border-[#355E20] flex items-center justify-between text-white">
+        <div className="bg-[#487E2C] p-4 sm:p-6 border-b-2 sm:border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[#8B8B8B] border-2 border-black rounded-xl flex items-center justify-center text-xl shadow">
+            <div className="w-10 h-10 bg-[#8B8B8B] border-2 border-black rounded-xl flex items-center justify-center text-xl shadow shrink-0">
               📄
             </div>
             <div>
-              <h2 className="text-lg font-black font-mono text-white">
+              <h2 className="text-base sm:text-lg font-black font-mono text-white">
                 《Minecraft English AI 本地智能学习客户端》白皮书 V1.0
               </h2>
               <p className="text-xs text-white/90 font-mono font-bold">
@@ -35,7 +35,7 @@ export const WhitepaperGuideModal: React.FC<WhitepaperGuideModalProps> = ({ onCl
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto font-mono text-xs leading-relaxed text-slate-700 font-bold">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1 font-mono text-xs leading-relaxed text-slate-700 font-bold">
           
           {/* Section 1 */}
           <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-2">

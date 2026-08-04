@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { UserProfile, ApiKeyConfig } from '../types';
+import { UserProfile, ApiKeyConfig, ApiRequestMode } from '../types';
 import { testApiKeyConnection } from '../services/aiService';
-import { Settings, Key, Sparkles, CheckCircle2, AlertCircle, Download, Upload, Trash2, RefreshCw } from 'lucide-react';
+import { ApiSecurityNotice } from './ApiSecurityNotice';
+import { Settings, Key, Sparkles, CheckCircle2, AlertCircle, Download, Upload, Trash2, Eye, EyeOff } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 
 interface SettingsModalProps {
@@ -21,13 +22,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [apiKey, setApiKey] = useState<string>(profile.apiKeyConfig.apiKey || '');
   const [baseUrl, setBaseUrl] = useState<string>(profile.apiKeyConfig.baseUrl || 'https://api.deepseek.com');
   const [model, setModel] = useState<string>(profile.apiKeyConfig.model || 'deepseek-chat');
+  const [requestMode, setRequestMode] = useState<ApiRequestMode>(profile.apiKeyConfig.requestMode || 'direct');
+  const [showKey, setShowKey] = useState<boolean>(false);
 
   const [nickname, setNickname] = useState<string>(profile.nickname || 'Tom');
   const [age, setAge] = useState<number>(profile.age || 8);
   const [selectedAvatar, setSelectedAvatar] = useState<string>(profile.selectedAvatar || '👦');
 
   const [isTesting, setIsTesting] = useState<boolean>(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);
 
   const handleTestKey = async () => {
     setIsTesting(true);
@@ -38,7 +41,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       provider,
       apiKey: apiKey.trim(),
       baseUrl: baseUrl.trim(),
-      model
+      model,
+      requestMode
     };
 
     const res = await testApiKeyConnection(config);
@@ -59,7 +63,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         provider,
         apiKey: apiKey.trim(),
         baseUrl: baseUrl.trim(),
-        model
+        model,
+        requestMode
       }
     });
     onClose();
@@ -77,14 +82,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white border-4 border-[#487E2C] rounded-[2.5rem] w-full max-w-xl text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto pt-safe pb-safe">
+      <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-xl text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-auto max-h-[92dvh] flex flex-col">
         
         {/* Header */}
-        <div className="bg-[#487E2C] p-5 border-b-4 border-[#355E20] flex items-center justify-between text-white">
+        <div className="bg-[#487E2C] p-4 sm:p-5 border-b-2 sm:border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
           <div className="flex items-center space-x-2.5">
             <Settings className="w-5 h-5 text-[#FFD700]" />
-            <h2 className="text-lg font-black font-mono text-white">
+            <h2 className="text-base sm:text-lg font-black font-mono text-white">
               设置与 DeepSeek API 配置
             </h2>
           </div>
@@ -96,7 +101,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs font-mono">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1 min-h-0 text-xs font-mono">
           
           {/* DeepSeek Key Config */}
           <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
@@ -143,13 +148,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <label className="block text-[#487E2C] font-black mb-1">
                 {provider === 'deepseek' ? 'DeepSeek API Key (sk-...):' : 'Gemini API Key:'}
               </label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-                className="w-full bg-white border-2 border-slate-300 rounded-xl px-3.5 py-2 text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
-              />
+              <div className="relative">
+                <input
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+                  className="w-full bg-white border-2 border-slate-300 rounded-xl pl-3.5 pr-10 py-2 text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                  title={showKey ? "隐藏密钥" : "显示密钥"}
+                >
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {provider === 'deepseek' && (
@@ -178,6 +193,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
+            {/* Privacy Security Notice Component */}
+            <ApiSecurityNotice
+              requestMode={requestMode}
+              onRequestModeChange={setRequestMode}
+              onClearKey={() => setApiKey('')}
+              hasKey={!!apiKey.trim()}
+            />
+
             <div className="flex items-center justify-between pt-1">
               <button
                 type="button"
@@ -192,7 +215,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {testResult && (
                 <div className={`text-[11px] font-bold flex items-center space-x-1 ${testResult.success ? 'text-[#487E2C]' : 'text-rose-600'}`}>
                   {testResult.success ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                  <span className="max-w-[200px] truncate">{testResult.message}</span>
+                  <span className="max-w-[220px] truncate">{testResult.message}</span>
                 </div>
               )}
             </div>
@@ -265,7 +288,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Modal Bottom Save */}
-        <div className="p-4 bg-slate-50 border-t-2 border-slate-200 flex justify-end space-x-2">
+        <div className="p-4 bg-slate-50 border-t-2 border-slate-200 flex justify-end space-x-2 shrink-0">
           <button
             type="button"
             onClick={onClose}

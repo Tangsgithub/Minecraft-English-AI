@@ -33,6 +33,10 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   const allLessonVocab: VocabItem[] = LESSONS_DATA.flatMap(l => l.vocabulary);
   const combinedList: VocabItem[] = [...MINECRAFT_VOCABULARY];
 
+  // Helper set to distinguish Minecraft items vs NCE items
+  const mcIds = new Set(MINECRAFT_VOCABULARY.map(m => m.id));
+  const isMcVocabItem = (item: VocabItem) => item.id.startsWith('mc_') || mcIds.has(item.id);
+
   allLessonVocab.forEach(lv => {
     if (!combinedList.some(v => v.word.toLowerCase() === lv.word.toLowerCase())) {
       combinedList.push(lv);
@@ -46,10 +50,11 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   ];
 
   const filteredVocab = combinedList.filter(item => {
+    const isMc = isMcVocabItem(item);
     const matchesCategory =
       activeCategory === 'all' ||
-      (activeCategory === 'Minecraft' && item.category === 'Minecraft') ||
-      (activeCategory === 'Course' && item.category !== 'Minecraft');
+      (activeCategory === 'Minecraft' && isMc) ||
+      (activeCategory === 'Course' && !isMc);
 
     const matchesSearch =
       item.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -201,7 +206,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
 
       {/* Mode 1: Vocab Grid Mode */}
       {viewMode === 'grid' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
           {filteredVocab.map(item => {
             const isMastered = profile.masteredWords.includes(item.word);
             const maxUnlockedLesson = Math.max(...(profile.unlockedLessonIds || [1]), 1);
@@ -335,9 +340,20 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
 
                 {/* Bottom Card Action: Mark Mastered */}
                 <div className="pt-3 mt-3 border-t-2 border-slate-100 flex items-center justify-between text-xs font-mono">
-                  <span className="text-[11px] text-slate-400 font-bold">
-                    {item.category || 'General'}
-                  </span>
+                  <div className="flex items-center space-x-1 overflow-hidden">
+                    {isMcVocabItem(item) ? (
+                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-md text-[10px] font-black shrink-0">
+                        🟩 MC 专属
+                      </span>
+                    ) : (
+                      <span className="bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded-md text-[10px] font-black shrink-0">
+                        📖 新概念 1
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-400 font-bold truncate">
+                      {item.category || ''}
+                    </span>
+                  </div>
 
                   <button
                     onClick={() => {

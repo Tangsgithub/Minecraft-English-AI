@@ -90,8 +90,8 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
   const fluencyScore = Math.min(98, 80 + profile.level * 2);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white border-4 border-[#487E2C] rounded-[2.5rem] w-full max-w-2xl text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
+      <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-2xl text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-auto max-h-[92dvh] flex flex-col">
         
         {/* Header */}
         <div className="bg-[#487E2C] p-5 border-b-4 border-[#355E20] flex items-center justify-between text-white">

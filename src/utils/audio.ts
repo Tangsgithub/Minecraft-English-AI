@@ -122,28 +122,106 @@ export function playMissionCompleteSound() {
   }
 }
 
+export function playBlockBreakSound() {
+  if (!getSoundEnabled()) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    // Low crunchy noise for breaking a Minecraft block
+    const bufferSize = ctx.sampleRate * 0.12;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(350, now);
+    filter.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+    filter.Q.setValueAtTime(3, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+    whiteNoise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    whiteNoise.start(now);
+    whiteNoise.stop(now + 0.12);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 // Web Speech API for Alex's text-to-speech
-export function speakText(text: string, onEnd?: () => void) {
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  const populateVoices = () => {
+    cachedVoices = window.speechSynthesis.getVoices();
+  };
+  populateVoices();
+  if ('onvoiceschanged' in window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+  }
+}
+
+export function speakText(text: string, onEnd?: () => void, options?: { lang?: string; rate?: number; pitch?: number }) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
-  // Clean markdown syntax or emojis for TTS
-  const cleanText = text
+  window.speechSynthesis.cancel();
+
+  // If voices aren't cached yet, try fetching again
+  if (cachedVoices.length === 0) {
+    cachedVoices = window.speechSynthesis.getVoices();
+  }
+
+  // Detect if text is mostly Chinese or English
+  const hasChinese = /[\u4e00-\u9fa5]/.test(text);
+  const hasEnglish = /[a-zA-Z]/.test(text);
+
+  let targetLang = options?.lang || 'en-US';
+  let cleanText = text
     .replace(/[*#_`~]/g, '')
-    .replace(/\[.*?\]/g, '') // remove bracketed Chinese translations for English TTS
+    .replace(/\[.*?\]/g, '') // remove bracketed notes
+    .replace(/\(.*?\)/g, '') // remove parenthetical notes if needed
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
     .trim();
 
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.92; // Slightly slower for children
-  utterance.pitch = 1.1; // Friendly warm pitch
+  // If we are reading English words, strip remaining Chinese characters so English voice doesn't spell them out
+  if (targetLang.startsWith('en') && hasEnglish && hasChinese) {
+    cleanText = cleanText.replace(/[\u4e00-\u9fa5]/g, '').trim();
+  }
 
-  // Pick female English voice if available for Alex
-  const voices = window.speechSynthesis.getVoices();
-  const alexVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Google US English')));
-  if (alexVoice) {
-    utterance.voice = alexVoice;
+  if (!cleanText) return;
+
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = targetLang;
+  utterance.rate = options?.rate ?? 0.95; // Natural clear reading speed
+  utterance.pitch = options?.pitch ?? 1.0; // Natural voice pitch (avoid 1.1 distortion)
+
+  // Find best quality voice matching language
+  if (cachedVoices.length > 0) {
+    // 1. Try to find natural/high quality English voice
+    let bestVoice = cachedVoices.find(v => 
+      v.lang.startsWith(targetLang.slice(0, 2)) && 
+      (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Jenny') || v.name.includes('Zira'))
+    );
+
+    // 2. Fallback to any voice matching target language
+    if (!bestVoice) {
+      bestVoice = cachedVoices.find(v => v.lang.startsWith(targetLang.slice(0, 2)));
+    }
+
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+    }
   }
 
   if (onEnd) {

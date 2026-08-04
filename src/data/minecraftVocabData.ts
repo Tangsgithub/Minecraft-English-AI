@@ -62,10 +62,34 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleTranslation: '我的房子有一扇红门和玻璃窗。',
     requiredLessonId: 1
   },
+  {
+    id: 'mc_006',
+    word: 'dirt',
+    phonetic: '/dɜːt/',
+    meaning: '泥土；土块',
+    category: 'Minecraft基础',
+    mcItem: 'Dirt Block',
+    mcItemIcon: '🟫',
+    sampleSentence: 'Dirt is the most common block in the Overworld.',
+    sampleTranslation: '泥土是主世界中最常见的方块。',
+    requiredLessonId: 1
+  },
+  {
+    id: 'mc_007',
+    word: 'cobblestone',
+    phonetic: '/ˈkɒb.əl.stəʊn/',
+    meaning: '圆石；鹅卵石',
+    category: 'Minecraft基础',
+    mcItem: 'Cobblestone',
+    mcItemIcon: '🪨',
+    sampleSentence: 'Digging stone drops durable cobblestone.',
+    sampleTranslation: '挖掘石头会掉落耐用的圆石。',
+    requiredLessonId: 1
+  },
 
   // Lesson 2 Unlocks
   {
-    id: 'mc_006',
+    id: 'mc_008',
     word: 'village',
     phonetic: '/ˈvɪl.ɪdʒ/',
     meaning: '村庄；村民聚集地',
@@ -77,7 +101,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 2
   },
   {
-    id: 'mc_007',
+    id: 'mc_009',
     word: 'torch',
     phonetic: '/tɔːtʃ/',
     meaning: '火把',
@@ -89,7 +113,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 2
   },
   {
-    id: 'mc_008',
+    id: 'mc_010',
     word: 'apple',
     phonetic: '/ˈæp.əl/',
     meaning: '苹果',
@@ -100,10 +124,46 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleTranslation: '苹果在我的世界里可以恢复4点饥饿值。',
     requiredLessonId: 2
   },
+  {
+    id: 'mc_011',
+    word: 'coal',
+    phonetic: '/kəʊl/',
+    meaning: '煤炭',
+    category: '矿产资源',
+    mcItem: 'Coal Ore',
+    mcItemIcon: '🖤',
+    sampleSentence: 'Use coal to fuel your furnace and craft torches.',
+    sampleTranslation: '使用煤炭为熔炉提供燃料并合成火把。',
+    requiredLessonId: 2
+  },
+  {
+    id: 'mc_012',
+    word: 'chest',
+    phonetic: '/tʃest/',
+    meaning: '宝箱；箱子',
+    category: '工具箱',
+    mcItem: 'Wooden Chest',
+    mcItemIcon: '📦',
+    sampleSentence: 'Store your valuable emeralds inside a double chest.',
+    sampleTranslation: '将你珍贵的绿宝石存放在双倍大箱子里。',
+    requiredLessonId: 2
+  },
+  {
+    id: 'mc_013',
+    word: 'bed',
+    phonetic: '/bed/',
+    meaning: '床；复活点',
+    category: 'Minecraft基础',
+    mcItem: 'Red Bed',
+    mcItemIcon: '🛏️',
+    sampleSentence: 'Sleep in a red bed to skip the dangerous night.',
+    sampleTranslation: '睡在红色的床上可以跳过危险的夜晚。',
+    requiredLessonId: 2
+  },
 
   // Lesson 3 Unlocks (Minerals & Combat)
   {
-    id: 'mc_009',
+    id: 'mc_014',
     word: 'diamond',
     phonetic: '/ˈdaɪə.mənd/',
     meaning: '钻石',
@@ -115,7 +175,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 3
   },
   {
-    id: 'mc_010',
+    id: 'mc_015',
     word: 'sword',
     phonetic: '/sɔːd/',
     meaning: '剑；武器',
@@ -127,7 +187,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 3
   },
   {
-    id: 'mc_011',
+    id: 'mc_016',
     word: 'monster',
     phonetic: '/ˈmɒn.stər/',
     meaning: '怪物',
@@ -139,21 +199,45 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 3
   },
   {
-    id: 'mc_012',
+    id: 'mc_017',
     word: 'emerald',
     phonetic: '/ˈem.ər.əld/',
-    meaning: '绿宝石；硬币',
+    meaning: '绿宝石；交易货币',
     category: '矿产资源',
     mcItem: 'Emerald',
     mcItemIcon: '❇️',
-    sampleSentence: 'You earned 10 emeralds for finishing your English mission!',
-    sampleTranslation: '你完成英语任务获得了10颗绿宝石！',
+    sampleSentence: 'Trade emeralds with villagers to get rare treasure maps!',
+    sampleTranslation: '用绿宝石和村民交易获得稀有宝藏地图！',
+    requiredLessonId: 3
+  },
+  {
+    id: 'mc_018',
+    word: 'iron',
+    phonetic: '/ˈaɪ.ən/',
+    meaning: '铁；铁锭',
+    category: '矿产资源',
+    mcItem: 'Iron Ingot',
+    mcItemIcon: '🪙',
+    sampleSentence: 'Smelt raw iron in the furnace to craft armor.',
+    sampleTranslation: '在熔炉里熔炼粗铁来制作护甲。',
+    requiredLessonId: 3
+  },
+  {
+    id: 'mc_019',
+    word: 'gold',
+    phonetic: '/ɡəʊld/',
+    meaning: '黄金；金锭',
+    category: '矿产资源',
+    mcItem: 'Gold Ingot',
+    mcItemIcon: '🌟',
+    sampleSentence: 'Piglins in the Nether love bright gold ingots.',
+    sampleTranslation: '下界里的猪灵非常喜爱耀眼的金锭。',
     requiredLessonId: 3
   },
 
   // Lesson 5 Unlocks
   {
-    id: 'mc_013',
+    id: 'mc_020',
     word: 'inventory',
     phonetic: '/ˈɪn.vən.tər.i/',
     meaning: '物品栏；背包',
@@ -165,7 +249,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 5
   },
   {
-    id: 'mc_014',
+    id: 'mc_021',
     word: 'creeper',
     phonetic: '/ˈkriː.pər/',
     meaning: '苦力怕；爬行者',
@@ -177,7 +261,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 5
   },
   {
-    id: 'mc_015',
+    id: 'mc_022',
     word: 'redstone',
     phonetic: '/ˈred.stəʊn/',
     meaning: '红石；电路线',
@@ -189,7 +273,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 5
   },
   {
-    id: 'mc_016',
+    id: 'mc_023',
     word: 'furnace',
     phonetic: '/ˈfɜː.nɪs/',
     meaning: '熔炉；炼钢炉',
@@ -200,10 +284,46 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleTranslation: '在熔炉里使用煤炭来熔炼粗铁矿。',
     requiredLessonId: 5
   },
+  {
+    id: 'mc_024',
+    word: 'bucket',
+    phonetic: '/ˈbʌk.ɪt/',
+    meaning: '水桶；铁桶',
+    category: '工具箱',
+    mcItem: 'Water Bucket',
+    mcItemIcon: '🪣',
+    sampleSentence: 'Carry a water bucket to put out lava fires!',
+    sampleTranslation: '随身带一只水桶来扑灭岩浆大火！',
+    requiredLessonId: 5
+  },
+  {
+    id: 'mc_025',
+    word: 'bow',
+    phonetic: '/bəʊ/',
+    meaning: '弓；远射武器',
+    category: '武器装备',
+    mcItem: 'Enchanted Bow',
+    mcItemIcon: '🏹',
+    sampleSentence: 'Shoot your bow from a high tower to protect your base.',
+    sampleTranslation: '在高塔上拉弓射击保卫你的基地。',
+    requiredLessonId: 5
+  },
+  {
+    id: 'mc_026',
+    word: 'zombie',
+    phonetic: '/ˈzɒm.bi/',
+    meaning: '僵尸',
+    category: '生物怪兽',
+    mcItem: 'Zombie Flesh',
+    mcItemIcon: '🧟',
+    sampleSentence: 'Zombies burn under the bright morning sunlight.',
+    sampleTranslation: '僵尸会在清晨明亮的阳光下自燃。',
+    requiredLessonId: 5
+  },
 
   // Lesson 8 Unlocks (Intermediate Adventures)
   {
-    id: 'mc_017',
+    id: 'mc_027',
     word: 'shield',
     phonetic: '/ʃiːld/',
     meaning: '盾牌；防护罩',
@@ -215,7 +335,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 8
   },
   {
-    id: 'mc_018',
+    id: 'mc_028',
     word: 'anvil',
     phonetic: '/ˈæn.vɪl/',
     meaning: '铁砧；修补台',
@@ -227,7 +347,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 8
   },
   {
-    id: 'mc_019',
+    id: 'mc_029',
     word: 'enderman',
     phonetic: '/ˈend.ə.mæn/',
     meaning: '末影人；小紫眼',
@@ -239,7 +359,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 8
   },
   {
-    id: 'mc_020',
+    id: 'mc_030',
     word: 'potion',
     phonetic: '/ˈpəʊ.ʃən/',
     meaning: '药水；魔法药水',
@@ -250,10 +370,46 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleTranslation: '喝下一瓶治疗药水立刻恢复生命值。',
     requiredLessonId: 8
   },
+  {
+    id: 'mc_031',
+    word: 'skeleton',
+    phonetic: '/ˈskel.ə.tən/',
+    meaning: '骷髅；白骨弓箭手',
+    category: '生物怪兽',
+    mcItem: 'Bone',
+    mcItemIcon: '💀',
+    sampleSentence: 'A skeleton carries a bow and shoots arrows from afar.',
+    sampleTranslation: '骷髅拿着一把弓并从远处射箭。',
+    requiredLessonId: 8
+  },
+  {
+    id: 'mc_032',
+    word: 'wolf',
+    phonetic: '/wʊlf/',
+    meaning: '狼；驯服宠狗',
+    category: '生物怪兽',
+    mcItem: 'Tamed Wolf',
+    mcItemIcon: '🐺',
+    sampleSentence: 'Feed a wild wolf bones to make it your loyal dog.',
+    sampleTranslation: '喂野狼吃骨头可以把它变成你忠诚的小狗。',
+    requiredLessonId: 8
+  },
+  {
+    id: 'mc_033',
+    word: 'armor',
+    phonetic: '/ˈɑː.mər/',
+    meaning: '护甲；铠甲',
+    category: '武器装备',
+    mcItem: 'Diamond Armor',
+    mcItemIcon: '🦺',
+    sampleSentence: 'Wear diamond armor to reduce damage from attack.',
+    sampleTranslation: '穿上钻石护甲可以大幅减少受到的伤害。',
+    requiredLessonId: 8
+  },
 
   // Lesson 12 Unlocks (Nether World)
   {
-    id: 'mc_021',
+    id: 'mc_034',
     word: 'nether',
     phonetic: '/ˈneð.ər/',
     meaning: '下界；地狱维度',
@@ -265,7 +421,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 12
   },
   {
-    id: 'mc_022',
+    id: 'mc_035',
     word: 'obsidian',
     phonetic: '/əbˈsɪd.i.ən/',
     meaning: '黑曜石',
@@ -277,7 +433,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 12
   },
   {
-    id: 'mc_023',
+    id: 'mc_036',
     word: 'crossbow',
     phonetic: '/ˈkrɒs.bəʊ/',
     meaning: '弩；远距离武器',
@@ -288,10 +444,34 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleTranslation: '将烟花装进弩箭发射暴击伤害！',
     requiredLessonId: 12
   },
+  {
+    id: 'mc_037',
+    word: 'lava',
+    phonetic: '/ˈlɑː.və/',
+    meaning: '岩浆；熔岩',
+    category: '维度探险',
+    mcItem: 'Lava Bucket',
+    mcItemIcon: '🔥',
+    sampleSentence: 'Lava glows bright red and melts items instantly.',
+    sampleTranslation: '岩浆发出火红光芒并会瞬间融化掉落物。',
+    requiredLessonId: 12
+  },
+  {
+    id: 'mc_038',
+    word: 'compass',
+    phonetic: '/ˈkʌm.pəs/',
+    meaning: '指南针',
+    category: '工具箱',
+    mcItem: 'Compass',
+    mcItemIcon: '🧭',
+    sampleSentence: 'Follow the red needle on your compass to find home.',
+    sampleTranslation: '跟着指南针上的红针指针找到回家的路。',
+    requiredLessonId: 12
+  },
 
   // Lesson 15 Unlocks (Magic & Artifacts)
   {
-    id: 'mc_024',
+    id: 'mc_039',
     word: 'enchanted',
     phonetic: '/ɪnˈtʃɑːn.tɪd/',
     meaning: '附魔的；魔力的',
@@ -303,7 +483,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 15
   },
   {
-    id: 'mc_025',
+    id: 'mc_040',
     word: 'totem',
     phonetic: '/ˈtəʊ.təm/',
     meaning: '图腾；不死图腾',
@@ -315,7 +495,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 15
   },
   {
-    id: 'mc_026',
+    id: 'mc_041',
     word: 'beacon',
     phonetic: '/ˈbiː.kən/',
     meaning: '信标；光束塔',
@@ -326,10 +506,22 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleTranslation: '信标向天空发射出一道宏伟的巨大光柱。',
     requiredLessonId: 15
   },
+  {
+    id: 'mc_042',
+    word: 'map',
+    phonetic: '/mæp/',
+    meaning: '地图；探险海图',
+    category: '工具箱',
+    mcItem: 'Treasure Map',
+    mcItemIcon: '🗺️',
+    sampleSentence: 'Unfold the treasure map to locate buried ruins.',
+    sampleTranslation: '展开宝藏地图定位掩埋的遗迹。',
+    requiredLessonId: 15
+  },
 
   // Lesson 20 Unlocks (The End Realm)
   {
-    id: 'mc_027',
+    id: 'mc_043',
     word: 'dragon',
     phonetic: '/ˈdræɡ.ən/',
     meaning: '末影龙；巨龙',
@@ -341,7 +533,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 20
   },
   {
-    id: 'mc_028',
+    id: 'mc_044',
     word: 'elytra',
     phonetic: '/ˈel.ɪ.trə/',
     meaning: '鞘翅；飞行翼',
@@ -353,7 +545,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 20
   },
   {
-    id: 'mc_029',
+    id: 'mc_045',
     word: 'trident',
     phonetic: '/ˈtraɪ.dənt/',
     meaning: '三叉戟；海王武器',
@@ -365,7 +557,7 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     requiredLessonId: 20
   },
   {
-    id: 'mc_030',
+    id: 'mc_046',
     word: 'spyglass',
     phonetic: '/ˈspaɪ.ɡlɑːs/',
     meaning: '望远镜；单筒镜',
@@ -375,5 +567,30 @@ export const MINECRAFT_VOCABULARY: VocabItem[] = [
     sampleSentence: 'Look through the spyglass to spot distant pillager outposts.',
     sampleTranslation: '透过单筒望远镜观察远方的掠夺者前哨站。',
     requiredLessonId: 24
+  },
+  {
+    id: 'mc_047',
+    word: 'biome',
+    phonetic: '/ˈbaɪ.əʊm/',
+    meaning: '生物群系；环境地貌',
+    category: '探索环境',
+    mcItem: 'Cherry Grove',
+    mcItemIcon: '🌸',
+    sampleSentence: 'A biome is a natural environment with unique plants.',
+    sampleTranslation: '生物群系是拥有独特植物的自然地貌环境。',
+    requiredLessonId: 24
+  },
+  {
+    id: 'mc_048',
+    word: 'piston',
+    phonetic: '/ˈpɪs.tən/',
+    meaning: '活塞；机械机械推杆',
+    category: '红石机械',
+    mcItem: 'Sticky Piston',
+    mcItemIcon: '🟩',
+    sampleSentence: 'Sticky pistons push and pull heavy stone blocks.',
+    sampleTranslation: '黏性活塞可以推拉沉重的方块。',
+    requiredLessonId: 24
   }
 ];
+

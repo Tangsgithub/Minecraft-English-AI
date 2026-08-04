@@ -12,6 +12,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { WhitepaperGuideModal } from './components/WhitepaperGuideModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
+import { AuthModal } from './components/AuthModal';
+import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -27,7 +29,7 @@ const DEFAULT_PROFILE: UserProfile = {
   lastActiveDate: new Date().toISOString().split('T')[0],
   selectedAvatar: '👦',
   currentLessonId: 1,
-  unlockedLessonIds: [1, 3],
+  unlockedLessonIds: [1, 2],
   completedMissionIds: [],
   unlockedBadgeIds: ['badge_first_words'],
   masteredWords: ['block', 'craft', 'house'],
@@ -50,6 +52,19 @@ export default function App() {
           if (parsed.nickname === 'Tom') {
             parsed.nickname = 'Olaf';
           }
+          // Repair and ensure valid unlockedLessonIds continuous sequence
+          if (Array.isArray(parsed.unlockedLessonIds)) {
+            const unlockedSet = new Set<number>(parsed.unlockedLessonIds);
+            unlockedSet.add(1);
+            if (parsed.currentLessonId) {
+              for (let i = 1; i <= parsed.currentLessonId; i++) {
+                unlockedSet.add(i);
+              }
+            }
+            parsed.unlockedLessonIds = Array.from(unlockedSet).sort((a, b) => a - b);
+          } else {
+            parsed.unlockedLessonIds = [1, 2];
+          }
           // Recalibrate level strictly from XP to prevent level-XP mismatch
           parsed.level = getLevelFromXp(parsed.xp || 40);
           return parsed;
@@ -64,6 +79,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   
+  // Firebase Auth State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+
   // Active Lesson Context for Alex Chat
   const [selectedLessonForChat, setSelectedLessonForChat] = useState<Lesson | null>(null);
 
@@ -73,6 +92,33 @@ export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isParentDashboardOpen, setIsParentDashboardOpen] = useState<boolean>(false);
   const [isEyeCareOpen, setIsEyeCareOpen] = useState<boolean>(false);
+
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        const cloudProfile = await fetchUserProfileFromCloud(user.uid);
+        if (cloudProfile) {
+          setProfile(cloudProfile);
+        } else {
+          // Push initial profile to Firestore for newly authenticated user
+          await saveUserProfileToCloud(profile, user.uid);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Sync profile to localStorage and Cloud Firestore
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mc_english_user_profile', JSON.stringify(profile));
+    }
+    if (currentUser) {
+      saveUserProfileToCloud(profile, currentUser.uid);
+    }
+  }, [profile, currentUser]);
 
   // Continuous study timer for Eye Care
   const [continuousMinutes, setContinuousMinutes] = useState<number>(0);
@@ -221,6 +267,8 @@ export default function App() {
       {/* Fixed Top Status Header */}
       <HeaderBar
         profile={profile}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
@@ -229,24 +277,24 @@ export default function App() {
       />
 
       {/* Main App Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:py-6 flex flex-col space-y-5">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 py-3 sm:py-6 flex flex-col space-y-4 sm:space-y-5 pb-safe">
         
         {/* Navigation Tabs Bar (Vibrant Palette Tactile Style) */}
-        <nav className="bg-white/95 border-4 border-[#487E2C] rounded-[2rem] p-2 flex items-center justify-around overflow-x-auto shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] scrollbar-none">
+        <nav className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
           
           <button
             onClick={() => {
               playClickSound();
               setActiveTab('map');
             }}
-            className={`flex-1 min-w-[120px] py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
               activeTab === 'map'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
-            <Map className="w-4 h-4" />
-            <span>🗺️ 冒险地图</span>
+            <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">🗺️ 冒险地图</span>
           </button>
 
           <button
@@ -254,16 +302,16 @@ export default function App() {
               playClickSound();
               setActiveTab('chat');
             }}
-            className={`flex-1 min-w-[120px] py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all relative transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all relative transform hover:translate-y-[-2px] active:translate-y-[2px] ${
               activeTab === 'chat'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
-            <span>👩‍🦰 Alex 对话</span>
+            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">👩‍🦰 Alex 对话</span>
             {selectedLessonForChat && (
-              <span className="w-3 h-3 rounded-full bg-[#FF6321] animate-ping absolute top-2 right-2 border border-white" />
+              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF6321] animate-ping absolute top-1.5 right-1.5 border border-white" />
             )}
           </button>
 
@@ -272,14 +320,14 @@ export default function App() {
               playClickSound();
               setActiveTab('vocab');
             }}
-            className={`flex-1 min-w-[120px] py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
               activeTab === 'vocab'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
-            <BookOpen className="w-4 h-4" />
-            <span>📦 MC 词库</span>
+            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">📦 MC 词库</span>
           </button>
 
           <button
@@ -287,14 +335,14 @@ export default function App() {
               playClickSound();
               setActiveTab('missions');
             }}
-            className={`flex-1 min-w-[120px] py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
               activeTab === 'missions'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
-            <Scroll className="w-4 h-4" />
-            <span>📜 任务告示</span>
+            <Scroll className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">📜 任务告示</span>
           </button>
 
           <button
@@ -302,14 +350,14 @@ export default function App() {
               playClickSound();
               setActiveTab('achievements');
             }}
-            className={`flex-1 min-w-[120px] py-3 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
               activeTab === 'achievements'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
-            <Trophy className="w-4 h-4" />
-            <span>🏆 成就阶梯</span>
+            <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">🏆 成就阶梯</span>
           </button>
 
         </nav>
@@ -402,6 +450,16 @@ export default function App() {
             setContinuousMinutes(0);
           }}
           onGrantReward={() => handleAwardEmeralds(5, 10)}
+        />
+      )}
+
+      {isAuthOpen && (
+        <AuthModal
+          currentUser={currentUser}
+          currentProfile={profile}
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onProfileLoaded={(loaded) => setProfile(loaded)}
         />
       )}
 

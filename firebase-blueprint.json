@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile and Progress",
+      "description": "User learning progress, level, XP, emeralds, unlocked lessons, badges, and settings",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string text",
+          "description": "Firebase Auth user ID"
+        },
+        "email": {
+          "type": "string text",
+          "description": "User email address"
+        },
+        "nickname": {
+          "type": "string text",
+          "description": "User display nickname"
+        },
+        "age": {
+          "type": "number",
+          "description": "User age"
+        },
+        "level": {
+          "type": "number",
+          "description": "Current player level"
+        },
+        "xp": {
+          "type": "number",
+          "description": "Accumulated XP points"
+        },
+        "emeralds": {
+          "type": "number",
+          "description": "Emerald currency balance"
+        },
+        "streakDays": {
+          "type": "number",
+          "description": "Consecutive daily learning streak"
+        },
+        "lastActiveDate": {
+          "type": "string text",
+          "description": "Date string YYYY-MM-DD of last activity"
+        },
+        "selectedAvatar": {
+          "type": "string text",
+          "description": "Chosen Minecraft avatar emoji or icon"
+        },
+        "currentLessonId": {
+          "type": "number",
+          "description": "Current active lesson ID"
+        },
+        "unlockedLessonIds": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Array of unlocked lesson IDs"
+        },
+        "completedMissionIds": {
+          "type": "array",
+          "items": { "type": "string text" },
+          "description": "Array of completed mission IDs"
+        },
+        "unlockedBadgeIds": {
+          "type": "array",
+          "items": { "type": "string text" },
+          "description": "Array of unlocked achievement badge IDs"
+        },
+        "masteredWords": {
+          "type": "array",
+          "items": { "type": "string text" },
+          "description": "Array of mastered vocabulary words"
+        },
+        "isInitialSetupDone": {
+          "type": "boolean",
+          "description": "Whether onboarding profile setup is finished"
+        },
+        "todayStudyMinutes": {
+          "type": "number",
+          "description": "Today's total study minutes"
+        },
+        "totalStudyMinutes": {
+          "type": "number",
+          "description": "Total lifetime study minutes"
+        },
+        "parentSettings": {
+          "type": "object",
+          "description": "Parental control settings"
+        },
+        "updatedAt": {
+          "type": "string timestamp",
+          "description": "Last synced timestamp"
+        }
+      },
+      "required": ["uid", "nickname"]
+    }
+  },
+  "security": {
+    "users": {
+      "read": "auth.uid == docId",
+      "write": "auth.uid == docId"
+    }
+  }
+}

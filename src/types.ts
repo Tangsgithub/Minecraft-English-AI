@@ -1,10 +1,12 @@
 export type ApiProvider = 'deepseek' | 'gemini' | 'custom';
+export type ApiRequestMode = 'direct' | 'proxy';
 
 export interface ApiKeyConfig {
   provider: ApiProvider;
   apiKey: string;
   baseUrl?: string;
   model: string;
+  requestMode?: ApiRequestMode;
 }
 
 export interface ParentSettings {

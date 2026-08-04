@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Lesson, UserProfile } from '../types';
 import { getFullLessonsCatalog, LESSONS_DATA } from '../data/lessonsData';
-import { BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play, MessageSquare, ChevronRight, Award } from 'lucide-react';
+import { BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play, MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid, Globe, Flame, AlertTriangle } from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
+import { MinecraftAdventureMap } from './MinecraftAdventureMap';
+import { GiantWorldMap } from './GiantWorldMap';
+import { RandomAdventureModal, RANDOM_ADVENTURE_EVENTS, RandomEvent } from './RandomAdventureModal';
 
 interface LessonMapProps {
   profile: UserProfile;
@@ -19,9 +22,55 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   onAwardEmeralds
 }) => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
+  const [viewMode, setViewMode] = useState<'world' | 'map' | 'grid'>('world');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string } | null>(null);
+  const [activeRandomEvent, setActiveRandomEvent] = useState<RandomEvent | null>(null);
+  const [pendingEventAlert, setPendingEventAlert] = useState<RandomEvent | null>(null);
+
+  // Timed trigger for random events
+  useEffect(() => {
+    const triggerRandomEvent = () => {
+      const randomIndex = Math.floor(Math.random() * RANDOM_ADVENTURE_EVENTS.length);
+      const evt = RANDOM_ADVENTURE_EVENTS[randomIndex];
+      setPendingEventAlert(evt);
+    };
+
+    // Trigger initial event after 12s, then every 45s
+    const firstTimer = setTimeout(triggerRandomEvent, 12000);
+    const interval = setInterval(triggerRandomEvent, 45000);
+
+    return () => {
+      clearTimeout(firstTimer);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleManualTriggerEvent = () => {
+    playClickSound();
+    const randomIndex = Math.floor(Math.random() * RANDOM_ADVENTURE_EVENTS.length);
+    const evt = RANDOM_ADVENTURE_EVENTS[randomIndex];
+    setActiveRandomEvent(evt);
+    setPendingEventAlert(null);
+  };
+
+  const unitNavRef = useRef<HTMLDivElement>(null);
+  const unitTabRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({});
+
+  useEffect(() => {
+    const el = unitTabRefs.current[selectedUnit];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [selectedUnit]);
+
+  const handleScrollUnits = (direction: 'left' | 'right') => {
+    if (unitNavRef.current) {
+      const amount = direction === 'left' ? -220 : 220;
+      unitNavRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+    }
+  };
 
   const catalog = getFullLessonsCatalog();
 
@@ -90,148 +139,289 @@ export const LessonMap: React.FC<LessonMapProps> = ({
     <div className="space-y-6">
       
       {/* Search & Unit Navigation */}
-      <div className="bg-white/95 border-4 border-[#487E2C] rounded-[2rem] p-5 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] space-y-4">
+      <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] space-y-3 sm:space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[#487E2C] text-white border-2 border-black rounded-xl flex items-center justify-center font-bold shadow-sm">
-              <BookOpen className="w-5 h-5" />
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#487E2C] text-white border-2 border-black rounded-xl flex items-center justify-center font-bold shadow-sm shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <h2 className="text-lg font-black font-mono text-[#2D2D2D]">
+            <h2 className="text-base sm:text-lg font-black font-mono text-[#2D2D2D]">
               《新概念英语第一册》144 课 Minecraft 冒险地图
             </h2>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索课程编号/主题/关键词..."
-              className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
-            />
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            {/* View Switcher Controls */}
+            <div className="bg-slate-100 p-1 rounded-xl border-2 border-slate-300 flex items-center space-x-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setViewMode('world');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black flex items-center space-x-1.5 transition-all ${
+                  viewMode === 'world'
+                    ? 'bg-[#487E2C] text-white shadow-sm border border-black/20'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>全景大地图</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setViewMode('map');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black flex items-center space-x-1.5 transition-all ${
+                  viewMode === 'map'
+                    ? 'bg-[#487E2C] text-white shadow-sm border border-black/20'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Map className="w-3.5 h-3.5" />
+                <span>卷轴线路图</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setViewMode('grid');
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black flex items-center space-x-1.5 transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-[#487E2C] text-white shadow-sm border border-black/20'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>列表网格</span>
+              </button>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative flex-1 sm:w-56 min-w-[160px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索课程/主题/关键词..."
+                className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl pl-9 pr-3 py-1.5 sm:py-2 text-xs text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
+              />
+            </div>
+
+            {/* Random Event Trigger Button */}
+            <button
+              type="button"
+              onClick={handleManualTriggerEvent}
+              className="px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-amber-950 border-2 border-black rounded-xl text-xs font-mono font-black flex items-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 shrink-0"
+              title="立即触发随机探险突发事件"
+            >
+              <Flame className="w-3.5 h-3.5 text-red-700 animate-bounce" />
+              <span>🎲 探险突发事件</span>
+            </button>
           </div>
         </div>
 
-        {/* Units Filter Buttons */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+        {/* Pending Random Event Alert Banner */}
+        {pendingEventAlert && (
+          <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 border-3 border-black text-amber-950 p-3 sm:p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-black/20 border-2 border-black/30 rounded-xl flex items-center justify-center text-2xl shrink-0">
+                {pendingEventAlert.avatar}
+              </div>
+              <div>
+                <div className="flex items-center space-x-1.5 text-xs font-mono font-black uppercase text-amber-950">
+                  <AlertTriangle className="w-4 h-4 text-red-800" />
+                  <span>地图突发探险危机告警！</span>
+                </div>
+                <p className="text-xs font-mono font-black text-amber-950 mt-0.5">
+                  {pendingEventAlert.titleZh} — {pendingEventAlert.locationName}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveRandomEvent(pendingEventAlert);
+                setPendingEventAlert(null);
+              }}
+              className="bg-black text-amber-300 hover:bg-slate-900 border-2 border-black px-4 py-2 rounded-xl text-xs font-mono font-black flex items-center space-x-1 shadow-md shrink-0 active:translate-y-0.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>前往处理危机 (+{pendingEventAlert.rewardEmeralds} ❇️)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Units Filter Buttons with Left/Right Scroll Arrow Controls & Auto Scroll */}
+        <div className="relative flex items-center space-x-1.5">
           <button
-            onClick={() => {
-              playClickSound();
-              setSelectedUnit(0);
-            }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-mono font-black whitespace-nowrap border-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 ${
-              selectedUnit === 0
-                ? 'bg-[#487E2C] border-black text-white shadow-[0_3px_0_0_#2A4718]'
-                : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
-            }`}
+            type="button"
+            onClick={() => handleScrollUnits('left')}
+            className="p-1.5 sm:p-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl text-slate-700 shrink-0 transition-colors shadow-sm active:translate-y-0.5"
+            title="向左滑动 Unit 标签"
           >
-            全部 144 课
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {Array.from({ length: 12 }, (_, i) => i + 1).map(uNum => (
+          <div
+            ref={unitNavRef}
+            className="flex items-center space-x-2 overflow-x-auto pb-1.5 pt-0.5 scrollbar-none snap-x snap-mandatory scroll-smooth flex-1 min-w-0"
+          >
             <button
-              key={uNum}
-              onClick={() => {
+              ref={(el) => { unitTabRefs.current[0] = el; }}
+              onClick={(e) => {
                 playClickSound();
-                setSelectedUnit(uNum);
+                setSelectedUnit(0);
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
               }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-mono font-black whitespace-nowrap border-2 transition-all transform hover:-translate-y-0.5 active:translate-y-0 ${
-                selectedUnit === uNum
-                  ? 'bg-[#487E2C] border-black text-white shadow-[0_3px_0_0_#2A4718]'
+              className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-mono font-black whitespace-nowrap border-2 transition-all shrink-0 snap-start active:translate-y-0.5 ${
+                selectedUnit === 0
+                  ? 'bg-[#487E2C] border-black text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_3px_0_0_#2A4718]'
                   : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              Unit {uNum} (第 {(uNum - 1) * 12 + 1}-{uNum * 12} 课)
+              全部 144 课
             </button>
-          ))}
+
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(uNum => (
+              <button
+                key={uNum}
+                ref={(el) => { unitTabRefs.current[uNum] = el; }}
+                onClick={(e) => {
+                  playClickSound();
+                  setSelectedUnit(uNum);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }}
+                className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-mono font-black whitespace-nowrap border-2 transition-all shrink-0 snap-start active:translate-y-0.5 ${
+                  selectedUnit === uNum
+                    ? 'bg-[#487E2C] border-black text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_3px_0_0_#2A4718]'
+                    : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                Unit {uNum} (第 {(uNum - 1) * 12 + 1}-{uNum * 12} 课)
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleScrollUnits('right')}
+            className="p-1.5 sm:p-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl text-slate-700 shrink-0 transition-colors shadow-sm active:translate-y-0.5"
+            title="向右滑动 Unit 标签"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* 144 Lessons Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-        {filteredCatalog.map(item => {
-          const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1;
-          const isCompleted = profile.unlockedLessonIds.includes(item.id + 1) || item.id < profile.currentLessonId;
-          const isCurrent = profile.currentLessonId === item.id;
+      {/* View Mode Content: World Map vs Adventure Path vs Grid */}
+      {viewMode === 'world' ? (
+        <GiantWorldMap
+          profile={profile}
+          onSelectLessonForChat={onSelectLessonForChat}
+          onCompleteLesson={onCompleteLesson}
+          onAwardEmeralds={onAwardEmeralds}
+        />
+      ) : viewMode === 'map' ? (
+        <MinecraftAdventureMap
+          profile={profile}
+          selectedUnit={selectedUnit}
+          onSelectLesson={handleOpenLessonDetail}
+          onStartChat={onSelectLessonForChat}
+          onOralTest={(target) => setOralTarget(target)}
+        />
+      ) : (
+        /* 144 Lessons Grid */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
+          {filteredCatalog.map(item => {
+            const isCompleted = item.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
+            const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
+            const isCurrent = profile.currentLessonId === item.id;
 
-          return (
-            <div
-              key={item.id}
-              onClick={() => isUnlocked && handleOpenLessonDetail(item.id)}
-              className={`rounded-3xl border-4 p-4 transition-all duration-200 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
-                isCurrent
-                  ? 'bg-white border-[#FF6321] shadow-[8px_8px_0px_0px_rgba(255,99,33,0.25)] ring-2 ring-[#FF6321]/50 transform hover:-translate-y-1'
-                  : isUnlocked
-                  ? 'bg-white border-[#487E2C] hover:border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.08)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.12)] transform hover:-translate-y-1'
-                  : 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed shadow-none'
-              }`}
-            >
-              {/* Badge Overlay */}
-              {isCurrent && (
-                <div className="absolute top-0 right-0 bg-[#FF6321] text-white font-mono font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-sm uppercase tracking-wider">
-                  当前进度的课
+            return (
+              <div
+                key={item.id}
+                onClick={() => isUnlocked && handleOpenLessonDetail(item.id)}
+                className={`rounded-3xl border-4 p-4 transition-all duration-200 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                  isCurrent
+                    ? 'bg-white border-[#FF6321] shadow-[8px_8px_0px_0px_rgba(255,99,33,0.25)] ring-2 ring-[#FF6321]/50 transform hover:-translate-y-1'
+                    : isUnlocked
+                    ? 'bg-white border-[#487E2C] hover:border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.08)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.12)] transform hover:-translate-y-1'
+                    : 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed shadow-none'
+                }`}
+              >
+                {/* Badge Overlay */}
+                {isCurrent && (
+                  <div className="absolute top-0 right-0 bg-[#FF6321] text-white font-mono font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-sm uppercase tracking-wider">
+                    当前进度的课
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-mono font-black text-[#487E2C]">
+                      Lesson {item.id}
+                    </span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase border ${
+                      item.difficulty === 'easy'
+                        ? 'bg-green-100 text-green-800 border-green-300'
+                        : item.difficulty === 'medium'
+                        ? 'bg-amber-100 text-amber-800 border-amber-300'
+                        : 'bg-rose-100 text-rose-800 border-rose-300'
+                    }`}>
+                      {item.difficulty}
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-black text-[#2D2D2D] mb-0.5 line-clamp-1 font-mono">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 mb-3 line-clamp-1">
+                    {item.titleZh}
+                  </p>
                 </div>
-              )}
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-black text-[#487E2C]">
-                    Lesson {item.id}
+                <div className="pt-3 border-t-2 border-slate-100 flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-500 font-bold text-[11px] truncate max-w-[130px]">
+                    {item.topic}
                   </span>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase border ${
-                    item.difficulty === 'easy'
-                      ? 'bg-green-100 text-green-800 border-green-300'
-                      : item.difficulty === 'medium'
-                      ? 'bg-amber-100 text-amber-800 border-amber-300'
-                      : 'bg-rose-100 text-rose-800 border-rose-300'
-                  }`}>
-                    {item.difficulty}
-                  </span>
-                </div>
 
-                <h3 className="text-sm font-black text-[#2D2D2D] mb-0.5 line-clamp-1 font-mono">
-                  {item.title}
-                </h3>
-                <p className="text-xs font-bold text-slate-500 mb-3 line-clamp-1">
-                  {item.titleZh}
-                </p>
-              </div>
-
-              <div className="pt-3 border-t-2 border-slate-100 flex items-center justify-between text-xs font-mono">
-                <span className="text-slate-500 font-bold text-[11px] truncate max-w-[130px]">
-                  {item.topic}
-                </span>
-
-                <div className="flex items-center space-x-1">
-                  {isCompleted ? (
-                    <span className="text-green-600 font-black flex items-center space-x-1">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span className="text-[10px]">已完成</span>
-                    </span>
-                  ) : isUnlocked ? (
-                    <span className="text-[#FF6321] font-black flex items-center space-x-1">
-                      <Play className="w-3.5 h-3.5 fill-[#FF6321]" />
-                      <span className="text-[10px]">学习</span>
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 flex items-center space-x-1">
-                      <Lock className="w-3.5 h-3.5" />
-                      <span className="text-[10px]">解锁中</span>
-                    </span>
-                  )}
+                  <div className="flex items-center space-x-1">
+                    {isCompleted ? (
+                      <span className="text-green-600 font-black flex items-center space-x-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span className="text-[10px]">已完成</span>
+                      </span>
+                    ) : isUnlocked ? (
+                      <span className="text-[#FF6321] font-black flex items-center space-x-1">
+                        <Play className="w-3.5 h-3.5 fill-[#FF6321]" />
+                        <span className="text-[10px]">学习</span>
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 flex items-center space-x-1">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span className="text-[10px]">解锁中</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Lesson Detailed Study Modal */}
       {activeLesson && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border-4 border-[#487E2C] rounded-[2.5rem] w-full max-w-3xl text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto pt-safe pb-safe">
+          <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-3xl text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-auto max-h-[92dvh] flex flex-col">
             
             {/* Modal Header */}
             <div className="bg-[#487E2C] p-6 border-b-4 border-[#355E20] flex items-center justify-between text-white">
@@ -258,7 +448,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
               
               {/* Target Sentences Section */}
               <div className="bg-slate-50 p-5 rounded-2xl border-2 border-slate-200 space-y-3">
@@ -428,6 +618,16 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           translation={oralTarget.translation}
           phonetic={oralTarget.phonetic}
           onClose={() => setOralTarget(null)}
+          onAwardEmeralds={(emeralds, xp) => {
+            if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
+          }}
+        />
+      )}
+
+      {activeRandomEvent && (
+        <RandomAdventureModal
+          event={activeRandomEvent}
+          onClose={() => setActiveRandomEvent(null)}
           onAwardEmeralds={(emeralds, xp) => {
             if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
           }}

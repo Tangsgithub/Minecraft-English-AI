@@ -144,32 +144,32 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-[78vh] bg-white border-4 border-[#487E2C] rounded-[2rem] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] text-[#2D2D2D]">
+    <div className="flex flex-col h-[calc(100dvh-11rem)] min-h-[460px] max-h-[820px] bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] text-[#2D2D2D]">
       
       {/* Top Banner: Alex NPC Status & Active Lesson */}
-      <div className="bg-[#487E2C] p-3 sm:p-4 border-b-4 border-[#355E20] text-white flex items-center justify-between">
-        <div className="flex items-center space-x-3">
+      <div className="bg-[#487E2C] p-2.5 sm:p-4 border-b-2 sm:border-b-4 border-[#355E20] text-white flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
           {/* Animated Alex Character Frame */}
-          <div className="relative">
-            <div className="w-12 h-12 bg-[#EEDDCC] border-4 border-[#C89D7C] rounded-2xl flex items-center justify-center text-2xl shadow-md">
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#EEDDCC] border-2 sm:border-4 border-[#C89D7C] rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl shadow-md">
               👩‍🦰
             </div>
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#7CFC00] border-2 border-black rounded-full animate-pulse" title="Alex 在线" />
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-[#7CFC00] border-2 border-black rounded-full animate-pulse" title="Alex 在线" />
           </div>
 
-          <div>
-            <div className="flex items-center space-x-2">
-              <h3 className="font-black font-mono text-white text-sm sm:text-base drop-shadow-sm">
-                Alex 老师 (Minecraft AI English Companion)
+          <div className="min-w-0">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <h3 className="font-black font-mono text-white text-xs sm:text-base drop-shadow-sm truncate">
+                Alex 老师
               </h3>
-              <span className="text-[10px] bg-[#FF6321] text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                {profile.apiKeyConfig.provider === 'deepseek' ? 'DeepSeek API' : 'Gemini AI'}
+              <span className="text-[9px] sm:text-[10px] bg-[#FF6321] text-white font-black px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                {profile.apiKeyConfig.provider === 'deepseek' ? 'DeepSeek' : 'Gemini'}
               </span>
             </div>
-            <p className="text-xs text-white/90 font-bold">
+            <p className="text-[11px] sm:text-xs text-white/90 font-bold truncate">
               {activeLesson
-                ? `当前课程：Lesson ${activeLesson.id} - ${activeLesson.title}`
-                : 'Minecraft 村庄自由英语实战交流'}
+                ? `Lesson ${activeLesson.id} - ${activeLesson.title}`
+                : 'Minecraft 村庄英语交流'}
             </p>
           </div>
         </div>

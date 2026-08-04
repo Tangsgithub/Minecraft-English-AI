@@ -34,8 +34,8 @@ export const EyeCareModal: React.FC<EyeCareModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-white border-4 border-[#487E2C] rounded-[2.5rem] w-full max-w-lg text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden text-center p-6 space-y-6 animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
+      <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-lg text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden text-center p-4 sm:p-6 space-y-4 sm:space-y-6 my-auto max-h-[92dvh] overflow-y-auto">
         
         {/* Banner Graphic */}
         <div className="w-24 h-24 bg-green-100 border-4 border-[#487E2C] rounded-3xl mx-auto flex items-center justify-center text-5xl shadow-md animate-bounce">
