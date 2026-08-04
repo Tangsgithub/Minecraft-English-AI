@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile, ApiKeyConfig, ApiRequestMode } from '../types';
 import { testApiKeyConnection } from '../services/aiService';
 import { ApiSecurityNotice } from './ApiSecurityNotice';
-import { Settings, Key, Sparkles, CheckCircle2, AlertCircle, Download, Upload, Trash2, Eye, EyeOff } from 'lucide-react';
-import { playClickSound, playEmeraldSound } from '../utils/audio';
+import { Settings, Key, Sparkles, CheckCircle2, AlertCircle, Download, Upload, Trash2, Eye, EyeOff, Volume2, Mic, Play } from 'lucide-react';
+import {
+  playClickSound,
+  playEmeraldSound,
+  getTtsEngine,
+  setTtsEngine,
+  getSelectedKokoroVoice,
+  setSelectedKokoroVoice,
+  speakText,
+  TtsEngineType
+} from '../utils/audio';
+import { KOKORO_VOICES, KokoroVoiceId, subscribeKokoroStatus } from '../services/kokoroService';
 
 interface SettingsModalProps {
   profile: UserProfile;
@@ -24,6 +34,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [model, setModel] = useState<string>(profile.apiKeyConfig.model || 'deepseek-chat');
   const [requestMode, setRequestMode] = useState<ApiRequestMode>(profile.apiKeyConfig.requestMode || 'direct');
   const [showKey, setShowKey] = useState<boolean>(false);
+
+  // TTS Engine & Kokoro Settings
+  const [ttsEngineState, setTtsEngineState] = useState<TtsEngineType>(getTtsEngine());
+  const [kokoroVoiceState, setKokoroVoiceState] = useState<KokoroVoiceId>(getSelectedKokoroVoice());
+  const [kokoroStatus, setKokoroStatus] = useState<{ loading: boolean; progress: number; ready: boolean; error: string | null }>({
+    loading: false,
+    progress: 0,
+    ready: false,
+    error: null
+  });
+  const [isTestingSpeech, setIsTestingSpeech] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeKokoroStatus(setKokoroStatus);
+    return () => unsubscribe();
+  }, []);
 
   const [nickname, setNickname] = useState<string>(profile.nickname || 'Tom');
   const [age, setAge] = useState<number>(profile.age || 8);
@@ -53,8 +79,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleTestTtsSpeech = async () => {
+    playClickSound();
+    setIsTestingSpeech(true);
+    await speakText("Welcome to Minecraft English World! Excellent work!", {
+      lang: 'en-US',
+      rate: 1.0
+    });
+    setIsTestingSpeech(false);
+  };
+
   const handleSave = () => {
     playEmeraldSound();
+    setTtsEngine(ttsEngineState);
+    setSelectedKokoroVoice(kokoroVoiceState);
+
     onSaveProfile({
       nickname: nickname.trim() || 'Tom',
       age,
@@ -218,6 +257,135 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span className="max-w-[220px] truncate">{testResult.message}</span>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Kokoro-82M AI Audio TTS Engine Config */}
+          <div className="bg-gradient-to-br from-slate-900 to-emerald-950 p-4 rounded-2xl border-2 border-emerald-500/40 text-white space-y-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300">
+                  <Mic className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-[#FFD700] text-sm flex items-center space-x-2">
+                    <span>🎙️ Kokoro-82M 超自然 AI 发音引擎</span>
+                    <span className="text-[10px] bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 px-2 py-0.5 rounded-full font-mono">
+                      开源 82M 神经网络
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    告别机械浏览器发音！支持极具抑扬顿挫的类真人真人音色
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Engine Selection */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setTtsEngineState('kokoro');
+                }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  ttsEngineState === 'kokoro'
+                    ? 'bg-emerald-600/40 border-emerald-400 text-white shadow-md'
+                    : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className="font-bold text-xs flex items-center justify-between">
+                  <span>🎙️ Kokoro-82M (推荐)</span>
+                  {ttsEngineState === 'kokoro' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                </div>
+                <div className="text-[10px] opacity-80 mt-1">
+                  超自然高品质 AI 发音，真人抑扬顿挫
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setTtsEngineState('webspeech');
+                }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  ttsEngineState === 'webspeech'
+                    ? 'bg-amber-600/40 border-amber-400 text-white shadow-md'
+                    : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className="font-bold text-xs flex items-center justify-between">
+                  <span>🤖 浏览器原生发音</span>
+                  {ttsEngineState === 'webspeech' && <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />}
+                </div>
+                <div className="text-[10px] opacity-80 mt-1">
+                  标准合成音，无需下载模型
+                </div>
+              </button>
+            </div>
+
+            {/* Kokoro Voice Selector */}
+            {ttsEngineState === 'kokoro' && (
+              <div className="space-y-2 pt-1">
+                <label className="block text-xs font-bold text-slate-200">
+                  选择 Kokoro AI 发音人音色 (Voice Persona):
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {KOKORO_VOICES.map(v => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        playClickSound();
+                        setKokoroVoiceState(v.id);
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                        kokoroVoiceState === v.id
+                          ? 'bg-emerald-500/30 border-emerald-400 text-white ring-1 ring-emerald-400'
+                          : 'bg-slate-800/40 border-slate-700 text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="font-bold text-xs flex items-center justify-between text-emerald-300">
+                        <span>{v.name} ({v.gender})</span>
+                        <span className="text-[10px] text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded font-mono">
+                          {v.accent}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{v.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Voice Audition & Loading Progress */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+              <div className="text-[11px] text-slate-300 font-mono">
+                {kokoroStatus.loading ? (
+                  <span className="text-amber-400 flex items-center space-x-1">
+                    <span className="animate-spin">⏳</span>
+                    <span>模型初始化中 {kokoroStatus.progress}%</span>
+                  </span>
+                ) : kokoroStatus.ready ? (
+                  <span className="text-emerald-400 font-bold flex items-center space-x-1">
+                    <span>✨ Kokoro-82M ONNX 神经发音准备就绪</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-400">准备就绪 (按需极速推理)</span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestTtsSpeech}
+                disabled={isTestingSpeech}
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{isTestingSpeech ? '播放中...' : '🔊 试听发音'}</span>
+              </button>
             </div>
           </div>
 

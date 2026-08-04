@@ -159,6 +159,47 @@ export function playBlockBreakSound() {
   }
 }
 
+import { speakKokoroText, stopKokoroAudio, KokoroVoiceId } from '../services/kokoroService';
+
+export type TtsEngineType = 'kokoro' | 'webspeech';
+
+let currentTtsEngine: TtsEngineType = 'kokoro';
+let currentKokoroVoice: KokoroVoiceId = 'af_heart';
+
+export function getTtsEngine(): TtsEngineType {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('mc_tts_engine');
+    if (saved === 'webspeech' || saved === 'kokoro') {
+      currentTtsEngine = saved;
+    }
+  }
+  return currentTtsEngine;
+}
+
+export function setTtsEngine(engine: TtsEngineType) {
+  currentTtsEngine = engine;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('mc_tts_engine', engine);
+  }
+}
+
+export function getSelectedKokoroVoice(): KokoroVoiceId {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('mc_kokoro_voice');
+    if (saved) {
+      currentKokoroVoice = saved as KokoroVoiceId;
+    }
+  }
+  return currentKokoroVoice;
+}
+
+export function setSelectedKokoroVoice(voice: KokoroVoiceId) {
+  currentKokoroVoice = voice;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('mc_kokoro_voice', voice);
+  }
+}
+
 // Web Speech API for Alex's text-to-speech
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
@@ -172,49 +213,79 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   }
 }
 
-export function speakText(text: string, onEnd?: () => void, options?: { lang?: string; rate?: number; pitch?: number }) {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+export async function speakText(
+  text: string,
+  onEndOrOptions?: (() => void) | { lang?: string; rate?: number; pitch?: number },
+  opts?: { lang?: string; rate?: number; pitch?: number }
+) {
+  if (typeof window === 'undefined') return;
 
-  window.speechSynthesis.cancel();
+  let onEnd: (() => void) | undefined;
+  let options: { lang?: string; rate?: number; pitch?: number } | undefined;
 
-  // If voices aren't cached yet, try fetching again
-  if (cachedVoices.length === 0) {
-    cachedVoices = window.speechSynthesis.getVoices();
+  if (typeof onEndOrOptions === 'function') {
+    onEnd = onEndOrOptions;
+    options = opts;
+  } else if (typeof onEndOrOptions === 'object' && onEndOrOptions !== null) {
+    options = onEndOrOptions;
   }
 
-  // Detect if text is mostly Chinese or English
-  const hasChinese = /[\u4e00-\u9fa5]/.test(text);
-  const hasEnglish = /[a-zA-Z]/.test(text);
-
-  let targetLang = options?.lang || 'en-US';
+  // Clean formatted text
   let cleanText = text
     .replace(/[*#_`~]/g, '')
     .replace(/\[.*?\]/g, '') // remove bracketed notes
-    .replace(/\(.*?\)/g, '') // remove parenthetical notes if needed
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
     .trim();
 
-  // If we are reading English words, strip remaining Chinese characters so English voice doesn't spell them out
+  // If we are reading English words, strip remaining Chinese characters
+  const hasEnglish = /[a-zA-Z]/.test(cleanText);
+  const hasChinese = /[\u4e00-\u9fa5]/.test(cleanText);
+
+  let targetLang = options?.lang || 'en-US';
   if (targetLang.startsWith('en') && hasEnglish && hasChinese) {
     cleanText = cleanText.replace(/[\u4e00-\u9fa5]/g, '').trim();
   }
 
   if (!cleanText) return;
 
+  // Stop any currently playing speech
+  stopSpeech();
+
+  // 1. Try Kokoro-82M AI Engine first if selected
+  const engine = getTtsEngine();
+  if (engine === 'kokoro') {
+    const voice = getSelectedKokoroVoice();
+    const success = await speakKokoroText(cleanText, {
+      voice,
+      speed: options?.rate || 1.0,
+      onEnd
+    });
+
+    if (success) {
+      return; // Kokoro played audio successfully!
+    }
+  }
+
+  // 2. Fallback to Web Speech API
+  if (!('speechSynthesis' in window)) return;
+
+  window.speechSynthesis.cancel();
+
+  if (cachedVoices.length === 0) {
+    cachedVoices = window.speechSynthesis.getVoices();
+  }
+
   const utterance = new SpeechSynthesisUtterance(cleanText);
   utterance.lang = targetLang;
-  utterance.rate = options?.rate ?? 0.95; // Natural clear reading speed
-  utterance.pitch = options?.pitch ?? 1.0; // Natural voice pitch (avoid 1.1 distortion)
+  utterance.rate = options?.rate ?? 0.95;
+  utterance.pitch = options?.pitch ?? 1.0;
 
-  // Find best quality voice matching language
   if (cachedVoices.length > 0) {
-    // 1. Try to find natural/high quality English voice
     let bestVoice = cachedVoices.find(v => 
       v.lang.startsWith(targetLang.slice(0, 2)) && 
       (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Jenny') || v.name.includes('Zira'))
     );
 
-    // 2. Fallback to any voice matching target language
     if (!bestVoice) {
       bestVoice = cachedVoices.find(v => v.lang.startsWith(targetLang.slice(0, 2)));
     }
@@ -233,6 +304,7 @@ export function speakText(text: string, onEnd?: () => void, options?: { lang?: s
 }
 
 export function stopSpeech() {
+  stopKokoroAudio();
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
   }

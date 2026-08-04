@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
-import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon } from 'lucide-react';
-import { getSoundEnabled, toggleSoundEffects, playClickSound } from '../utils/audio';
+import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic } from 'lucide-react';
+import { getSoundEnabled, toggleSoundEffects, playClickSound, getTtsEngine } from '../utils/audio';
+import { subscribeKokoroStatus } from '../services/kokoroService';
 import { User } from 'firebase/auth';
 
 interface HeaderBarProps {
@@ -30,6 +31,14 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   
   // XP calculation for next level
   const { nextLevelMinXp, progressPercent } = getXpProgressForCurrentLevel(profile.xp, profile.level);
+
+  const [kokoroReady, setKokoroReady] = useState(false);
+  const ttsEngine = getTtsEngine();
+
+  useEffect(() => {
+    const unsub = subscribeKokoroStatus(s => setKokoroReady(s.ready));
+    return () => unsub();
+  }, []);
 
   const handleSoundToggle = () => {
     const newState = toggleSoundEffects();
@@ -149,6 +158,25 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           >
             <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#7CFC00]" />
             <span className="hidden md:inline">指南</span>
+          </button>
+
+          {/* Kokoro-82M TTS Engine Badge */}
+          <button
+            onClick={() => {
+              playClickSound();
+              onOpenSettings();
+            }}
+            className={`px-2 py-1.5 border-2 rounded-xl transition-all flex items-center space-x-1 text-xs font-mono font-bold shadow-sm active:translate-y-0.5 ${
+              ttsEngine === 'kokoro'
+                ? 'bg-emerald-900/60 border-emerald-400 text-emerald-200 hover:bg-emerald-900'
+                : 'bg-black/30 border-white/30 text-slate-300 hover:bg-black/40'
+            }`}
+            title="Kokoro-82M AI 神经发音引擎配置"
+          >
+            <Mic className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden lg:inline text-[11px]">
+              {ttsEngine === 'kokoro' ? 'Kokoro AI' : 'Web TTS'}
+            </span>
           </button>
 
           {/* Sound Toggle */}

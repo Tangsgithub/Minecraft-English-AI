@@ -6,6 +6,8 @@ import { FirstLaunchModal } from './components/FirstLaunchModal';
 import { LessonMap } from './components/LessonMap';
 import { AlexChatView } from './components/AlexChatView';
 import { MinecraftVocabView } from './components/MinecraftVocabView';
+import { CraftingLabView } from './components/CraftingLabView';
+import { VocabProgressChart } from './components/VocabProgressChart';
 import { MissionsView } from './components/MissionsView';
 import { AchievementsView } from './components/AchievementsView';
 import { SettingsModal } from './components/SettingsModal';
@@ -15,7 +17,7 @@ import { EyeCareModal } from './components/EyeCareModal';
 import { AuthModal } from './components/AuthModal';
 import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
-import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles } from 'lucide-react';
+import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -76,7 +78,7 @@ export default function App() {
     return DEFAULT_PROFILE;
   });
 
-  const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'missions' | 'achievements'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   
   // Firebase Auth State
@@ -333,6 +335,21 @@ export default function App() {
           <button
             onClick={() => {
               playClickSound();
+              setActiveTab('crafting');
+            }}
+            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+              activeTab === 'crafting'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
+            }`}
+          >
+            <Hammer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">🔨 合成实验室</span>
+          </button>
+
+          <button
+            onClick={() => {
+              playClickSound();
               setActiveTab('missions');
             }}
             className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
@@ -363,14 +380,20 @@ export default function App() {
         </nav>
 
         {/* Tab View Contents */}
-        <div className="flex-1">
+        <div className="flex-1 space-y-4">
           {activeTab === 'map' && (
-            <LessonMap
-              profile={profile}
-              onSelectLessonForChat={handleSelectLessonForChat}
-              onCompleteLesson={handleCompleteLesson}
-              onAwardEmeralds={handleAwardEmeralds}
-            />
+            <>
+              <VocabProgressChart
+                profile={profile}
+                onNavigateToVocab={() => setActiveTab('vocab')}
+              />
+              <LessonMap
+                profile={profile}
+                onSelectLessonForChat={handleSelectLessonForChat}
+                onCompleteLesson={handleCompleteLesson}
+                onAwardEmeralds={handleAwardEmeralds}
+              />
+            </>
           )}
 
           {activeTab === 'chat' && (
@@ -385,10 +408,24 @@ export default function App() {
           )}
 
           {activeTab === 'vocab' && (
-            <MinecraftVocabView
+            <>
+              <VocabProgressChart
+                profile={profile}
+                onNavigateToVocab={() => setActiveTab('vocab')}
+              />
+              <MinecraftVocabView
+                profile={profile}
+                onToggleMasterWord={handleToggleMasterWord}
+                onAwardEmeralds={handleAwardEmeralds}
+              />
+            </>
+          )}
+
+          {activeTab === 'crafting' && (
+            <CraftingLabView
               profile={profile}
-              onToggleMasterWord={handleToggleMasterWord}
               onAwardEmeralds={handleAwardEmeralds}
+              onMasterWord={handleToggleMasterWord}
             />
           )}
 
