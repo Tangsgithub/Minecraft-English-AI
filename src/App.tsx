@@ -11,12 +11,14 @@ import { VocabProgressChart } from './components/VocabProgressChart';
 import { MissionsView } from './components/MissionsView';
 import { AchievementsView } from './components/AchievementsView';
 import { SettingsModal } from './components/SettingsModal';
-import { WhitepaperGuideModal } from './components/WhitepaperGuideModal';
+import { StudyGuideManualModal } from './components/StudyGuideManualModal';
+import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { AuthModal } from './components/AuthModal';
 import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
+import { unlockMobileAudio } from './services/edgeTtsService';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -94,6 +96,7 @@ export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isParentDashboardOpen, setIsParentDashboardOpen] = useState<boolean>(false);
   const [isEyeCareOpen, setIsEyeCareOpen] = useState<boolean>(false);
+  const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -168,6 +171,20 @@ export default function App() {
 
   useEffect(() => {
     setSoundEnabled(getSoundEnabled());
+
+    const handleUserTouch = () => {
+      unlockMobileAudio();
+    };
+
+    window.addEventListener('touchstart', handleUserTouch, { passive: true });
+    window.addEventListener('pointerdown', handleUserTouch, { passive: true });
+    window.addEventListener('click', handleUserTouch, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleUserTouch);
+      window.removeEventListener('pointerdown', handleUserTouch);
+      window.removeEventListener('click', handleUserTouch);
+    };
   }, []);
 
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
@@ -463,11 +480,20 @@ export default function App() {
           onSaveProfile={handleUpdateProfile}
           onClose={() => setIsSettingsOpen(false)}
           onResetProgress={handleResetProgress}
+          onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         />
       )}
 
       {isGuideOpen && (
-        <WhitepaperGuideModal onClose={() => setIsGuideOpen(false)} />
+        <StudyGuideManualModal onClose={() => setIsGuideOpen(false)} />
+      )}
+
+      {isAdminConsoleOpen && (
+        <AdminDashboardModal
+          profile={profile}
+          onUpdateProfile={(updater) => setProfile(updater)}
+          onClose={() => setIsAdminConsoleOpen(false)}
+        />
       )}
 
       {isParentDashboardOpen && (

@@ -41,8 +41,8 @@ export const RANDOM_ADVENTURE_EVENTS: RandomEvent[] = [
     questionEn: 'Which English phrase means "请问 / 打扰一下"?',
     questionZh: '哪个英语短语表达“请问 / 打扰一下”？',
     options: [
-      { label: 'A', textEn: 'Excuse me', textZh: '打扰一下 / 请问', isCorrect: true },
-      { label: 'B', textEn: 'Thank you very much', textZh: '非常感谢', isCorrect: false },
+      { label: 'A', textEn: 'Thank you very much', textZh: '非常感谢', isCorrect: false },
+      { label: 'B', textEn: 'Excuse me', textZh: '打扰一下 / 请问', isCorrect: true },
       { label: 'C', textEn: 'Good night', textZh: '晚安', isCorrect: false },
       { label: 'D', textEn: 'Nice to meet you', textZh: '很高兴认识你', isCorrect: false }
     ],
@@ -64,9 +64,9 @@ export const RANDOM_ADVENTURE_EVENTS: RandomEvent[] = [
     questionEn: 'How do you ask "这是你的手提包吗？" in English?',
     questionZh: '用英语怎么表达“这是你的手提包吗？”？',
     options: [
-      { label: 'A', textEn: 'Is this your handbag?', textZh: '这是你的手提包吗？', isCorrect: true },
-      { label: 'B', textEn: 'Where is my handbag?', textZh: '我的手提包在哪？', isCorrect: false },
-      { label: 'C', textEn: 'This is my coat.', textZh: '这是我的外套。', isCorrect: false },
+      { label: 'A', textEn: 'Where is my handbag?', textZh: '我的手提包在哪？', isCorrect: false },
+      { label: 'B', textEn: 'This is my coat.', textZh: '这是我的外套。', isCorrect: false },
+      { label: 'C', textEn: 'Is this your handbag?', textZh: '这是你的手提包吗？', isCorrect: true },
       { label: 'D', textEn: 'Give me your handbag.', textZh: '把你的包给我。', isCorrect: false }
     ],
     explanationZh: '“Is this your...?” 是询问物品归属的标准一般疑问句型。',
@@ -110,10 +110,10 @@ export const RANDOM_ADVENTURE_EVENTS: RandomEvent[] = [
     questionEn: 'How do you ask someone if they are French or Swedish?',
     questionZh: '如何询问对方是法国人还是瑞典人（选择疑问句）？',
     options: [
-      { label: 'A', textEn: 'Are you French or Swedish?', textZh: '你是法国人还是瑞典人？', isCorrect: true },
-      { label: 'B', textEn: 'Do you French and Swedish?', textZh: '错用助动词', isCorrect: false },
-      { label: 'C', textEn: 'Where are French or Swedish?', textZh: '句意不通', isCorrect: false },
-      { label: 'D', textEn: 'Who is French or Swedish?', textZh: '谁是法国人或瑞典人', isCorrect: false }
+      { label: 'A', textEn: 'Do you French and Swedish?', textZh: '错用助动词', isCorrect: false },
+      { label: 'B', textEn: 'Where are French or Swedish?', textZh: '句意不通', isCorrect: false },
+      { label: 'C', textEn: 'Who is French or Swedish?', textZh: '谁是法国人或瑞典人', isCorrect: false },
+      { label: 'D', textEn: 'Are you French or Swedish?', textZh: '你是法国人还是瑞典人？', isCorrect: true }
     ],
     explanationZh: '选择疑问句用 “A or B” 连接，并升调问出！',
     rewardEmeralds: 10,

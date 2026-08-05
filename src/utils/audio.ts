@@ -1,4 +1,6 @@
 // Web Audio API Synthesizer for retro Minecraft-style sound effects
+import { speakKokoroText, stopKokoroAudio, KokoroVoiceId } from '../services/kokoroService';
+import { speakEdgeTtsText, stopEdgeTtsAudio, unlockMobileAudio } from '../services/edgeTtsService';
 
 let isSoundEnabled = true;
 
@@ -13,25 +15,76 @@ export function toggleSoundEffects(enabled?: boolean): boolean {
 }
 
 export function getSoundEnabled(): boolean {
-  const saved = localStorage.getItem('mc_sound_enabled');
-  if (saved !== null) {
-    try {
-      isSoundEnabled = JSON.parse(saved);
-    } catch {
-      isSoundEnabled = true;
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('mc_sound_enabled');
+    if (saved !== null) {
+      try {
+        isSoundEnabled = JSON.parse(saved);
+      } catch {
+        isSoundEnabled = true;
+      }
     }
   }
   return isSoundEnabled;
+}
+
+let globalAudioCtx: AudioContext | null = null;
+let isAudioUnlocked = false;
+
+export function unlockAudio() {
+  if (typeof window === 'undefined') return;
+
+  // 1. Resume Web Audio API AudioContext
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioCtx) {
+      if (!globalAudioCtx) {
+        globalAudioCtx = new AudioCtx();
+      }
+      if (globalAudioCtx.state === 'suspended') {
+        globalAudioCtx.resume().catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to unlock Web Audio API:', e);
+  }
+
+  // 2. Unlock Mobile/Browser HTMLAudioElement
+  unlockMobileAudio();
+  isAudioUnlocked = true;
+}
+
+// Automatically register gesture listeners to unlock audio on first user touch/click/keypress
+if (typeof window !== 'undefined') {
+  const handleUserGesture = () => {
+    unlockAudio();
+    window.removeEventListener('click', handleUserGesture);
+    window.removeEventListener('pointerdown', handleUserGesture);
+    window.removeEventListener('keydown', handleUserGesture);
+    window.removeEventListener('touchstart', handleUserGesture);
+  };
+
+  window.addEventListener('click', handleUserGesture, { once: true });
+  window.addEventListener('pointerdown', handleUserGesture, { once: true });
+  window.addEventListener('keydown', handleUserGesture, { once: true });
+  window.addEventListener('touchstart', handleUserGesture, { once: true });
 }
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   if (!AudioCtx) return null;
-  return new AudioCtx();
+  if (!globalAudioCtx) {
+    globalAudioCtx = new AudioCtx();
+  }
+  if (globalAudioCtx.state === 'suspended') {
+    globalAudioCtx.resume().catch(() => {});
+  }
+  return globalAudioCtx;
 }
 
 export function playClickSound() {
+  unlockAudio();
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -53,6 +106,7 @@ export function playClickSound() {
 }
 
 export function playEmeraldSound() {
+  unlockAudio();
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -75,6 +129,7 @@ export function playEmeraldSound() {
 }
 
 export function playLevelUpSound() {
+  unlockAudio();
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -99,6 +154,7 @@ export function playLevelUpSound() {
 }
 
 export function playMissionCompleteSound() {
+  unlockAudio();
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -123,6 +179,7 @@ export function playMissionCompleteSound() {
 }
 
 export function playBlockBreakSound() {
+  unlockAudio();
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -159,18 +216,19 @@ export function playBlockBreakSound() {
   }
 }
 
-import { speakKokoroText, stopKokoroAudio, KokoroVoiceId } from '../services/kokoroService';
+export type TtsEngineType = 'edge' | 'kokoro' | 'webspeech';
 
-export type TtsEngineType = 'kokoro' | 'webspeech';
-
-let currentTtsEngine: TtsEngineType = 'kokoro';
+let currentTtsEngine: TtsEngineType = 'edge';
 let currentKokoroVoice: KokoroVoiceId = 'af_heart';
+let currentEdgeVoice: string = 'en-US-AnaNeural';
 
 export function getTtsEngine(): TtsEngineType {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('mc_tts_engine');
-    if (saved === 'webspeech' || saved === 'kokoro') {
-      currentTtsEngine = saved;
+    if (saved === 'webspeech' || saved === 'kokoro' || saved === 'edge') {
+      currentTtsEngine = saved as TtsEngineType;
+    } else {
+      currentTtsEngine = 'edge'; // 默认极速高品质神经网络声音
     }
   }
   return currentTtsEngine;
@@ -180,6 +238,23 @@ export function setTtsEngine(engine: TtsEngineType) {
   currentTtsEngine = engine;
   if (typeof window !== 'undefined') {
     localStorage.setItem('mc_tts_engine', engine);
+  }
+}
+
+export function getSelectedEdgeVoice(): string {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('mc_edge_voice');
+    if (saved) {
+      currentEdgeVoice = saved;
+    }
+  }
+  return currentEdgeVoice;
+}
+
+export function setSelectedEdgeVoice(voice: string) {
+  currentEdgeVoice = voice;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('mc_edge_voice', voice);
   }
 }
 
@@ -219,6 +294,7 @@ export async function speakText(
   opts?: { lang?: string; rate?: number; pitch?: number }
 ) {
   if (typeof window === 'undefined') return;
+  unlockAudio();
 
   let onEnd: (() => void) | undefined;
   let options: { lang?: string; rate?: number; pitch?: number } | undefined;
@@ -251,22 +327,38 @@ export async function speakText(
   // Stop any currently playing speech
   stopSpeech();
 
-  // 1. Try Kokoro-82M AI Engine first if selected
   const engine = getTtsEngine();
+
+  // 1. High Quality Edge Neural Speech (Ultra natural, 100-200ms latency)
+  if (engine === 'edge') {
+    const edgeVoice = getSelectedEdgeVoice();
+    const success = await speakEdgeTtsText(cleanText, {
+      voice: edgeVoice,
+      onEnd
+    });
+    if (success) {
+      return; // Edge Neural Speech played successfully!
+    }
+  }
+
+  // 2. Kokoro-82M AI Engine if explicitly selected
   if (engine === 'kokoro') {
     const voice = getSelectedKokoroVoice();
-    const success = await speakKokoroText(cleanText, {
+    const kokoroPromise = speakKokoroText(cleanText, {
       voice,
       speed: options?.rate || 1.0,
       onEnd
     });
 
-    if (success) {
-      return; // Kokoro played audio successfully!
+    const timeoutPromise = new Promise<boolean>(res => setTimeout(() => res(false), 1200));
+
+    const result = await Promise.race([kokoroPromise, timeoutPromise]);
+    if (result) {
+      return;
     }
   }
 
-  // 2. Fallback to Web Speech API
+  // 3. Fallback to Web Speech API
   if (!('speechSynthesis' in window)) return;
 
   window.speechSynthesis.cancel();
@@ -304,8 +396,17 @@ export async function speakText(
 }
 
 export function stopSpeech() {
+  stopEdgeTtsAudio();
   stopKokoroAudio();
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     window.speechSynthesis.cancel();
   }
+}
+
+export function testAudioSound() {
+  unlockAudio();
+  playEmeraldSound();
+  setTimeout(() => {
+    speakText("Welcome to Minecraft English! Sound is working perfectly.");
+  }, 400);
 }

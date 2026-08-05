@@ -3,6 +3,7 @@ import { ChatMessage, Lesson, UserProfile } from '../types';
 import { sendChatMessageToAlex } from '../services/aiService';
 import { buildAlexSystemPrompt } from '../utils/aiTeacherPrompt';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
+import { unlockMobileAudio } from '../services/edgeTtsService';
 import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award } from 'lucide-react';
 
 interface AlexChatViewProps {
@@ -88,6 +89,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     const textToSend = (customText || inputText).trim();
     if (!textToSend || isLoading) return;
 
+    // Trigger mobile audio unlock directly within user gesture
+    unlockMobileAudio();
     playClickSound();
     setInputText('');
 
@@ -144,7 +147,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-11rem)] min-h-[460px] max-h-[820px] bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] text-[#2D2D2D]">
+    <div className="flex flex-col h-[calc(100dvh-12rem)] min-h-[420px] max-h-[820px] bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] text-[#2D2D2D]">
       
       {/* Top Banner: Alex NPC Status & Active Lesson */}
       <div className="bg-[#487E2C] p-2.5 sm:p-4 border-b-2 sm:border-b-4 border-[#355E20] text-white flex items-center justify-between gap-2">
@@ -345,7 +348,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               handleSendMessage();
             }
           }}
-          placeholder={isListening ? '请对麦克风用英文说话...' : '输入英文与 Alex 老师对话 (例如: "Excuse me, where is the house?")...'}
+          placeholder={isListening ? '请用英文说话...' : '用英文与 Alex 老师对话 (例: "Where is the house?")...'}
           className="flex-1 bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
         />
 

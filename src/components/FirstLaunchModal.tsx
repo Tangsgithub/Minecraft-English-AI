@@ -253,7 +253,7 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
                     type="button"
                     onClick={() => {
                       setProvider('gemini');
-                      setModel('gemini-2.5-flash');
+                      setModel('gemini-3.6-flash');
                     }}
                     className={`py-2 px-3 rounded-xl border-2 text-xs font-mono font-black flex items-center justify-center space-x-2 ${
                       provider === 'gemini'

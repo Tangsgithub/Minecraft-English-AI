@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Volume2, Mic, MicOff, Star, Sparkles, CheckCircle2, RotateCcw, Award, Play } from 'lucide-react';
 import { speakText, playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
+import { unlockMobileAudio } from '../services/edgeTtsService';
 
 interface OralEvaluationModalProps {
   targetText: string;
@@ -54,6 +55,7 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   }, [isRecording]);
 
   const handlePlayStandard = () => {
+    unlockMobileAudio();
     setIsPlayingStandard(true);
     speakText(targetText, () => {
       setIsPlayingStandard(false);
@@ -61,6 +63,7 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   };
 
   const startRecording = async () => {
+    unlockMobileAudio();
     playClickSound();
     setEvaluationResult(null);
     setRecordedAudioUrl(null);

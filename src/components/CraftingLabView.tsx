@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, VocabItem } from '../types';
+import { UserProfile, VocabItem, Lesson } from '../types';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA } from '../data/lessonsData';
 import {
   Hammer, Sparkles, Volume2, Trophy, Shield, Flame, CheckCircle, RefreshCw,
-  Zap, ArrowRight, Sword, Lock, Star, ChevronRight, Play, Heart, Award
+  Zap, ArrowRight, Sword, Lock, Star, ChevronRight, Play, Heart, Award, AlertCircle
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playBlockBreakSound, speakText, playLevelUpSound } from '../utils/audio';
+import { unlockMobileAudio } from '../services/edgeTtsService';
 import confetti from 'canvas-confetti';
 
 interface CraftingLabViewProps {
@@ -217,55 +218,70 @@ const RECIPES: CraftingRecipe[] = [
 
 interface SentencePattern {
   id: string;
+  lessonId: number;
   title: string;
   targetSentence: string;
   translation: string;
-  blocks: string[]; // Order of blocks
-  distractors: string[]; // Distractor blocks
+  blocks: string[];
+  distractors: string[];
 }
 
-const SENTENCE_PATTERNS: SentencePattern[] = [
-  {
-    id: 's_01',
-    title: '课文句型 01',
-    targetSentence: 'Excuse me, is this your handbag?',
-    translation: '请问，这是你的手提包吗？',
-    blocks: ['Excuse me,', 'is this', 'your', 'handbag?'],
-    distractors: ['my', 'that', 'pencil']
-  },
-  {
-    id: 's_02',
-    title: '课文句型 02',
-    targetSentence: 'This is not my umbrella.',
-    translation: '这不是我的雨伞。',
-    blocks: ['This is', 'not', 'my', 'umbrella.'],
-    distractors: ['her', 'your', 'hat']
-  },
-  {
-    id: 's_03',
-    title: '课文句型 03',
-    targetSentence: 'Is he a miner or a builder?',
-    translation: '他是一位矿工还是一位建筑师？',
-    blocks: ['Is he', 'a miner', 'or', 'a builder?'],
-    distractors: ['she', 'and', 'doctor']
-  },
-  {
-    id: 's_04',
-    title: 'MC句型 04',
-    targetSentence: 'Look at that giant diamond block!',
-    translation: '看那块巨大的钻石方块！',
-    blocks: ['Look at', 'that', 'giant', 'diamond block!'],
-    distractors: ['this', 'red', 'sword']
-  },
-  {
-    id: 's_05',
-    title: 'MC句型 05',
-    targetSentence: 'Where is the secret chest in the cave?',
-    translation: '山洞里的秘密宝箱在哪里？',
-    blocks: ['Where is', 'the secret chest', 'in the cave?'],
-    distractors: ['on', 'under', 'bed']
-  }
-];
+function getDynamicSentencePatterns(unlockedLessonIds: number[]): SentencePattern[] {
+  const patterns: SentencePattern[] = [];
+  const maxLessonId = Math.max(...(unlockedLessonIds || [1]), 1);
+
+  const lessonsToUse = LESSONS_DATA.filter(l => l.id <= maxLessonId || l.id <= 5).slice(0, 10);
+
+  lessonsToUse.forEach((lesson) => {
+    if (lesson.targetSentences && lesson.targetSentences.length > 0) {
+      const sentence = lesson.targetSentences[0];
+      const translation = lesson.targetSentenceTranslations ? lesson.targetSentenceTranslations[0] : '课文例句';
+
+      const words = sentence.split(' ');
+      let blocks: string[] = [];
+      if (words.length <= 4) {
+        blocks = words;
+      } else {
+        const mid = Math.floor(words.length / 2);
+        blocks = [
+          words.slice(0, mid).join(' '),
+          words.slice(mid).join(' ')
+        ];
+      }
+
+      const distractors = ['not', 'my', 'the house', 'a diamond'].filter(d => !sentence.includes(d)).slice(0, 2);
+
+      patterns.push({
+        id: `s_lesson_${lesson.id}`,
+        lessonId: lesson.id,
+        title: `Lesson ${lesson.id} • ${lesson.title}`,
+        targetSentence: sentence,
+        translation: translation,
+        blocks: blocks,
+        distractors: distractors
+      });
+    }
+  });
+
+  return patterns.length > 0 ? patterns : [
+    {
+      id: 's_01',
+      lessonId: 1,
+      title: 'Lesson 1 • Excuse me!',
+      targetSentence: 'Excuse me, is this your handbag?',
+      translation: '请问，这是你的手提包吗？',
+      blocks: ['Excuse me,', 'is this', 'your', 'handbag?'],
+      distractors: ['my', 'that', 'pencil']
+    }
+  ];
+}
+
+interface BossQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
 
 interface Boss {
   id: string;
@@ -277,12 +293,7 @@ interface Boss {
   rewardEmeralds: number;
   rewardXp: number;
   difficulty: string;
-  questions: {
-    question: string;
-    options: string[];
-    answer: string;
-    explanation: string;
-  }[];
+  questions: BossQuestion[];
 }
 
 export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
@@ -306,7 +317,16 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   const [lastCraftedRecipe, setLastCraftedRecipe] = useState<CraftingRecipe | null>(null);
 
   // Sentence Synthesizer State
-  const [selectedSentencePattern, setSelectedSentencePattern] = useState<SentencePattern>(SENTENCE_PATTERNS[0]);
+  const sentencePatterns = getDynamicSentencePatterns(profile.unlockedLessonIds || [1]);
+  const [selectedSentencePattern, setSelectedSentencePattern] = useState<SentencePattern>(sentencePatterns[0] || {
+    id: 's_default',
+    lessonId: 1,
+    title: 'Lesson 1',
+    targetSentence: 'I break the block with a wooden pickaxe.',
+    translation: '我用木镐破坏方块。',
+    blocks: ['I break', 'the block', 'with a wooden pickaxe.'],
+    distractors: ['not', 'iron']
+  });
   const [placedSentenceBlocks, setPlacedSentenceBlocks] = useState<string[]>([]);
   const [availableSentencePool, setAvailableSentencePool] = useState<string[]>([]);
   const [sentenceSuccess, setSentenceSuccess] = useState<boolean>(false);
@@ -833,7 +853,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
             </div>
 
             <div className="flex gap-2">
-              {SENTENCE_PATTERNS.map(pat => (
+              {sentencePatterns.map(pat => (
                 <button
                   key={pat.id}
                   onClick={() => { playClickSound(); setSelectedSentencePattern(pat); }}
