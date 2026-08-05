@@ -17,6 +17,7 @@ import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { AuthModal } from './components/AuthModal';
 import { LandingPage } from './components/LandingPage';
+import { VipActivationModal } from './components/VipActivationModal';
 import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
@@ -84,6 +85,7 @@ export default function App() {
   const [isLandingView, setIsLandingView] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
   
   // Firebase Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -292,6 +294,7 @@ export default function App() {
           }}
           onOpenAuth={() => setIsAuthOpen(true)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+          onOpenVipModal={() => setIsVipModalOpen(true)}
         />
         {isAuthOpen && (
           <AuthModal
@@ -308,8 +311,15 @@ export default function App() {
             onUpdateProfile={handleUpdateProfile}
             onClose={() => setIsParentDashboardOpen(false)}
             onTriggerEyeCareTest={() => setIsEyeCareOpen(true)}
+            onOpenVipModal={() => setIsVipModalOpen(true)}
           />
         )}
+        <VipActivationModal
+          isOpen={isVipModalOpen}
+          onClose={() => setIsVipModalOpen(false)}
+          profile={profile}
+          onUpdateProfile={handleUpdateProfile}
+        />
       </>
     );
   }
@@ -325,6 +335,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+        onOpenVipModal={() => setIsVipModalOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
@@ -537,8 +548,16 @@ export default function App() {
           onUpdateProfile={handleUpdateProfile}
           onClose={() => setIsParentDashboardOpen(false)}
           onTriggerEyeCareTest={() => setIsEyeCareOpen(true)}
+          onOpenVipModal={() => setIsVipModalOpen(true)}
         />
       )}
+
+      <VipActivationModal
+        isOpen={isVipModalOpen}
+        onClose={() => setIsVipModalOpen(false)}
+        profile={profile}
+        onUpdateProfile={handleUpdateProfile}
+      />
 
       {isEyeCareOpen && (
         <EyeCareModal

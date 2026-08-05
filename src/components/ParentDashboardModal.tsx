@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, ParentSettings } from '../types';
+import { UserProfile, ParentSettings, APP_VERSION_INFO } from '../types';
 import { Shield, Clock, Award, Eye, Volume2, Sparkles, CheckCircle, BarChart3, Lock, Heart, Gift, MessageSquare, AlertCircle } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 
@@ -8,13 +8,15 @@ interface ParentDashboardModalProps {
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onClose: () => void;
   onTriggerEyeCareTest: () => void;
+  onOpenVipModal?: () => void;
 }
 
 export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
   profile,
   onUpdateProfile,
   onClose,
-  onTriggerEyeCareTest
+  onTriggerEyeCareTest,
+  onOpenVipModal
 }) => {
   // Simple parent lock math question to prevent child mis-touch
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -102,10 +104,12 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
             <div>
               <h2 className="text-lg font-black font-mono text-white flex items-center space-x-2">
                 <span>家长护航中心与周报仪表盘</span>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full border border-white/30">Parent Guardian</span>
+                <span className="text-[10px] bg-[#FFD700] text-black px-2 py-0.5 rounded-full font-bold shadow-sm">
+                  {APP_VERSION_INFO.version}
+                </span>
               </h2>
               <p className="text-xs text-white/90 font-mono font-bold">
-                学习效果可视化 • 护眼防沉迷 • 家长激励机制
+                学习效果可视化 • 护眼防沉迷 • 新概念三册体系支持
               </p>
             </div>
           </div>
@@ -167,6 +171,39 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
           /* Unlocked Parent Dashboard Content */
           <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs font-mono">
             
+            {/* VIP Membership Status Card */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-3xl border-2 border-amber-400/60 text-white space-y-3 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center justify-center text-lg">
+                    👑
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-white">
+                      账号会员状态: {profile.isVip ? '💎 终身VIP会员' : '🎁 普通试学账号'}
+                    </h3>
+                    <p className="text-[10px] text-slate-400">
+                      {profile.isVip
+                        ? '全量 144 个关卡、PPT 与 Alex AI 语音全开放'
+                        : '当前仅可试学前 3 个主线关卡，升级获取 144 课'}
+                    </p>
+                  </div>
+                </div>
+
+                {onOpenVipModal && (
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      onOpenVipModal();
+                    }}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-xs transition-all shadow"
+                  >
+                    {profile.isVip ? '查看会员权益' : '🔑 输入激活码解锁VIP'}
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* 1. Learning Report Card */}
             <div className="bg-slate-50 p-5 rounded-3xl border-2 border-slate-200 space-y-4">
               <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, ApiKeyConfig, ApiRequestMode } from '../types';
+import { UserProfile, ApiKeyConfig, ApiRequestMode, APP_VERSION_INFO } from '../types';
 import { testApiKeyConnection } from '../services/aiService';
 import { ApiSecurityNotice } from './ApiSecurityNotice';
 import { Settings, Key, Sparkles, CheckCircle2, AlertCircle, Download, Upload, Trash2, Eye, EyeOff, Volume2, Mic, Play } from 'lucide-react';
@@ -452,6 +452,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>重置进度数据</span>
               </button>
+            </div>
+          </div>
+
+          {/* App Version System & Curriculum Matrix */}
+          <div className="bg-slate-900 text-white p-4 rounded-2xl border-2 border-slate-950 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="font-black text-amber-300 text-sm flex items-center space-x-2">
+                <span className="px-2 py-0.5 bg-amber-400 text-slate-950 text-xs font-mono font-black border border-black">
+                  {APP_VERSION_INFO.version}
+                </span>
+                <span>{APP_VERSION_INFO.editionName}</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">{APP_VERSION_INFO.buildCode}</span>
+            </div>
+
+            <div className="text-[11px] text-slate-300 leading-relaxed">
+              {APP_VERSION_INFO.releaseNotes}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              {APP_VERSION_INFO.volumes.map(vol => (
+                <div key={vol.id} className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
+                  <div className="font-bold text-emerald-400 text-xs flex items-center justify-between">
+                    <span>{vol.title}</span>
+                    <span className="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-300 font-mono">
+                      {vol.badge.split(' ')[0]}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 truncate">{vol.subtitle}</div>
+                </div>
+              ))}
             </div>
           </div>
 

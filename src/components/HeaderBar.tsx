@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, APP_VERSION_INFO } from '../types';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
 import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic } from 'lucide-react';
 import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio } from '../utils/audio';
@@ -12,6 +12,7 @@ interface HeaderBarProps {
   onOpenSettings: () => void;
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
+  onOpenVipModal?: () => void;
   onGoToLandingPage?: () => void;
   soundEnabled: boolean;
   setSoundEnabled: (val: boolean) => void;
@@ -24,6 +25,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenSettings,
   onOpenHelpWizard,
   onOpenParentDashboard,
+  onOpenVipModal,
   onGoToLandingPage,
   soundEnabled,
   setSoundEnabled
@@ -59,7 +61,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 Minecraft English
               </span>
               <span className="text-[8px] sm:text-[10px] font-black bg-[#FFD700] text-black px-1 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                AI
+                {APP_VERSION_INFO.version}
               </span>
             </div>
 
@@ -108,9 +110,28 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
         </div>
 
-        {/* Right Actions: Auth Cloud, Sound & Settings */}
+        {/* Right Actions: VIP, Auth Cloud, Sound & Settings */}
         <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
           
+          {/* VIP Membership Badge Button */}
+          {onOpenVipModal && (
+            <button
+              onClick={() => {
+                playClickSound();
+                onOpenVipModal();
+              }}
+              className={`px-2 sm:px-3 py-1 sm:py-2 border-2 border-black rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_rgba(0,0,0,0.5)] active:translate-y-0.5 ${
+                profile.isVip
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-amber-300'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white animate-pulse'
+              }`}
+              title={profile.isVip ? '您已开通终身VIP会员' : '点击兑换/解锁 144 课 VIP 权限'}
+            >
+              <span className="text-xs">{profile.isVip ? '👑' : '💎'}</span>
+              <span className="hidden sm:inline">{profile.isVip ? '终身VIP' : '开通VIP'}</span>
+            </button>
+          )}
+
           {/* Website / Landing Page Button */}
           {onGoToLandingPage && (
             <button
