@@ -16,6 +16,7 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { AuthModal } from './components/AuthModal';
+import { LandingPage } from './components/LandingPage';
 import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
@@ -80,6 +81,7 @@ export default function App() {
     return DEFAULT_PROFILE;
   });
 
+  const [isLandingView, setIsLandingView] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   
@@ -280,6 +282,38 @@ export default function App() {
     setIsFirstLaunchOpen(true);
   };
 
+  if (isLandingView) {
+    return (
+      <>
+        <LandingPage
+          onEnterApp={(targetTab) => {
+            if (targetTab) setActiveTab(targetTab);
+            setIsLandingView(false);
+          }}
+          onOpenAuth={() => setIsAuthOpen(true)}
+          onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+        />
+        {isAuthOpen && (
+          <AuthModal
+            currentUser={currentUser}
+            currentProfile={profile}
+            isOpen={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            onProfileLoaded={(loaded) => setProfile(loaded)}
+          />
+        )}
+        {isParentDashboardOpen && (
+          <ParentDashboardModal
+            profile={profile}
+            onUpdateProfile={handleUpdateProfile}
+            onClose={() => setIsParentDashboardOpen(false)}
+            onTriggerEyeCareTest={() => setIsEyeCareOpen(true)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#6194E3] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#7CFC00] selection:text-black">
       
@@ -291,6 +325,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+        onGoToLandingPage={() => setIsLandingView(true)}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
       />

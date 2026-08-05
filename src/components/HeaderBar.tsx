@@ -12,6 +12,7 @@ interface HeaderBarProps {
   onOpenSettings: () => void;
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
+  onGoToLandingPage?: () => void;
   soundEnabled: boolean;
   setSoundEnabled: (val: boolean) => void;
 }
@@ -23,6 +24,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenSettings,
   onOpenHelpWizard,
   onOpenParentDashboard,
+  onGoToLandingPage,
   soundEnabled,
   setSoundEnabled
 }) => {
@@ -109,6 +111,21 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Right Actions: Auth Cloud, Sound & Settings */}
         <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
           
+          {/* Website / Landing Page Button */}
+          {onGoToLandingPage && (
+            <button
+              onClick={() => {
+                playClickSound();
+                onGoToLandingPage();
+              }}
+              className="px-2 sm:px-3 py-1 sm:py-2 bg-purple-700 hover:bg-purple-600 border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#4A148C] active:translate-y-0.5"
+              title="返回官网/产品介绍"
+            >
+              <span className="text-xs">🌐</span>
+              <span className="hidden md:inline">官网首页</span>
+            </button>
+          )}
+
           {/* Cloud Auth Account Button */}
           <button
             onClick={() => {
