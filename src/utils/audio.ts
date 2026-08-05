@@ -320,6 +320,8 @@ export async function speakText(
   let targetLang = options?.lang || 'en-US';
   if (targetLang.startsWith('en') && hasEnglish && hasChinese) {
     cleanText = cleanText.replace(/[\u4e00-\u9fa5]/g, '').trim();
+    // Remove orphaned punctuation left behind after removing Chinese text
+    cleanText = cleanText.replace(/[（）()：:【】！!？?，,。.""'']/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   if (!cleanText) return;

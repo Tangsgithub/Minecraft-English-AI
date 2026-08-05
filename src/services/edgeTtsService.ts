@@ -14,9 +14,12 @@ export const EDGE_VOICES: EdgeVoiceOption[] = [
   { id: 'en-US-AriaNeural', name: 'Aria (情感美音)', gender: 'Female', accent: '美音 (US)', description: '自然丰富的情感表达，极具对话真实感' }
 ];
 
-// Global mobile audio player instance pre-unlocked by user touch gestures
-let sharedAudioElement: HTMLAudioElement | null = null;
+// Global dummy audio element for unlocking browser autoplay restrictions
+let unlockAudioElement: HTMLAudioElement | null = null;
 let isMobileAudioUnlocked = false;
+
+// Currently playing speech audio element
+let currentActiveAudio: HTMLAudioElement | null = null;
 
 /**
  * Mobile Audio Unlocker: Call on user touchstart/click to bypass iOS/Android autoplay restrictions
@@ -24,19 +27,18 @@ let isMobileAudioUnlocked = false;
 export function unlockMobileAudio() {
   if (typeof window === 'undefined') return;
 
-  if (!sharedAudioElement) {
-    sharedAudioElement = new Audio();
-    sharedAudioElement.setAttribute('playsinline', 'true');
-    sharedAudioElement.setAttribute('webkit-playsinline', 'true');
+  if (!unlockAudioElement) {
+    unlockAudioElement = new Audio();
+    unlockAudioElement.setAttribute('playsinline', 'true');
+    unlockAudioElement.setAttribute('webkit-playsinline', 'true');
   }
 
   if (!isMobileAudioUnlocked) {
     // Play short silent sound to unlock mobile audio context
-    sharedAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAARKwAAESsAAAABAAgAZGF0YQAAAAA=';
-    sharedAudioElement.play()
+    unlockAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAARKwAAESsAAAABAAgAZGF0YQAAAAA=';
+    unlockAudioElement.play()
       .then(() => {
         isMobileAudioUnlocked = true;
-        if (sharedAudioElement) sharedAudioElement.pause();
       })
       .catch((err) => {
         console.log('Mobile audio unlock gesture listener active:', err);
@@ -48,11 +50,13 @@ export function unlockMobileAudio() {
 const audioCache = new Map<string, ArrayBuffer>();
 
 export function stopEdgeTtsAudio() {
-  if (sharedAudioElement) {
+  if (currentActiveAudio) {
     try {
-      sharedAudioElement.pause();
-      sharedAudioElement.currentTime = 0;
+      currentActiveAudio.pause();
+      currentActiveAudio.currentTime = 0;
+      currentActiveAudio.src = '';
     } catch {}
+    currentActiveAudio = null;
   }
 }
 
@@ -63,8 +67,7 @@ export async function speakEdgeTtsText(
   text: string,
   options?: { voice?: string; rate?: string; onEnd?: () => void }
 ): Promise<boolean> {
-  // Ensure shared audio element is initialized
-  if (typeof window !== 'undefined' && !sharedAudioElement) {
+  if (typeof window !== 'undefined' && !isMobileAudioUnlocked) {
     unlockMobileAudio();
   }
 
@@ -107,9 +110,11 @@ export async function speakEdgeTtsText(
     const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
     const audioUrl = URL.createObjectURL(blob);
 
-    const audio = sharedAudioElement || new Audio();
-    audio.src = audioUrl;
+    const audio = new Audio(audioUrl);
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
     audio.volume = 1.0;
+    currentActiveAudio = audio;
 
     return new Promise((resolve) => {
       let isDone = false;
@@ -117,6 +122,9 @@ export async function speakEdgeTtsText(
       const finish = (success: boolean) => {
         if (isDone) return;
         isDone = true;
+        if (currentActiveAudio === audio) {
+          currentActiveAudio = null;
+        }
         try {
           URL.revokeObjectURL(audioUrl);
         } catch {}

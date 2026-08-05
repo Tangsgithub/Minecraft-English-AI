@@ -347,19 +347,19 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       questions: [
         {
           question: '僵尸（Zombie）最害怕清晨的什么？',
-          options: ['Sunlight (阳光)', 'Lava (岩浆)', 'Water (水)', 'Shadow (阴影)'],
+          options: ['Lava (岩浆)', 'Sunlight (阳光)', 'Water (水)', 'Shadow (阴影)'],
           answer: 'Sunlight (阳光)',
           explanation: 'Zombies burn in the morning sunlight!'
         },
         {
           question: '“合成台”的英文短语是以下哪一个？',
-          options: ['Crafting Table', 'Furnace Block', 'Chest Box', 'Redstone Wire'],
+          options: ['Furnace Block', 'Chest Box', 'Crafting Table', 'Redstone Wire'],
           answer: 'Crafting Table',
           explanation: 'Crafting Table 是 Minecraft 里的核心合成工具！'
         },
         {
           question: '请补全对话：“Excuse me, is this your coat?” - “Yes, ____.”',
-          options: ['it is', 'it isn\'t', 'he is', 'they are'],
+          options: ['it isn\'t', 'he is', 'they are', 'it is'],
           answer: 'it is',
           explanation: '肯定的简短回答是：Yes, it is.'
         }
@@ -378,19 +378,19 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       questions: [
         {
           question: '苦力怕靠近玩家时会发出什么特有的嘶嘶声？',
-          options: ['Ssssss! (嘶嘶)', 'Roar! (咆哮)', 'Meow! (喵喵)', 'Bzzzz! (蜂鸣)'],
+          options: ['Roar! (咆哮)', 'Meow! (喵喵)', 'Ssssss! (嘶嘶)', 'Bzzzz! (蜂鸣)'],
           answer: 'Ssssss! (嘶嘶)',
           explanation: 'Creeper is famous for its "Ssssss!" fuse sound!'
         },
         {
           question: '“这是一块钻石”用英语怎么说？',
-          options: ['This is a diamond.', 'That are a diamond.', 'This is an emerald.', 'Is this diamond.'],
+          options: ['That are a diamond.', 'This is a diamond.', 'This is an emerald.', 'Is this diamond.'],
           answer: 'This is a diamond.',
           explanation: 'This is + a/an + 单数名词：表示“这是一...”'
         },
         {
           question: '在我的世界中，“Inventory”的意思是？',
-          options: ['物品栏 / 背包', '地图导航', '下界传送门', '附魔台'],
+          options: ['地图导航', '下界传送门', '附魔台', '物品栏 / 背包'],
           answer: '物品栏 / 背包',
           explanation: 'Press "E" key to open your inventory!'
         }
@@ -409,19 +409,19 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       questions: [
         {
           question: '末影龙守护在哪个维度（Dimension）中？',
-          options: ['The End (末地)', 'The Nether (下界)', 'Overworld (主世界)', 'Deep Dark (深暗之域)'],
+          options: ['The Nether (下界)', 'Overworld (主世界)', 'The End (末地)', 'Deep Dark (深暗之域)'],
           answer: 'The End (末地)',
           explanation: 'The Ender Dragon resides in The End realm!'
         },
         {
           question: '请翻译句子：“Where is my enchanted bow?”',
-          options: ['我的附魔弓在哪里？', '这是我的普通弓吗？', '我在哪里可以制造弓箭？', '你的弓丢了吗？'],
+          options: ['这是我的普通弓吗？', '我在哪里可以制造弓箭？', '你的弓丢了吗？', '我的附魔弓在哪里？'],
           answer: '我的附魔弓在哪里？',
           explanation: 'Where is... 询问地点；enchanted bow 表示附魔弓。'
         },
         {
           question: '词汇辨析：下面哪个单词表示“绿宝石”？',
-          options: ['Emerald', 'Diamond', 'Obsidian', 'Gold Ingot'],
+          options: ['Diamond', 'Emerald', 'Obsidian', 'Gold Ingot'],
           answer: 'Emerald',
           explanation: 'Emerald 即绿宝石，是村庄交易的黄金货币！'
         }

@@ -71,9 +71,18 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   const getQuizOptions = (correctItem: VocabItem) => {
     if (!correctItem) return [];
     const others = combinedList.filter(v => v.word !== correctItem.word);
-    // Shuffle others
-    const shuffledOthers = [...others].sort(() => 0.5 - Math.random()).slice(0, 3);
-    const options = [correctItem, ...shuffledOthers].sort(() => 0.5 - Math.random());
+    // Shuffle others with Fisher-Yates
+    const shuffledOthers = [...others];
+    for (let i = shuffledOthers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledOthers[i], shuffledOthers[j]] = [shuffledOthers[j], shuffledOthers[i]];
+    }
+    const options = [correctItem, ...shuffledOthers.slice(0, 3)];
+    // Fisher-Yates shuffle final options
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
     return options;
   };
 
