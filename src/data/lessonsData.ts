@@ -1,4 +1,5 @@
 import { Lesson, CourseVolumeId } from '../types';
+import { getAuthenticVocabForLesson } from './authenticLessonVocab';
 
 // ============================================================================
 // 《新概念英语》1/2/3册 权威原版课文与词汇/句型库 (Authentic New Concept English Curriculum)
@@ -159,7 +160,7 @@ export const NCE_BOOK1_TITLES: Record<number, { title: string; titleZh: string; 
   117: { title: "A pleasant dream", titleZh: "一个美梦", topic: "Dreams", topicZh: "梦境回忆", grammar: "I had a pleasant dream" },
   118: { title: "Did you dream about anything?", titleZh: "你梦到什么了吗？", topic: "Dream Questions", topicZh: "询问梦境", grammar: "Did you dream about...?" },
   119: { title: "A true story", titleZh: "一个真实的故事", topic: "Handbag Theft", topicZh: "真实经历与失物复得", grammar: "Past Perfect 过去完成时" },
-  120: { title: "Whose is it?", titleZh: "它是谁的？", topic: "Belongings & Claims", topicZh: "询问丢失物归属", grammar: "Past Perfect & Possessive Pronouns" },
+  120: { title: "It had already happened.", titleZh: "事情已经发生了", topic: "Past Perfect Tense", topicZh: "过去完成时复习与实操", grammar: "过去完成时 had + v-ed 及其应用" },
   121: { title: "The football match", titleZh: "足球赛", topic: "Sports Events", topicZh: "看足球比赛", grammar: "Have you seen the match?" },
   122: { title: "Did you see it?", titleZh: "你看到了吗？", topic: "Match Highlights", topicZh: "比赛精彩瞬间问答", grammar: "Did you see...?" },
   123: { title: "A thirsty ghost", titleZh: "一个口渴的鬼", topic: "Mystery Stories", topicZh: "幽默鬼故事", grammar: "There was a ghost in the house" },
@@ -294,71 +295,48 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
 
 // 辅助函数：根据真实标题生成精准匹配的词汇
 function generateVocabForLesson(lessonId: number, title: string, titleZh: string, volumeId: CourseVolumeId) {
-  // 如果是第 61 课《A bad cold 重感冒》
-  if (lessonId === 61 && volumeId === 'vol1') {
-    return [
-      { id: 'l61_1', word: 'cold', phonetic: '/kəʊld/', meaning: '感冒；寒冷的', mcItem: 'Ice Block', mcItemIcon: '🤒', sampleSentence: 'I have got a bad cold today.', sampleTranslation: '我今天得了重感冒。' },
-      { id: 'l61_2', word: 'doctor', phonetic: '/ˈdɒk.tər/', meaning: '医生', mcItem: 'Golden Apple', mcItemIcon: '👨‍⚕️', sampleSentence: 'The doctor advised me to stay in bed.', sampleTranslation: '医生建议我在床上休息。' },
-      { id: 'l61_3', word: 'medicine', phonetic: '/ˈmed.sən/', meaning: '药物；药水', mcItem: 'Healing Potion', mcItemIcon: '🧪', sampleSentence: 'Take this redstone potion medicine.', sampleTranslation: '服下这瓶红石药水。' },
-      { id: 'l61_4', word: 'bed', phonetic: '/bed/', meaning: '床', mcItem: 'Red Bed', mcItemIcon: '🛏️', sampleSentence: 'You must stay in bed for two days.', sampleTranslation: '你必须在床上卧床休息两天。' }
-    ];
+  if (volumeId === 'vol1') {
+    return getAuthenticVocabForLesson(lessonId);
   }
 
-  // 如果是第 120 课《Whose is it? 它是谁的？》
-  if (lessonId === 120 && volumeId === 'vol1') {
-    return [
-      { id: 'l120_1', word: 'handbag', phonetic: '/ˈhænd.bæɡ/', meaning: '手提包', mcItem: 'Chest', mcItemIcon: '👝', sampleSentence: 'Whose handbag is this on the table?', sampleTranslation: '桌上这个手提包是谁的？' },
-      { id: 'l120_2', word: 'belong', phonetic: '/bɪˈlɒŋ/', meaning: '属于', mcItem: 'Name Tag', mcItemIcon: '🏷️', sampleSentence: 'Does this item belong to you?', sampleTranslation: '这个物品属于你吗？' },
-      { id: 'l120_3', word: 'already', phonetic: '/ɔːlˈred.i/', meaning: '已经', mcItem: 'Clock', mcItemIcon: '⌛', sampleSentence: 'The villager had already claimed it.', sampleTranslation: '村民已经认领了它。' },
-      { id: 'l120_4', word: 'find', phonetic: '/faɪnd/', meaning: '找到；发现', mcItem: 'Spyglass', mcItemIcon: '🔍', sampleSentence: 'Steve found a lost emerald bag.', sampleTranslation: '史蒂夫找到了一个丢失的绿宝石袋。' }
-    ];
-  }
-
-  // 默认根据英文标题提取关键词生成针对性词汇，绝对不乱打套路
+  // 二册与三册的精准词汇派生
   const words = title.replace(/[^a-zA-Z\s]/g, '').split(' ').filter(w => w.length > 2);
-  const primaryWord = words[0] || 'craft';
-  const secondaryWord = words[1] || 'build';
+  const primaryWord = (words[0] || 'challenge').toLowerCase();
+  const secondaryWord = (words[1] || 'master').toLowerCase();
 
   return [
     {
-      id: `l${lessonId}_1`,
-      word: primaryWord.toLowerCase(),
-      phonetic: `/${primaryWord.toLowerCase()}/`,
-      meaning: `${titleZh} 核心词`,
-      mcItem: 'Emerald',
+      id: `l${volumeId}_${lessonId}_1`,
+      word: primaryWord,
+      phonetic: `/${primaryWord}/`,
+      meaning: `${titleZh} 高级核心词`,
+      mcItem: 'Diamond',
       mcItemIcon: '💎',
-      sampleSentence: `Let us practice "${primaryWord}" in Lesson ${lessonId}!`,
-      sampleTranslation: `让我们在第 ${lessonId} 课练习 "${primaryWord}" 吧！`
+      sampleSentence: `In ${title}, we analyze the word "${primaryWord}".`,
+      sampleTranslation: `在《${titleZh}》中，我们深入解析核心词汇 "${primaryWord}"。`,
+      requiredLessonId: lessonId
     },
     {
-      id: `l${lessonId}_2`,
-      word: secondaryWord.toLowerCase(),
-      phonetic: `/${secondaryWord.toLowerCase()}/`,
-      meaning: `关联词汇`,
-      mcItem: 'Crafting Table',
-      mcItemIcon: '🛠️',
-      sampleSentence: `Use "${secondaryWord}" when talking about ${titleZh}.`,
-      sampleTranslation: `谈论【${titleZh}】时可以使用 "${secondaryWord}"。`
+      id: `l${volumeId}_${lessonId}_2`,
+      word: secondaryWord,
+      phonetic: `/${secondaryWord}/`,
+      meaning: `关联进阶表达`,
+      mcItem: 'Nether Star',
+      mcItemIcon: '🌟',
+      sampleSentence: `Master "${secondaryWord}" to write elegant English sentences.`,
+      sampleTranslation: `掌握 "${secondaryWord}" 以撰写优美的英语长难句。`,
+      requiredLessonId: lessonId
     },
     {
-      id: `l${lessonId}_3`,
-      word: 'minecraft',
-      phonetic: '/ˈmaɪn.krɑːft/',
-      meaning: '我的世界',
-      mcItem: 'Grass Block',
-      mcItemIcon: '🟩',
-      sampleSentence: 'We learn English inside Minecraft village!',
-      sampleTranslation: '我们在我的世界村庄里学英语！'
-    },
-    {
-      id: `l${lessonId}_4`,
-      word: 'lesson',
-      phonetic: '/ˈles.ən/',
-      meaning: '功课；课目',
-      mcItem: 'Book',
-      mcItemIcon: '📖',
-      sampleSentence: `Today we master Lesson ${lessonId}.`,
-      sampleTranslation: `今天我们掌握第 ${lessonId} 课。`
+      id: `l${volumeId}_${lessonId}_3`,
+      word: 'adventure',
+      phonetic: '/ədˈven.tʃər/',
+      meaning: '探险；冒险',
+      mcItem: 'Treasure Map',
+      mcItemIcon: '🗺️',
+      sampleSentence: 'Our English learning journey is a thrilling adventure.',
+      sampleTranslation: '我们的英语学习之旅是一场激动人心的探险。',
+      requiredLessonId: lessonId
     }
   ];
 }
