@@ -8,8 +8,6 @@ import {
   playEmeraldSound,
   getTtsEngine,
   setTtsEngine,
-  getSelectedKokoroVoice,
-  setSelectedKokoroVoice,
   getSelectedEdgeVoice,
   setSelectedEdgeVoice,
   speakText,
@@ -17,7 +15,6 @@ import {
   testAudioSound,
   TtsEngineType
 } from '../utils/audio';
-import { KOKORO_VOICES, KokoroVoiceId, subscribeKokoroStatus } from '../services/kokoroService';
 import { EDGE_VOICES } from '../services/edgeTtsService';
 
 interface SettingsModalProps {
@@ -44,20 +41,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // TTS Engine & Voice Settings
   const [ttsEngineState, setTtsEngineState] = useState<TtsEngineType>(getTtsEngine());
-  const [kokoroVoiceState, setKokoroVoiceState] = useState<KokoroVoiceId>(getSelectedKokoroVoice());
   const [edgeVoiceState, setEdgeVoiceState] = useState<string>(getSelectedEdgeVoice());
-  const [kokoroStatus, setKokoroStatus] = useState<{ loading: boolean; progress: number; ready: boolean; error: string | null }>({
-    loading: false,
-    progress: 0,
-    ready: false,
-    error: null
-  });
   const [isTestingSpeech, setIsTestingSpeech] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = subscribeKokoroStatus(setKokoroStatus);
-    return () => unsubscribe();
-  }, []);
 
   const [nickname, setNickname] = useState<string>(profile.nickname || 'Tom');
   const [age, setAge] = useState<number>(profile.age || 8);
@@ -101,7 +86,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleSave = () => {
     playEmeraldSound();
     setTtsEngine(ttsEngineState);
-    setSelectedKokoroVoice(kokoroVoiceState);
     setSelectedEdgeVoice(edgeVoiceState);
 
     onSaveProfile({
@@ -291,8 +275,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {/* Engine Selection: 3 Options */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Engine Selection: 2 Online Options */}
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -306,32 +290,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <div className="font-bold text-xs flex items-center justify-between text-emerald-300">
-                  <span>✨ 云端极速 (推荐)</span>
+                  <span>✨ 云端 AI 神经网络 (推荐)</span>
                   {ttsEngineState === 'edge' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
                 </div>
                 <div className="text-[10px] opacity-80 mt-1">
-                  微软神经网络语音，优雅自然，100ms 极速响应
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playClickSound();
-                  setTtsEngineState('kokoro');
-                }}
-                className={`p-2.5 rounded-xl border-2 text-left transition-all ${
-                  ttsEngineState === 'kokoro'
-                    ? 'bg-purple-600/40 border-purple-400 text-white shadow-md ring-1 ring-purple-400/50'
-                    : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <div className="font-bold text-xs flex items-center justify-between text-purple-300">
-                  <span>🎙️ Kokoro-82M</span>
-                  {ttsEngineState === 'kokoro' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
-                </div>
-                <div className="text-[10px] opacity-80 mt-1">
-                  端侧开源 AI 模型，需端侧计算资源
+                  服务器端在线高清合成，零显存占用，100ms 极速发音
                 </div>
               </button>
 
@@ -348,7 +311,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 }`}
               >
                 <div className="font-bold text-xs flex items-center justify-between text-amber-300">
-                  <span>🤖 浏览器原生</span>
+                  <span>🤖 浏览器原生系统语音</span>
                   {ttsEngineState === 'webspeech' && <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />}
                 </div>
                 <div className="text-[10px] opacity-80 mt-1">
@@ -391,56 +354,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {/* Kokoro Voice Selector */}
-            {ttsEngineState === 'kokoro' && (
-              <div className="space-y-2 pt-1">
-                <label className="block text-xs font-bold text-slate-200">
-                  选择 Kokoro 端侧音色 (Kokoro Persona):
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {KOKORO_VOICES.map(v => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        setKokoroVoiceState(v.id);
-                      }}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        kokoroVoiceState === v.id
-                          ? 'bg-purple-500/30 border-purple-400 text-white ring-1 ring-purple-400'
-                          : 'bg-slate-800/40 border-slate-700 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="font-bold text-xs flex items-center justify-between text-purple-300">
-                        <span>{v.name} ({v.gender})</span>
-                        <span className="text-[10px] text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded font-mono">
-                          {v.accent}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{v.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Voice Audition */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-800">
               <div className="text-[11px] text-slate-300 font-mono">
                 {ttsEngineState === 'edge' ? (
                   <span className="text-emerald-400 font-bold flex items-center space-x-1">
-                    <span>✨ 云端极速神经网络已就绪 (低延迟)</span>
+                    <span>✨ 云端 AI 神经网络已就绪 (在线合成)</span>
                   </span>
-                ) : ttsEngineState === 'kokoro' ? (
-                  kokoroStatus.loading ? (
-                    <span className="text-amber-400 flex items-center space-x-1">
-                      <span className="animate-spin">⏳</span>
-                      <span>Kokoro 初始化中 {kokoroStatus.progress}%</span>
-                    </span>
-                  ) : (
-                    <span className="text-purple-300">Kokoro-82M 端侧模式</span>
-                  )
                 ) : (
                   <span className="text-slate-400">系统原生 TTS</span>
                 )}

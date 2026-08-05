@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
 import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic } from 'lucide-react';
-import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio, getTtsEngine } from '../utils/audio';
-import { subscribeKokoroStatus } from '../services/kokoroService';
+import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio } from '../utils/audio';
 import { User } from 'firebase/auth';
 
 interface HeaderBarProps {
@@ -31,14 +30,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   
   // XP calculation for next level
   const { nextLevelMinXp, progressPercent } = getXpProgressForCurrentLevel(profile.xp, profile.level);
-
-  const [kokoroReady, setKokoroReady] = useState(false);
-  const ttsEngine = getTtsEngine();
-
-  useEffect(() => {
-    const unsub = subscribeKokoroStatus(s => setKokoroReady(s.ready));
-    return () => unsub();
-  }, []);
 
   const handleSoundToggle = () => {
     unlockAudio();

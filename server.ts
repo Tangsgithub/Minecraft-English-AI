@@ -99,12 +99,31 @@ async function startServer() {
         const promptText = `${systemPrompt}\n\nConversation History:\n` +
           messages.map((m: any) => `${m.role === 'user' ? 'Student' : 'Alex Teacher'}: ${m.content}`).join('\n');
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: promptText
-        });
+        const requestModel = config?.model || 'gemini-2.5-flash';
+        const candidateModels = Array.from(new Set([requestModel, 'gemini-2.5-flash', 'gemini-2.0-flash']));
 
-        const replyText = response.text || "Alex: Great effort! Keep exploring!";
+        let responseText = '';
+        let lastError: any = null;
+
+        for (const mod of candidateModels) {
+          try {
+            const response = await ai.models.generateContent({
+              model: mod,
+              contents: promptText
+            });
+            responseText = response.text || '';
+            if (responseText) break;
+          } catch (err: any) {
+            console.warn(`Gemini model ${mod} failed, trying fallback model:`, err?.message || err);
+            lastError = err;
+          }
+        }
+
+        if (!responseText && lastError) {
+          throw lastError;
+        }
+
+        const replyText = responseText || "Alex: Great effort! Keep exploring!";
         return res.json({ text: replyText });
       }
 

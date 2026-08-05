@@ -225,10 +225,10 @@ let currentEdgeVoice: string = 'en-US-AnaNeural';
 export function getTtsEngine(): TtsEngineType {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('mc_tts_engine');
-    if (saved === 'webspeech' || saved === 'kokoro' || saved === 'edge') {
+    if (saved === 'webspeech' || saved === 'edge') {
       currentTtsEngine = saved as TtsEngineType;
     } else {
-      currentTtsEngine = 'edge'; // 默认极速高品质神经网络声音
+      currentTtsEngine = 'edge'; // 默认极速高品质神经网络声音 (服务器端)
     }
   }
   return currentTtsEngine;
