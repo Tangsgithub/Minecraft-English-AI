@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, BiomeChapter, getBiomeChapterByUnit } from '../data/storyData';
-import { getFullLessonsCatalog, LESSONS_DATA } from '../data/lessonsData';
+import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
   Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X
@@ -219,7 +219,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   const [userQuizChoice, setUserQuizChoice] = useState<string | null>(null);
   const [breakingLessonId, setBreakingLessonId] = useState<number | null>(null);
 
-  const catalog = getFullLessonsCatalog();
+  const selectedVolId = profile.selectedVolumeId || 'vol1';
+  const catalog = getFullLessonsCatalog(selectedVolId);
 
   // Scroll to selected biome section
   const biomeSectionRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -239,72 +240,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
     setBreakingLessonId(lessonId);
     setTimeout(() => setBreakingLessonId(null), 700);
 
-    const found = LESSONS_DATA.find(l => l.id === lessonId);
-    if (found) {
-      setActiveLesson(found);
-    } else {
-      const cat = catalog.find(c => c.id === lessonId);
-      const unitNum = cat?.unit || 1;
-      const chapter = getBiomeChapterByUnit(unitNum);
-      const storySnippet = chapter.lessonsStory[lessonId] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 开展第 ${lessonId} 课英语实践。`;
-
-      setActiveLesson({
-        id: lessonId,
-        unit: unitNum,
-        title: cat?.title || `Lesson ${lessonId}`,
-        titleZh: cat?.titleZh || `第 ${lessonId} 课`,
-        topic: cat?.topic || 'Minecraft Adventure',
-        topicZh: '我的世界场景表达',
-        difficulty: cat?.difficulty || 'easy',
-        minecraftScene: `${chapter.biomeNameZh} 关卡`,
-        sceneDescription: storySnippet,
-        vocabulary: [
-          {
-            id: `l${lessonId}_1`,
-            word: 'explore',
-            phonetic: '/ɪkˈsplɔːr/',
-            meaning: '探索；考察',
-            mcItem: 'Compass',
-            mcItemIcon: '🧭',
-            sampleSentence: `Lesson ${lessonId} is waiting for your exploration!`,
-            sampleTranslation: `第 ${lessonId} 课等待着你的探索！`
-          },
-          {
-            id: `l${lessonId}_2`,
-            word: 'build',
-            phonetic: '/bɪld/',
-            meaning: '建造；构建',
-            mcItem: 'Wooden Planks',
-            mcItemIcon: '🪵',
-            sampleSentence: `Build your English skills block by block!`,
-            sampleTranslation: `像搭方块一样一块块构建你的英语能力！`
-          }
-        ],
-        targetSentences: [
-          `Welcome to Lesson ${lessonId}!`,
-          `Are you ready for the ${chapter.biomeNameZh} challenge?`
-        ],
-        targetSentenceTranslations: [
-          `欢迎来到第 ${lessonId} 课！`,
-          `你准备好接受 ${chapter.biomeNameZh} 的挑战了吗？`
-        ],
-        dialogueScript: [
-          {
-            speaker: 'Alex',
-            text: `Hello, ${profile.nickname || 'Olaf'}! Welcome to Lesson ${lessonId} in ${chapter.biomeNameZh}.`,
-            translation: `你好，${profile.nickname || 'Olaf'}！欢迎来到 ${chapter.biomeNameZh} 的第 ${lessonId} 课。`,
-            avatar: '👩'
-          },
-          {
-            speaker: 'Steve',
-            text: `Hi Alex! I am ready to practice target sentences today!`,
-            translation: `嗨，Alex！我准备好今天练习核心句型了！`,
-            avatar: '👦'
-          }
-        ],
-        grammarNote: `复习 Unit ${unitNum} 核心地道表达与语法要点。`
-      });
-    }
+    const lessonData = getLessonById(lessonId, selectedVolId);
+    setActiveLesson(lessonData);
   };
 
   const handleInteractNPC = (npc: MapNPC) => {

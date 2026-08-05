@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, getBiomeChapterByUnit, getBiomeChapterByLesson, BiomeChapter } from '../data/storyData';
-import { getFullLessonsCatalog, LESSONS_DATA } from '../data/lessonsData';
+import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import {
   CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
   Award, Star, ChevronRight, BookOpen, Trophy, Flame, Shield, Flag, MapPin, Mic
@@ -243,9 +243,10 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const activeNodeRef = useRef<HTMLDivElement>(null);
 
-  const catalog = getFullLessonsCatalog();
+  const currentVolId = profile.selectedVolumeId || 'vol1';
+  const catalog = getFullLessonsCatalog(currentVolId);
 
-  // Filter lessons based on selectedUnit (0 = all 144, 1-12 = unit 1-12)
+  // Filter lessons based on selectedUnit (0 = all, 1-12 = unit 1-12)
   const displayLessons = catalog.filter(l => selectedUnit === 0 || l.unit === selectedUnit);
 
   const currentChapter: BiomeChapter = selectedUnit > 0
@@ -267,70 +268,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
 
   // Construct complete Lesson object with vocabulary and dialogues
   const getFullLessonObj = (lessonId: number): Lesson => {
-    const found = LESSONS_DATA.find(l => l.id === lessonId);
-    if (found) return found;
-
-    const cat = catalog.find(c => c.id === lessonId);
-    const unitNum = cat?.unit || 1;
-    const chapter = getBiomeChapterByUnit(unitNum);
-    const storySnippet = chapter.lessonsStory[lessonId] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 展开第 ${lessonId} 课的英语挑战。`;
-
-    return {
-      id: lessonId,
-      unit: unitNum,
-      title: cat?.title || `Lesson ${lessonId}`,
-      titleZh: cat?.titleZh || `第 ${lessonId} 课`,
-      topic: cat?.topic || 'Minecraft Adventure',
-      topicZh: '我的世界场景表达',
-      difficulty: cat?.difficulty || 'easy',
-      minecraftScene: `${chapter.biomeNameZh} 探索关卡`,
-      sceneDescription: storySnippet,
-      vocabulary: [
-        {
-          id: `l${lessonId}_1`,
-          word: 'adventure',
-          phonetic: '/ədˈven.tʃər/',
-          meaning: '冒险；探索',
-          mcItem: 'Compass',
-          mcItemIcon: '🧭',
-          sampleSentence: `Lesson ${lessonId} is full of exciting English adventures!`,
-          sampleTranslation: `第 ${lessonId} 课充满刺激的英语冒险！`
-        },
-        {
-          id: `l${lessonId}_2`,
-          word: 'craft',
-          phonetic: '/krɑːft/',
-          meaning: '打造；合成',
-          mcItem: 'Crafting Table',
-          mcItemIcon: '🛠️',
-          sampleSentence: `Let us craft new sentences together!`,
-          sampleTranslation: `让我们一起打造新的句子吧！`
-        }
-      ],
-      targetSentences: [
-        `Welcome to Lesson ${lessonId}!`,
-        `Are you ready for the ${chapter.biomeNameZh} challenge?`
-      ],
-      targetSentenceTranslations: [
-        `欢迎来到第 ${lessonId} 课！`,
-        `你准备好接受 ${chapter.biomeNameZh} 的挑战了吗？`
-      ],
-      dialogueScript: [
-        {
-          speaker: 'Alex',
-          text: `Hello, ${profile.nickname || 'Olaf'}! Welcome to Lesson ${lessonId} in ${chapter.biomeNameZh}.`,
-          translation: `你好，${profile.nickname || 'Olaf'}！欢迎来到 ${chapter.biomeNameZh} 的第 ${lessonId} 课。`,
-          avatar: '👩'
-        },
-        {
-          speaker: 'Steve',
-          text: `Hi Alex! I am ready to practice target sentences today!`,
-          translation: `嗨，Alex！我准备好今天练习核心句型了！`,
-          avatar: '👦'
-        }
-      ],
-      grammarNote: `复习 Unit ${unitNum} 的核心地道句型表达与自然拼读发音。`
-    };
+    return getLessonById(lessonId, currentVolId);
   };
 
   const handleOpenNodeModal = (lessonId: number, isUnlocked: boolean) => {

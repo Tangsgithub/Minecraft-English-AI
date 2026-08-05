@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Lesson, UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
-import { getFullLessonsCatalog, LESSONS_DATA } from '../data/lessonsData';
+import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import { BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play, MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid, Globe, Flame, AlertTriangle, Layers, Zap, Compass, Star } from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
@@ -73,7 +73,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
     }
   };
 
-  const catalog = getFullLessonsCatalog();
+  const catalog = getFullLessonsCatalog(selectedVolumeId);
 
   // Filter lessons
   const filteredCatalog = catalog.filter(item => {
@@ -88,52 +88,9 @@ export const LessonMap: React.FC<LessonMapProps> = ({
 
   const handleOpenLessonDetail = (lessonId: number) => {
     playClickSound();
-    // Look up detailed lesson data or construct lesson view
-    const found = LESSONS_DATA.find(l => l.id === lessonId);
-    if (found) {
-      setActiveLesson(found);
-    } else {
-      // Fallback structured lesson template for catalog placeholders
-      const catalogItem = catalog.find(c => c.id === lessonId);
-      setActiveLesson({
-        id: lessonId,
-        unit: catalogItem?.unit || 1,
-        title: catalogItem?.title || `Lesson ${lessonId}`,
-        titleZh: catalogItem?.titleZh || `第 ${lessonId} 课`,
-        topic: catalogItem?.topic || 'Minecraft Adventure',
-        topicZh: '我的世界场景表达',
-        difficulty: catalogItem?.difficulty || 'easy',
-        minecraftScene: 'Minecraft Village Crafting Station',
-        sceneDescription: `Steve and Alex meet at the crafting table for Lesson ${lessonId}.`,
-        vocabulary: [
-          {
-            id: `l${lessonId}_1`,
-            word: 'crafting',
-            phonetic: '/ˈkrɑːf.tɪŋ/',
-            meaning: '合成；制作',
-            mcItem: 'Crafting Table',
-            mcItemIcon: '🛠️',
-            sampleSentence: `Let us practice English for Lesson ${lessonId}!`,
-            sampleTranslation: `让我们练习第 ${lessonId} 课的英语吧！`
-          }
-        ],
-        targetSentences: [
-          `Welcome to Lesson ${lessonId}!`,
-          'Can you build a wooden house?',
-          'Yes, I can.'
-        ],
-        targetSentenceTranslations: [
-          `欢迎来到第 ${lessonId} 课！`,
-          '你能造一间木头房子吗？',
-          '是的，我可以。'
-        ],
-        dialogueScript: [
-          { speaker: 'Alex', text: `Hello! Ready for Lesson ${lessonId}?`, translation: `你好！准备好学习第 ${lessonId} 课了吗？`, avatar: '👩' },
-          { speaker: 'Steve', text: 'Yes, Alex! I brought my pickaxe.', translation: '是的，亚历克斯！我带了我的铁镐。', avatar: '👦' }
-        ],
-        grammarNote: '情态动词 Can 的用法：Can + 动词原形。'
-      });
-    }
+    // Retrieve authentic New Concept lesson definition for current volume
+    const lessonData = getLessonById(lessonId, selectedVolumeId);
+    setActiveLesson(lessonData);
   };
 
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
