@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, APP_VERSION_INFO } from '../types';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
-import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic, Headphones } from 'lucide-react';
 import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio } from '../utils/audio';
 import { User } from 'firebase/auth';
 
@@ -12,6 +12,7 @@ interface HeaderBarProps {
   onOpenSettings: () => void;
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
+  onOpenCustomerService?: () => void;
   onOpenVipModal?: () => void;
   onGoToLandingPage?: () => void;
   soundEnabled: boolean;
@@ -25,6 +26,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenSettings,
   onOpenHelpWizard,
   onOpenParentDashboard,
+  onOpenCustomerService,
   onOpenVipModal,
   onGoToLandingPage,
   soundEnabled,
@@ -191,6 +193,21 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#487E2C]" />
             <span className="hidden sm:inline">家长</span>
           </button>
+
+          {/* Customer Service button */}
+          {onOpenCustomerService && (
+            <button
+              onClick={() => {
+                playClickSound();
+                onOpenCustomerService();
+              }}
+              className="px-2 sm:px-3 py-1 sm:py-2 bg-emerald-500 hover:bg-emerald-400 border-2 border-black text-slate-950 font-black rounded-xl transition-all flex items-center space-x-1 text-xs font-mono shadow-[0_2px_0_0_#000] active:translate-y-0.5"
+              title="在线客服与帮助支持"
+            >
+              <Headphones className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950" />
+              <span className="hidden sm:inline">客服</span>
+            </button>
+          )}
 
           {/* Sound Toggle */}
           <button

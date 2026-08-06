@@ -18,6 +18,7 @@ import { EyeCareModal } from './components/EyeCareModal';
 import { AuthModal } from './components/AuthModal';
 import { LandingPage } from './components/LandingPage';
 import { VipActivationModal } from './components/VipActivationModal';
+import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
 import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
@@ -101,6 +102,7 @@ export default function App() {
   const [isParentDashboardOpen, setIsParentDashboardOpen] = useState<boolean>(false);
   const [isEyeCareOpen, setIsEyeCareOpen] = useState<boolean>(false);
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
+  const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -284,18 +286,36 @@ export default function App() {
     setIsFirstLaunchOpen(true);
   };
 
+  const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
+    if (!currentUser) {
+      playClickSound();
+      setIsAuthOpen(true);
+      return;
+    }
+    if (targetTab) setActiveTab(targetTab);
+    setIsLandingView(false);
+  };
+
+  // Strictly enforce that unauthenticated users cannot bypass landing page
+  useEffect(() => {
+    if (!currentUser && !isLandingView) {
+      setIsLandingView(true);
+      setIsAuthOpen(true);
+    }
+  }, [currentUser, isLandingView]);
+
   if (isLandingView) {
     return (
       <>
         <LandingPage
-          onEnterApp={(targetTab) => {
-            if (targetTab) setActiveTab(targetTab);
-            setIsLandingView(false);
-          }}
+          currentUser={currentUser}
+          onEnterApp={handleEnterApp}
           onOpenAuth={() => setIsAuthOpen(true)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+          onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
           onOpenVipModal={() => setIsVipModalOpen(true)}
         />
+        <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
         {isAuthOpen && (
           <AuthModal
             currentUser={currentUser}
@@ -320,6 +340,14 @@ export default function App() {
           profile={profile}
           onUpdateProfile={handleUpdateProfile}
         />
+        <CustomerServiceModal
+          isOpen={isCustomerServiceOpen}
+          onClose={() => setIsCustomerServiceOpen(false)}
+          profile={profile}
+          currentUser={currentUser}
+          onOpenVipModal={() => setIsVipModalOpen(true)}
+          onOpenAuthModal={() => setIsAuthOpen(true)}
+        />
       </>
     );
   }
@@ -335,6 +363,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+        onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
         onOpenVipModal={() => setIsVipModalOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
         soundEnabled={soundEnabled}
@@ -455,6 +484,7 @@ export default function App() {
                 onSelectLessonForChat={handleSelectLessonForChat}
                 onCompleteLesson={handleCompleteLesson}
                 onAwardEmeralds={handleAwardEmeralds}
+                onOpenVipModal={() => setIsVipModalOpen(true)}
               />
             </>
           )}
@@ -579,6 +609,17 @@ export default function App() {
           onProfileLoaded={(loaded) => setProfile(loaded)}
         />
       )}
+
+      <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
+
+      <CustomerServiceModal
+        isOpen={isCustomerServiceOpen}
+        onClose={() => setIsCustomerServiceOpen(false)}
+        profile={profile}
+        currentUser={currentUser}
+        onOpenVipModal={() => setIsVipModalOpen(true)}
+        onOpenAuthModal={() => setIsAuthOpen(true)}
+      />
 
     </div>
   );

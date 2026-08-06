@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { APP_VERSION_INFO } from '../types';
+import { User } from 'firebase/auth';
 import {
   Sparkles,
   Gamepad2,
@@ -14,21 +15,28 @@ import {
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
-  Award
+  Award,
+  LogIn,
+  KeyRound,
+  Headphones
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 
 interface LandingPageProps {
+  currentUser: User | null;
   onEnterApp: (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => void;
   onOpenAuth: () => void;
   onOpenParentDashboard: () => void;
+  onOpenCustomerService?: () => void;
   onOpenVipModal?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
+  currentUser,
   onEnterApp,
   onOpenAuth,
   onOpenParentDashboard,
+  onOpenCustomerService,
   onOpenVipModal
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
@@ -40,6 +48,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       onOpenVipModal();
     } else {
       setIsPurchaseModalOpen(true);
+    }
+  };
+
+  const handleEnterClick = (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => {
+    if (!currentUser) {
+      playClickSound();
+      onOpenAuth();
+    } else {
+      playEmeraldSound();
+      onEnterApp(targetTab);
     }
   };
 
@@ -58,10 +76,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div
             className="flex items-center space-x-2.5 cursor-pointer"
-            onClick={() => {
-              playClickSound();
-              onEnterApp('map');
-            }}
+            onClick={() => handleEnterClick('map')}
           >
             <div className="w-9 h-9 bg-emerald-600 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] flex items-center justify-center text-lg font-mono">
               🟩
@@ -80,6 +95,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            {onOpenCustomerService && (
+              <button
+                onClick={() => {
+                  playClickSound();
+                  onOpenCustomerService();
+                }}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 flex items-center space-x-1"
+              >
+                <Headphones className="w-3.5 h-3.5" />
+                <span>在线客服</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 playClickSound();
@@ -96,20 +124,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 playClickSound();
                 onOpenAuth();
               }}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 active:shadow-none"
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 active:shadow-none flex items-center space-x-1"
             >
-              登录
+              {currentUser ? (
+                <>
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400 truncate max-w-[90px]">{currentUser.email?.split('@')[0] || '已登录'}</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>注册 / 登录</span>
+                </>
+              )}
             </button>
 
             <button
-              onClick={() => {
-                playEmeraldSound();
-                onEnterApp('map');
-              }}
+              onClick={() => handleEnterClick('map')}
               className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
             >
-              <Gamepad2 className="w-4 h-4" />
-              <span>进入学习大厅</span>
+              {currentUser ? (
+                <>
+                  <Gamepad2 className="w-4 h-4" />
+                  <span>进入学习大厅</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  <span>注册/登录后进入</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -141,14 +185,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* 核心操作按钮 */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
-              onClick={() => {
-                playEmeraldSound();
-                onEnterApp('map');
-              }}
+              onClick={() => handleEnterClick('map')}
               className="w-full sm:w-auto px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-base border-4 border-slate-950 shadow-[4px_4px_0_0_#000] transition-all flex items-center justify-center space-x-2 active:translate-y-0.5 active:shadow-none"
             >
-              <Gamepad2 className="w-5 h-5 text-slate-950" />
-              <span>立即免费体验 (无需注册)</span>
+              {currentUser ? (
+                <>
+                  <Gamepad2 className="w-5 h-5 text-slate-950" />
+                  <span>🎮 进入学习大厅 (已登录)</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5 text-slate-950" />
+                  <span>🔑 注册 / 登录开启学习</span>
+                </>
+              )}
             </button>
 
             <button
@@ -158,6 +208,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <Zap className="w-5 h-5 text-slate-950 fill-current" />
               <span>开通/激活 VIP 终身包 (¥99)</span>
             </button>
+          </div>
+
+          {/* 登录状态醒目标示 */}
+          <div className="pt-1">
+            {currentUser ? (
+              <div className="text-emerald-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-emerald-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">
+                <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>已登录账号：{currentUser.email}，随时可以开始关卡练习！</span>
+              </div>
+            ) : (
+              <div className="text-amber-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-amber-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">
+                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>🔒 提示：首页不提供直接进入，必须先注册或登录账号才可进入学习页面</span>
+              </div>
+            )}
           </div>
 
           {/* 精简 Hero 视觉展示卡片 */}
@@ -320,9 +385,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* ===== FOOTER ===== */}
         <footer className="pt-8 pb-6 border-t-4 border-slate-900 text-slate-500 text-xs text-center max-w-5xl mx-auto px-4 space-y-3 font-mono">
           <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400 font-bold">
-            <button onClick={() => onEnterApp('map')} className="hover:text-emerald-400">
+            <button onClick={() => handleEnterClick('map')} className="hover:text-emerald-400">
               学习大厅
             </button>
+            {onOpenCustomerService && (
+              <button onClick={onOpenCustomerService} className="text-emerald-400 hover:underline flex items-center gap-1">
+                <Headphones className="w-3.5 h-3.5" />
+                <span>官方客服与工单</span>
+              </button>
+            )}
             <button onClick={onOpenParentDashboard} className="hover:text-emerald-400">
               家长控制中心
             </button>
@@ -367,7 +438,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               onClick={() => {
                 setIsPurchaseModalOpen(false);
-                onEnterApp('map');
+                handleEnterClick('map');
               }}
               className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[2px_2px_0_0_#000]"
             >

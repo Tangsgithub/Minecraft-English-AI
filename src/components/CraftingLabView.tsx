@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserProfile, VocabItem, Lesson } from '../types';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA } from '../data/lessonsData';
+import { EXTRA_CRAFTING_RECIPES } from '../data/craftingRecipesData';
 import {
   Hammer, Sparkles, Volume2, Trophy, Shield, Flame, CheckCircle, RefreshCw,
   Zap, ArrowRight, Sword, Lock, Star, ChevronRight, Play, Heart, Award, AlertCircle
@@ -31,6 +32,7 @@ interface CraftingRecipe {
 }
 
 const RECIPES: CraftingRecipe[] = [
+  ...EXTRA_CRAFTING_RECIPES,
   {
     id: 'recipe_crafting_table',
     nameEn: 'Crafting Table',

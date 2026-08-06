@@ -184,14 +184,55 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-[10px] font-mono font-black uppercase text-[#7CFC00] bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
-                Cloud Firestore Database
+                Minecraft English 会员中心
               </span>
             </div>
             <h3 className="text-xl font-mono font-black text-white mt-0.5">
-              {currentUser ? '云端账号状态' : mode === 'login' ? '玩家账号登录' : '注册新探险家'}
+              {currentUser ? '云端会员档案' : mode === 'login' ? '玩家账号登录' : '注册新探险家账号'}
             </h3>
           </div>
         </div>
+
+        {/* Member Privileges Notice Banner */}
+        {!currentUser && (
+          <div className="mb-4 p-3 bg-slate-900/90 rounded-2xl border-2 border-emerald-500/40 text-xs space-y-2">
+            <div className="flex items-center justify-between text-emerald-400 font-bold font-mono border-b border-slate-800 pb-1.5">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>正规会员体系与权益说明</span>
+              </span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
+                正规官方授权
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 space-y-1">
+                <div className="text-emerald-300 font-extrabold flex items-center gap-1">
+                  <span>🎁 普通注册会员</span>
+                  <span className="text-[9px] bg-emerald-500 text-slate-950 px-1 rounded font-black">免费体验</span>
+                </div>
+                <p className="text-slate-300 leading-tight">
+                  • <strong className="text-amber-300">免费体验 1 ~ 10 课</strong>全量关卡内容<br />
+                  • 涵盖 Alex AI 语音交互与听说评测<br />
+                  • 云端自动无缝同步进度与单词本
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-2 rounded-xl border border-slate-800 space-y-1">
+                <div className="text-amber-300 font-extrabold flex items-center gap-1">
+                  <span>💎 VIP 尊享会员</span>
+                  <span className="text-[9px] bg-amber-400 text-slate-950 px-1 rounded font-black">全量通关</span>
+                </div>
+                <p className="text-slate-300 leading-tight">
+                  • 解锁 <strong className="text-amber-300">第 11 ~ 144 全套课程</strong><br />
+                  • 解锁 2册红石篇与 3册末地篇课程矩阵<br />
+                  • 激活码随时兑换，终身无损保存
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* If user is already logged in */}
         {currentUser ? (
