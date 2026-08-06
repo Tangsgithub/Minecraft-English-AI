@@ -14,6 +14,24 @@ export interface CraftingRecipe {
 
 export const EXTRA_CRAFTING_RECIPES: CraftingRecipe[] = [
   {
+    id: 'recipe_crafting_table',
+    nameEn: 'Crafting Table',
+    nameZh: '工作台 / 合成台',
+    phonetic: '/ˈkrɑːf.tɪŋ ˈteɪ.bəl/',
+    mcIcon: '🪵',
+    category: '基础装备',
+    requiredIngredients: [
+      { name: 'Wood Plank', icon: '🪵' },
+      { name: 'Wood Plank', icon: '🪵' },
+      { name: 'Wood Plank', icon: '🪵' },
+      { name: 'Wood Plank', icon: '🪵' }
+    ],
+    gridPattern: ['🪵', '🪵', null, '🪵', '🪵', null, null, null, null],
+    sampleSentence: 'Place four wood planks on the grid to craft a crafting table.',
+    sampleTranslation: '在网格上放置四个木板即可合成工作台。',
+    unlockedLevel: 1
+  },
+  {
     id: 'recipe_wood_plank',
     nameEn: 'Oak Planks',
     nameZh: '橡木板；木板',
