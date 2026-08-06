@@ -269,6 +269,25 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     setGridSlots([...recipe.gridPattern]);
   };
 
+  
+  const handleAddIngredientToGrid = (icon: string) => {
+    playClickSound();
+    const newGrid = [...gridSlots];
+    const emptyIndex = newGrid.indexOf(null);
+    if (emptyIndex !== -1) {
+      newGrid[emptyIndex] = icon;
+      setGridSlots(newGrid);
+    }
+  };
+
+  const handleRemoveFromGrid = (index: number) => {
+    if (!gridSlots[index]) return;
+    playClickSound();
+    const newGrid = [...gridSlots];
+    newGrid[index] = null;
+    setGridSlots(newGrid);
+  };
+
   const handleClearGrid = () => {
     playClickSound();
     setGridSlots(Array(9).fill(null));
