@@ -109,6 +109,7 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        setIsLandingView(false);
         const cloudProfile = await fetchUserProfileFromCloud(user.uid);
         if (cloudProfile) {
           setProfile(cloudProfile);
@@ -322,7 +323,10 @@ export default function App() {
             currentProfile={profile}
             isOpen={isAuthOpen}
             onClose={() => setIsAuthOpen(false)}
-            onProfileLoaded={(loaded) => setProfile(loaded)}
+            onProfileLoaded={(loaded) => {
+              setProfile(loaded);
+              setIsLandingView(false);
+            }}
           />
         )}
         {isParentDashboardOpen && (
@@ -606,7 +610,10 @@ export default function App() {
           currentProfile={profile}
           isOpen={isAuthOpen}
           onClose={() => setIsAuthOpen(false)}
-          onProfileLoaded={(loaded) => setProfile(loaded)}
+          onProfileLoaded={(loaded) => {
+            setProfile(loaded);
+            setIsLandingView(false);
+          }}
         />
       )}
 
