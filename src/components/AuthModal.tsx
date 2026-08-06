@@ -6,11 +6,14 @@ import {
   createUserWithEmailAndPassword, 
   signOut,
   saveUserProfileToCloud,
-  fetchUserProfileFromCloud
+  fetchUserProfileFromCloud,
+  checkUserExistsInFirestore,
+  findUserAccountByEmail,
+  updateUserPassword
 } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { playClickSound, playLevelUpSound, playEmeraldSound } from '../utils/audio';
-import { LogIn, UserPlus, LogOut, Cloud, Shield, CheckCircle, AlertCircle, Sparkles, KeyRound, Mail, User as UserIcon } from 'lucide-react';
+import { LogIn, UserPlus, LogOut, Cloud, Shield, CheckCircle, AlertCircle, Sparkles, KeyRound, Mail, User as UserIcon, Lock } from 'lucide-react';
 
 interface AuthModalProps {
   currentUser: User | null;
@@ -27,9 +30,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onProfileLoaded
 }) => {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'change_password'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nickname, setNickname] = useState('');
   const [loading, setLoading] = useState(false);
@@ -59,34 +63,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
-      const uid = userCredential.user.uid;
-      
-      // Try to load existing profile from Firestore database
-      const cloudProfile = await fetchUserProfileFromCloud(uid);
-      if (cloudProfile) {
-        onProfileLoaded(cloudProfile);
-      } else {
-        // First login after registration or missing doc: sync current profile
-        const updated = {
-          ...currentProfile,
-          id: uid,
-          email: userCredential.user.email || targetEmail,
-          nickname: nickname || currentProfile.nickname || 'Minecraft探险家'
-        };
-        await saveUserProfileToCloud(updated, uid);
-        onProfileLoaded(updated);
+      // 1. First try Firebase Auth login
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
+        const uid = userCredential.user.uid;
+        
+        // Try to load existing profile from Firestore database
+        const cloudProfile = await fetchUserProfileFromCloud(uid);
+        if (cloudProfile) {
+          onProfileLoaded(cloudProfile);
+        } else {
+          const updated = {
+            ...currentProfile,
+            id: uid,
+            email: userCredential.user.email || targetEmail,
+            nickname: nickname || currentProfile.nickname || 'Minecraft探险家'
+          };
+          await saveUserProfileToCloud(updated, uid, password);
+          onProfileLoaded(updated);
+        }
+
+        playLevelUpSound();
+        setSuccessMsg('登录成功！云端档案已准备就绪。');
+        setTimeout(() => {
+          onClose();
+        }, 1000);
+        return;
+      } catch (authErr: any) {
+        console.warn('Firebase Auth standard login returned issue, checking Firestore database fallback:', authErr);
       }
 
-      playLevelUpSound();
-      setSuccessMsg('登录成功！云端存档已实时同步。');
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-    } catch (err: any) {
-      console.error('Login error:', err);
-      
-      // Handle local fallback if Firebase auth failed or operation not allowed
+      // 2. Query Firestore user_accounts collection directly for instant login
+      const firestoreAccount = await findUserAccountByEmail(targetEmail);
+      if (firestoreAccount) {
+        if (firestoreAccount.password && firestoreAccount.password !== password) {
+          setErrorMsg('密码不正确！请检查密码或点击上方【修改密码】重置。');
+          setLoading(false);
+          return;
+        }
+
+        const loadedProfile = firestoreAccount.profile || {
+          ...currentProfile,
+          id: firestoreAccount.uid || 'fs-' + Date.now(),
+          email: targetEmail,
+          nickname: firestoreAccount.nickname || currentProfile.nickname || 'Minecraft探险家',
+          isInitialSetupDone: true
+        };
+
+        // Save local backup as well
+        localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: loadedProfile, password }));
+
+        onProfileLoaded(loadedProfile);
+        playLevelUpSound();
+        setSuccessMsg('登录成功！已成功从 Firestore 数据库载入您的探险存档。');
+        setTimeout(() => onClose(), 1000);
+        return;
+      }
+
+      // 3. Fallback to local account check if offline or saved previously
       const localAccountStr = localStorage.getItem('mc_account_' + targetEmail);
       if (localAccountStr) {
         try {
@@ -96,39 +130,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             playLevelUpSound();
             setSuccessMsg('登录成功！(已自动切入本地离线无缝存档)');
             setTimeout(() => onClose(), 1000);
-            setLoading(false);
             return;
           } else {
-            setErrorMsg('密码不正确，请重新输入！');
-            setLoading(false);
+            setErrorMsg('密码不正确，请重新输入或点击【修改密码】！');
             return;
           }
         } catch (e) {
-          // continue to standard error handling
+          // ignore
         }
       }
 
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setErrorMsg('账号或密码不正确！若为新玩家，请切换至【注册新探险家账号】。');
-      } else if (err.code === 'auth/invalid-email') {
-        setErrorMsg('输入的邮箱格式不正确，请输入形如 user@example.com 或纯用户名！');
-      } else if (err.code === 'auth/operation-not-allowed') {
-        // Fallback seamless local auto account creation
-        const localUid = 'local-' + Date.now();
-        const fallbackProfile: UserProfile = {
-          ...currentProfile,
-          id: localUid,
-          nickname: nickname || email.split('@')[0] || 'Minecraft探险家',
-          isInitialSetupDone: true
-        };
-        localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: fallbackProfile, password }));
-        onProfileLoaded(fallbackProfile);
-        playLevelUpSound();
-        setSuccessMsg('已为您启动智能快速登录模式！');
-        setTimeout(() => onClose(), 1000);
-      } else {
-        setErrorMsg(err.message || '登录遇到网络波动，请重试或检查账户！');
-      }
+      setErrorMsg('账号不存在或密码错误！若为新玩家，请切换至【注册账号】。');
+
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setErrorMsg(err.message || '登录遇到网络波动，请重试或检查账户！');
     } finally {
       setLoading(false);
     }
@@ -158,84 +174,106 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, password);
-      const uid = userCredential.user.uid;
+      // 1. Database Deduplication Check (数据库去重校验)
+      const dupCheck = await checkUserExistsInFirestore(targetEmail, nickname);
+      if (dupCheck.exists) {
+        if (dupCheck.reason === 'email') {
+          setErrorMsg('该邮箱/用户名已被注册！请切换至【登录账号】或【修改密码】。');
+        } else {
+          setErrorMsg('该玩家昵称已被占用！请使用一个独特独一无二的昵称。');
+        }
+        setLoading(false);
+        return;
+      }
 
-      // Create new profile object for registered user
+      let uid = 'mc-user-' + Date.now();
+
+      // 2. Try Firebase Auth registration
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, password);
+        uid = userCredential.user.uid;
+      } catch (authErr: any) {
+        console.warn('Firebase Auth native registration unavailable, storing account directly to Firestore:', authErr);
+      }
+
+      // 3. Create new profile object
       const newProfile: UserProfile = {
         ...currentProfile,
         id: uid,
+        email: targetEmail,
         nickname: nickname.trim(),
         isInitialSetupDone: true
       };
 
-      // Save to Cloud Firestore
-      await saveUserProfileToCloud(newProfile, uid);
+      // 4. Save to Cloud Firestore database with deduplication index
+      await saveUserProfileToCloud(newProfile, uid, password);
       
-      // Save local backup as well
+      // 5. Save local backup
       localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: newProfile, password }));
       
       onProfileLoaded(newProfile);
 
       playEmeraldSound();
-      setSuccessMsg('注册成功！云端 Firebase 数据库存档创建完毕！');
+      setSuccessMsg('注册成功！云端 Firestore 数据库探险家档案及去重记录创建完毕！');
       setTimeout(() => {
         onClose();
       }, 1200);
+
     } catch (err: any) {
       console.error('Register error:', err);
-      
-      // If Firebase Auth operation-not-allowed or network/API key issue: auto-fallback
-      if (
-        err.code === 'auth/operation-not-allowed' ||
-        err.code === 'auth/network-request-failed' ||
-        err.code === 'auth/api-key-not-valid' ||
-        err.message?.includes('operation-not-allowed')
-      ) {
-        console.warn('Firebase Auth email/password login is not enabled in project console. Using automatic fallback auth engine.');
-        const localUid = 'mc-user-' + Date.now();
-        const localProfile: UserProfile = {
-          ...currentProfile,
-          id: localUid,
-          nickname: nickname.trim(),
-          isInitialSetupDone: true
-        };
-        localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: localProfile, password }));
-        onProfileLoaded(localProfile);
+      setErrorMsg('注册失败：' + (err.message || '网络连接超时'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        playEmeraldSound();
-        setSuccessMsg('注册成功！(系统已自动切入智能双端无缝存储架构)');
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setErrorMsg('请输入账号与新密码！');
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMsg('新密码长度不能少于 6 位！');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('两次输入的新密码不一致！');
+      return;
+    }
+
+    const targetEmail = formatEmailInput(email);
+
+    setLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const result = await updateUserPassword(targetEmail, password, oldPassword);
+      if (result.success) {
+        // Update local backup if existing
+        const localAccountStr = localStorage.getItem('mc_account_' + targetEmail);
+        if (localAccountStr) {
+          try {
+            const localAcc = JSON.parse(localAccountStr);
+            localAcc.password = password;
+            localStorage.setItem('mc_account_' + targetEmail, JSON.stringify(localAcc));
+          } catch (e) {}
+        }
+
+        playLevelUpSound();
+        setSuccessMsg(result.message);
         setTimeout(() => {
-          onClose();
-        }, 1200);
-        setLoading(false);
-        return;
-      }
-
-      if (err.code === 'auth/email-already-in-use') {
-        setErrorMsg('该邮箱/用户名已被注册，请直接切换至【登录账号】！');
-      } else if (err.code === 'auth/weak-password') {
-        setErrorMsg('密码太弱，请输入至少 6 位的密码！');
-      } else if (err.code === 'auth/invalid-email') {
-        setErrorMsg('输入的邮箱/用户名格式不正确！');
+          setMode('login');
+          setSuccessMsg('');
+        }, 1500);
       } else {
-        // Fallback to local account creation so user is never blocked
-        const localUid = 'mc-user-' + Date.now();
-        const localProfile: UserProfile = {
-          ...currentProfile,
-          id: localUid,
-          nickname: nickname.trim(),
-          isInitialSetupDone: true
-        };
-        localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: localProfile, password }));
-        onProfileLoaded(localProfile);
-
-        playEmeraldSound();
-        setSuccessMsg('注册成功！(智能无缝存档已建立)');
-        setTimeout(() => {
-          onClose();
-        }, 1200);
+        setErrorMsg(result.message);
       }
+    } catch (err: any) {
+      setErrorMsg('修改密码失败：' + err.message);
     } finally {
       setLoading(false);
     }
@@ -285,7 +323,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </span>
             </div>
             <h3 className="text-xl font-mono font-black text-white mt-0.5">
-              {currentUser ? '云端会员档案' : mode === 'login' ? '玩家账号登录' : '注册新探险家账号'}
+              {currentUser ? '云端会员档案' : mode === 'login' ? '玩家账号登录' : mode === 'register' ? '注册新探险家账号' : '修改/重置账号密码'}
             </h3>
           </div>
         </div>
@@ -299,7 +337,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>正规会员体系与权益说明</span>
               </span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
-                正规官方授权
+                Firestore去重保障
               </span>
             </div>
             
@@ -340,7 +378,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>已连接 Firebase 云端数据库</span>
               </div>
               <p className="text-slate-200">
-                当前登录邮箱：<span className="text-amber-300 font-bold">{currentUser.email}</span>
+                当前登录邮箱/账号：<span className="text-amber-300 font-bold">{currentUser.email || currentProfile.email}</span>
               </p>
               <p className="text-slate-200">
                 玩家昵称：<span className="text-emerald-300 font-bold">{currentProfile.nickname}</span> (Lv.{currentProfile.level})
@@ -350,20 +388,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={loading}
-              className="w-full bg-rose-700 hover:bg-rose-600 border-2 border-black py-3 rounded-2xl font-mono text-xs font-black text-white flex items-center justify-center space-x-2 shadow-[0_4px_0_0_#881337] active:translate-y-0.5"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>退出登录 (切换账号)</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setMode('change_password');
+                  setEmail(currentUser.email || currentProfile.email || '');
+                }}
+                className="bg-slate-800 hover:bg-slate-700 border-2 border-black py-2.5 rounded-2xl font-mono text-xs font-bold text-amber-300 flex items-center justify-center space-x-1.5"
+              >
+                <Lock className="w-4 h-4" />
+                <span>修改当前密码</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loading}
+                className="bg-rose-700 hover:bg-rose-600 border-2 border-black py-2.5 rounded-2xl font-mono text-xs font-black text-white flex items-center justify-center space-x-1.5"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>退出登录</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div>
-            {/* Login / Register Toggle Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-4 bg-black/40 p-1 rounded-2xl border border-white/10">
+            {/* Login / Register / Change Password Toggle Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 mb-4 bg-black/40 p-1 rounded-2xl border border-white/10 text-[11px]">
               <button
                 type="button"
                 onClick={() => {
@@ -372,7 +425,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`py-2 rounded-xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 transition-colors ${
+                className={`py-2 rounded-xl font-mono font-black flex items-center justify-center space-x-1 transition-colors ${
                   mode === 'login'
                     ? 'bg-[#487E2C] text-white border-2 border-black shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -390,7 +443,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   setErrorMsg('');
                   setSuccessMsg('');
                 }}
-                className={`py-2 rounded-xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 transition-colors ${
+                className={`py-2 rounded-xl font-mono font-black flex items-center justify-center space-x-1 transition-colors ${
                   mode === 'register'
                     ? 'bg-[#487E2C] text-white border-2 border-black shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -399,23 +452,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>注册账号</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setMode('change_password');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
+                className={`py-2 rounded-xl font-mono font-black flex items-center justify-center space-x-1 transition-colors ${
+                  mode === 'change_password'
+                    ? 'bg-[#487E2C] text-white border-2 border-black shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>修改密码</span>
+              </button>
             </div>
 
             {/* Form */}
-            <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="space-y-3">
+            <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleChangePassword} className="space-y-3">
               
               {mode === 'register' && (
                 <div className="space-y-1">
                   <label className="text-[11px] font-mono font-black text-amber-300 flex items-center space-x-1">
                     <UserIcon className="w-3.5 h-3.5" />
-                    <span>玩家昵称 (Nickname):</span>
+                    <span>玩家昵称 (Nickname - 全局唯一去重):</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={nickname}
                     onChange={e => setNickname(e.target.value)}
-                    placeholder="例如: Olaf_Crafter"
+                    placeholder="例如: Steve_Builder"
                     className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:border-[#487E2C] focus:outline-none"
                   />
                 </div>
@@ -424,22 +495,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <div className="space-y-1">
                 <label className="text-[11px] font-mono font-black text-amber-300 flex items-center space-x-1">
                   <Mail className="w-3.5 h-3.5" />
-                  <span>电子邮箱 (Email):</span>
+                  <span>电子邮箱 / 用户名:</span>
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  placeholder="name@example.com 或纯用户名"
                   className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:border-[#487E2C] focus:outline-none"
                 />
               </div>
 
+              {mode === 'change_password' && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-mono font-black text-amber-300 flex items-center space-x-1">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>原密码 (如有，可选):</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={oldPassword}
+                    onChange={e => setOldPassword(e.target.value)}
+                    placeholder="不填写则进行安全直接重置"
+                    className="w-full bg-slate-900 border-2 border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-mono focus:border-[#487E2C] focus:outline-none"
+                  />
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-[11px] font-mono font-black text-amber-300 flex items-center space-x-1">
                   <KeyRound className="w-3.5 h-3.5" />
-                  <span>密码 (Password):</span>
+                  <span>{mode === 'change_password' ? '新密码 (New Password):' : '密码 (Password):'}</span>
                 </label>
                 <input
                   type="password"
@@ -451,11 +538,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 />
               </div>
 
-              {mode === 'register' && (
+              {(mode === 'register' || mode === 'change_password') && (
                 <div className="space-y-1">
                   <label className="text-[11px] font-mono font-black text-amber-300 flex items-center space-x-1">
                     <KeyRound className="w-3.5 h-3.5" />
-                    <span>确认密码 (Confirm Password):</span>
+                    <span>确认密码:</span>
                   </label>
                   <input
                     type="password"
@@ -489,11 +576,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-full bg-[#487E2C] hover:bg-[#3d6e23] border-2 border-black text-white py-3 rounded-2xl font-mono text-xs font-black flex items-center justify-center space-x-2 shadow-[0_4px_0_0_#224013] active:translate-y-0.5 mt-2"
               >
                 {loading ? (
-                  <span className="animate-pulse">正在连接 Firebase 数据库...</span>
+                  <span className="animate-pulse">正在同步 Firestore 数据库...</span>
                 ) : (
                   <>
                     <Cloud className="w-4 h-4 text-[#7CFC00]" />
-                    <span>{mode === 'login' ? '立即登录云端档案' : '完成注册并存入数据库'}</span>
+                    <span>
+                      {mode === 'login' 
+                        ? '立即登录并同步档案' 
+                        : mode === 'register' 
+                          ? '去重校验并完成注册' 
+                          : '确认修改数据库密码'}
+                    </span>
                   </>
                 )}
               </button>
@@ -501,7 +594,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <div className="mt-4 pt-3 border-t border-white/10 text-center">
               <p className="text-[11px] text-slate-400 font-mono">
-                未登录状态下学习进度将保存在本地浏览器，登录后可永久保存至云端 Firestore 数据库。
+                {mode === 'register' 
+                  ? '系统在注册时会自动在 Firestore 数据库进行邮箱及昵称去重校验。'
+                  : mode === 'change_password'
+                    ? '密码修改后将立即同步更新至 Firestore 数据库及本地存储。'
+                    : '登录后您的学习成就、绿宝石及单词本将永久保存在 Firestore 云端数据库。'}
               </p>
             </div>
           </div>
@@ -511,3 +608,4 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     </div>
   );
 };
+

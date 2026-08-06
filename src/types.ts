@@ -85,6 +85,7 @@ export interface ParentSettings {
 
 export interface UserProfile {
   id: string;
+  email?: string;
   nickname: string;
   age: number;
   level: number;
