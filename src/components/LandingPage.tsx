@@ -119,42 +119,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>家长控制</span>
             </button>
 
-            <button
-              onClick={() => {
-                playClickSound();
-                onOpenAuth();
-              }}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 active:shadow-none flex items-center space-x-1"
-            >
-              {currentUser ? (
-                <>
+            {currentUser ? (
+              <>
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    onOpenAuth();
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 flex items-center space-x-1"
+                >
                   <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 truncate max-w-[90px]">{currentUser.email?.split('@')[0] || '已登录'}</span>
-                </>
-              ) : (
-                <>
-                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                  <span>注册 / 登录</span>
-                </>
-              )}
-            </button>
+                  <span className="text-emerald-400 truncate max-w-[90px]">{currentUser.email?.split('@')[0] || '账号中心'}</span>
+                </button>
 
-            <button
-              onClick={() => handleEnterClick('map')}
-              className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
-            >
-              {currentUser ? (
-                <>
+                <button
+                  onClick={() => handleEnterClick('map')}
+                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
+                >
                   <Gamepad2 className="w-4 h-4" />
                   <span>进入学习大厅</span>
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  <span>注册/登录后进入</span>
-                </>
-              )}
-            </button>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  playClickSound();
+                  onOpenAuth();
+                }}
+                className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
+              >
+                <KeyRound className="w-4 h-4 text-slate-950" />
+                <span>注册 / 登录</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
