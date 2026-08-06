@@ -24,6 +24,7 @@ import { playClickSound, playEmeraldSound } from '../utils/audio';
 
 interface LandingPageProps {
   currentUser: User | null;
+  isAuthenticated?: boolean;
   onEnterApp: (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => void;
   onOpenAuth: () => void;
   onOpenParentDashboard: () => void;
@@ -33,6 +34,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   currentUser,
+  isAuthenticated,
   onEnterApp,
   onOpenAuth,
   onOpenParentDashboard,
@@ -119,7 +121,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>家长控制</span>
             </button>
 
-            {currentUser ? (
+            {currentUser || isAuthenticated ? (
               <>
                 <button
                   onClick={() => {
@@ -129,7 +131,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 flex items-center space-x-1"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 truncate max-w-[90px]">{currentUser.email?.split('@')[0] || '账号中心'}</span>
+                  <span className="text-emerald-400 truncate max-w-[90px]">{currentUser?.email?.split('@')[0] || '账号中心'}</span>
                 </button>
 
                 <button
@@ -185,7 +187,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onClick={() => handleEnterClick('map')}
               className="w-full sm:w-auto px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-base border-4 border-slate-950 shadow-[4px_4px_0_0_#000] transition-all flex items-center justify-center space-x-2 active:translate-y-0.5 active:shadow-none"
             >
-              {currentUser ? (
+              {currentUser || isAuthenticated ? (
                 <>
                   <Gamepad2 className="w-5 h-5 text-slate-950" />
                   <span>🎮 进入学习大厅 (已登录)</span>
@@ -209,10 +211,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* 登录状态醒目标示 */}
           <div className="pt-1">
-            {currentUser ? (
+            {currentUser || isAuthenticated ? (
               <div className="text-emerald-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-emerald-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">
                 <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>已登录账号：{currentUser.email}，随时可以开始关卡练习！</span>
+                <span>已安全登录并连接云端同步，随时可以开始练习！</span>
               </div>
             ) : (
               <div className="text-amber-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-amber-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">

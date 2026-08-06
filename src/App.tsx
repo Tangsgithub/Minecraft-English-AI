@@ -90,6 +90,20 @@ export default function App() {
   
   // Firebase Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mc_english_user_profile');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return !!(parsed.isInitialSetupDone && (parsed.email || parsed.id !== 'user_001'));
+        } catch {
+          return false;
+        }
+      }
+    }
+    return false;
+  });
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   // Active Lesson Context for Alex Chat
@@ -109,6 +123,7 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        setIsAuthenticated(true);
         setIsLandingView(false);
         const cloudProfile = await fetchUserProfileFromCloud(user.uid);
         if (cloudProfile) {
@@ -129,8 +144,10 @@ export default function App() {
     }
     if (currentUser) {
       saveUserProfileToCloud(profile, currentUser.uid);
+    } else if (isAuthenticated && profile.id && profile.email) {
+      // In case of proxy login, we can still save to cloud if needed, but proxy login saves explicitly where it's modified.
     }
-  }, [profile, currentUser]);
+  }, [profile, currentUser, isAuthenticated]);
 
   // Continuous study timer for Eye Care
   const [continuousMinutes, setContinuousMinutes] = useState<number>(0);
@@ -288,7 +305,7 @@ export default function App() {
   };
 
   const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
-    if (!currentUser) {
+    if (!isAuthenticated && !currentUser) {
       playClickSound();
       setIsAuthOpen(true);
       return;
@@ -299,17 +316,18 @@ export default function App() {
 
   // Strictly enforce that unauthenticated users cannot bypass landing page
   useEffect(() => {
-    if (!currentUser && !isLandingView) {
+    if (!isAuthenticated && !currentUser && !isLandingView) {
       setIsLandingView(true);
       setIsAuthOpen(true);
     }
-  }, [currentUser, isLandingView]);
+  }, [isAuthenticated, currentUser, isLandingView]);
 
   if (isLandingView) {
     return (
       <>
         <LandingPage
           currentUser={currentUser}
+          isAuthenticated={isAuthenticated}
           onEnterApp={handleEnterApp}
           onOpenAuth={() => setIsAuthOpen(true)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
@@ -325,6 +343,7 @@ export default function App() {
             onClose={() => setIsAuthOpen(false)}
             onProfileLoaded={(loaded) => {
               setProfile(loaded);
+              setIsAuthenticated(true);
               setIsLandingView(false);
             }}
           />

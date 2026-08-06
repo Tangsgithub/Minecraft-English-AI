@@ -275,10 +275,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     playClickSound();
     setLoading(true);
     try {
-      await signOut(auth);
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+      localStorage.removeItem('mc_english_user_profile');
       setSuccessMsg('已成功退出登录！');
       setTimeout(() => {
-        onClose();
+        window.location.reload();
       }, 800);
     } catch (err: any) {
       setErrorMsg('退出失败：' + err.message);
