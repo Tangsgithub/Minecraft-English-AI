@@ -18,7 +18,7 @@ export const EXTRA_CRAFTING_RECIPES: CraftingRecipe[] = [
     nameEn: 'Crafting Table',
     nameZh: '工作台 / 合成台',
     phonetic: '/ˈkrɑːf.tɪŋ ˈteɪ.bəl/',
-    mcIcon: '🪵',
+    mcIcon: '🛠️',
     category: '基础装备',
     requiredIngredients: [
       { name: 'Wood Plank', icon: '🪵' },
@@ -113,7 +113,7 @@ export const EXTRA_CRAFTING_RECIPES: CraftingRecipe[] = [
     nameEn: 'Wooden Shovel',
     nameZh: '木铲',
     phonetic: '/ˈwʊd.ən ˈʃʌv.əl/',
-    mcIcon: '🪵',
+    mcIcon: '🥄',
     category: '生存工具',
     requiredIngredients: [
       { name: 'Wood Plank', icon: '🪵' },
