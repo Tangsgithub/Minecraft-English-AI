@@ -9,6 +9,8 @@ import { GiantWorldMap } from './GiantWorldMap';
 import { RandomAdventureModal, RANDOM_ADVENTURE_EVENTS, RandomEvent } from './RandomAdventureModal';
 
 interface LessonMapProps {
+  selectedVolumeId: CourseVolumeId;
+
   profile: UserProfile;
   onSelectLessonForChat: (lesson: Lesson) => void;
   onCompleteLesson: (lessonId: number) => void;
@@ -17,14 +19,14 @@ interface LessonMapProps {
 }
 
 export const LessonMap: React.FC<LessonMapProps> = ({
+  selectedVolumeId,
   profile,
   onSelectLessonForChat,
   onCompleteLesson,
   onAwardEmeralds,
   onOpenVipModal
 }) => {
-  const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>(profile.selectedVolumeId || 'vol1');
-  const [selectedUnit, setSelectedUnit] = useState<number>(1);
+    const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'world' | 'map' | 'grid'>('world');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
@@ -139,78 +141,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
         </div>
       )}
       
-      {/* ===== 《新概念英语》分册与版本号体系控制面板 ===== */}
-      <div className="bg-slate-900 border-4 border-slate-950 p-4 rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,0.8)] text-white space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 bg-amber-400 text-slate-950 border-2 border-black font-black text-xs font-mono shadow">
-              {APP_VERSION_INFO.version}
-            </div>
-            <div>
-              <div className="font-black text-sm sm:text-base text-amber-300 flex items-center gap-2">
-                <span>{APP_VERSION_INFO.editionName}</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-mono">
-                  系统版本化
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-400 font-mono">
-                当前学习世界：{currentVolume.mcWorldTheme}
-              </div>
-            </div>
-          </div>
-
-          {/* 3册切换卡片 */}
-          <div className="grid grid-cols-3 gap-1.5 bg-slate-950 p-1.5 border-2 border-slate-800 rounded-xl">
-            {APP_VERSION_INFO.volumes.map(vol => {
-              const isSelected = vol.id === selectedVolumeId;
-              return (
-                <button
-                  key={vol.id}
-                  onClick={() => {
-                    playClickSound();
-                    setSelectedVolumeId(vol.id);
-                  }}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition-all flex flex-col items-center justify-center border-2 ${
-                    isSelected
-                      ? 'bg-emerald-500 text-slate-950 border-black shadow-[2px_2px_0_0_#000]'
-                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  <span className="truncate">{vol.title.replace('新概念英语 ', '')}</span>
-                  <span className="text-[9px] font-mono opacity-80">{vol.badge.split(' ')[0]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 当前选中分册的专属状态与升级提示 */}
-        <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2 text-xs font-bold text-slate-200">
-              <span className="text-emerald-400 font-mono font-black">【{currentVolume.title}】</span>
-              <span>{currentVolume.subtitle}</span>
-              {currentVolume.status === 'preview' && (
-                <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono">
-                  高阶预告中
-                </span>
-              )}
-            </div>
-            <div className="text-[11px] text-slate-400">
-              {currentVolume.description} • 适用年龄：<span className="text-amber-300 font-bold">{currentVolume.targetAge}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 shrink-0 text-[11px]">
-            {currentVolume.features.map((feat, idx) => (
-              <span key={idx} className="hidden lg:inline-block px-2 py-1 bg-slate-900 border border-slate-800 text-slate-300 font-mono">
-                ✓ {feat}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Search & Unit Navigation */}
       <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] space-y-3 sm:space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

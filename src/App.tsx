@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Lesson, ChatMessage } from './types';
+import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId } from './types';
 import { getLevelFromXp } from './data/gamificationData';
 import { HeaderBar } from './components/HeaderBar';
 import { FirstLaunchModal } from './components/FirstLaunchModal';
@@ -84,6 +84,7 @@ export default function App() {
   });
 
   const [isLandingView, setIsLandingView] = useState<boolean>(true);
+  const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>(profile.selectedVolumeId || 'vol1');
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
@@ -256,6 +257,8 @@ export default function App() {
     });
   };
 
+  const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
+
   const handleCompleteLesson = (lessonId: number) => {
     handleAwardEmeralds(10, 30);
     setProfile(prev => {
@@ -393,6 +396,8 @@ export default function App() {
       
       {/* Fixed Top Status Header */}
       <HeaderBar
+        selectedVolumeId={selectedVolumeId}
+        onChangeVolumeId={setSelectedVolumeId}
         profile={profile}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -511,11 +516,8 @@ export default function App() {
         <div className="flex-1 space-y-4">
           {activeTab === 'map' && (
             <>
-              <VocabProgressChart
-                profile={profile}
-                onNavigateToVocab={() => setActiveTab('vocab')}
-              />
               <LessonMap
+                selectedVolumeId={selectedVolumeId}
                 profile={profile}
                 onSelectLessonForChat={handleSelectLessonForChat}
                 onCompleteLesson={handleCompleteLesson}

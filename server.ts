@@ -169,8 +169,11 @@ async function startServer() {
         const promptText = `${systemPrompt}\n\nConversation History:\n` +
           messages.map((m: any) => `${m.role === 'user' ? 'Student' : 'Alex Teacher'}: ${m.content}`).join('\n');
 
-        const requestModel = config?.model || 'gemini-2.5-flash';
-        const candidateModels = Array.from(new Set([requestModel, 'gemini-2.5-flash', 'gemini-2.0-flash']));
+        let requestModel = config?.model || 'gemini-3.6-flash';
+        if (requestModel.includes('deepseek') || requestModel.includes('openai') || requestModel.includes('llama')) {
+          requestModel = 'gemini-3.6-flash';
+        }
+        const candidateModels = Array.from(new Set([requestModel, 'gemini-3.6-flash', 'gemini-3.1-pro-preview']));
 
         let responseText = '';
         let lastError: any = null;
