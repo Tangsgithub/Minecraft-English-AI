@@ -135,7 +135,10 @@ export async function loginUserServer(email: string, password: string) {
       if (indexSnap.exists()) {
         const accData = indexSnap.data();
         if (accData.password && accData.password !== password) {
-          return { success: false, message: '密码不正确，请重新输入或使用【修改密码】！' };
+          return { success: false, reason: 'wrong_password', message: '密码不正确，请重新输入或使用【修改密码】！' };
+        }
+        if (!accData.password) {
+          return { success: false, reason: 'needs_client_auth', message: '请使用客户端进行安全验证登录。' };
         }
 
         let userProfile = accData.profile;
@@ -165,6 +168,12 @@ export async function loginUserServer(email: string, password: string) {
 
       if (!snap.empty) {
         const userDoc = snap.docs[0].data();
+        if (userDoc.password && userDoc.password !== password) {
+          return { success: false, reason: 'wrong_password', message: '密码不正确，请重新输入或使用【修改密码】！' };
+        }
+        if (!userDoc.password) {
+          return { success: false, reason: 'needs_client_auth', message: '请使用客户端进行安全验证登录。' };
+        }
         return {
           success: true,
           profile: userDoc,

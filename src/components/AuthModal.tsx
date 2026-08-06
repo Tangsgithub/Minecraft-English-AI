@@ -75,9 +75,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setSuccessMsg(serverResult.message || '登录成功！(服务端直连 Firestore 数据库已同步)');
           setTimeout(() => onClose(), 1000);
           return;
-        } else if (serverResult.message) {
+        } else if (serverResult.reason === 'wrong_password') {
           setErrorMsg(serverResult.message);
+          setLoading(false);
           return;
+        } else if (serverResult.reason === 'needs_client_auth') {
+          console.log('Server proxy requested client auth fallback.');
+        } else if (serverResult.message && serverResult.message.includes('网络')) {
+          console.log('Server proxy network issue, falling back...');
         }
       }
 

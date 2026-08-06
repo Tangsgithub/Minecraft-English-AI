@@ -22,9 +22,12 @@ import {
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 
+import { UserProfile } from '../types';
+
 interface LandingPageProps {
   currentUser: User | null;
   isAuthenticated?: boolean;
+  profile?: UserProfile;
   onEnterApp: (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => void;
   onOpenAuth: () => void;
   onOpenParentDashboard: () => void;
@@ -35,6 +38,7 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({
   currentUser,
   isAuthenticated,
+  profile,
   onEnterApp,
   onOpenAuth,
   onOpenParentDashboard,
@@ -131,7 +135,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 flex items-center space-x-1"
                 >
                   <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 truncate max-w-[90px]">{currentUser?.email?.split('@')[0] || '账号中心'}</span>
+                  <span className="text-emerald-400 truncate max-w-[90px]">{profile?.nickname || profile?.email?.split('@')[0] || currentUser?.email?.split('@')[0] || '账号中心'}</span>
                 </button>
 
                 <button

@@ -118,6 +118,20 @@ export default function App() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
 
+  // Initial profile sync for proxy-authenticated users
+  useEffect(() => {
+    const initSync = async () => {
+      if (isAuthenticated && !currentUser && profile.id && profile.id !== 'user_001') {
+        const cloudProfile = await fetchUserProfileFromCloud(profile.id);
+        if (cloudProfile && cloudProfile.updatedAt) {
+          setProfile(cloudProfile);
+        }
+      }
+    };
+    initSync();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Listen to Firebase Auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -142,12 +156,10 @@ export default function App() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('mc_english_user_profile', JSON.stringify(profile));
     }
-    if (currentUser) {
-      saveUserProfileToCloud(profile, currentUser.uid);
-    } else if (isAuthenticated && profile.id && profile.email) {
-      // In case of proxy login, we can still save to cloud if needed, but proxy login saves explicitly where it's modified.
+    if (isAuthenticated && profile.id && profile.id !== 'user_001') {
+      saveUserProfileToCloud(profile, profile.id);
     }
-  }, [profile, currentUser, isAuthenticated]);
+  }, [profile, isAuthenticated]);
 
   // Continuous study timer for Eye Care
   const [continuousMinutes, setContinuousMinutes] = useState<number>(0);
@@ -328,6 +340,7 @@ export default function App() {
         <LandingPage
           currentUser={currentUser}
           isAuthenticated={isAuthenticated}
+          profile={profile}
           onEnterApp={handleEnterApp}
           onOpenAuth={() => setIsAuthOpen(true)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
