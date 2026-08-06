@@ -33,9 +33,25 @@ export const saveUserProfileToCloud = async (
   userUid?: string, 
   password?: string
 ): Promise<boolean> => {
-  const uid = userUid || auth.currentUser?.uid;
+  const uid = userUid || auth.currentUser?.uid || profile.id;
   if (!uid) return false;
 
+  // 1. Try server proxy endpoint first (completely bypasses client network restrictions in China)
+  try {
+    const resp = await fetch('/api/user/save-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile, uid })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success) return true;
+    }
+  } catch (e) {
+    console.warn('Server proxy save profile fallback to client SDK:', e);
+  }
+
+  // 2. Client SDK fallback
   try {
     const userDocRef = doc(db, 'users', uid);
     const cleanEmail = (profile.email || auth.currentUser?.email || '').toLowerCase().trim();
@@ -48,7 +64,6 @@ export const saveUserProfileToCloud = async (
     };
     await setDoc(userDocRef, cleanProfileData, { merge: true });
 
-    // Store index document for fast lookup, deduplication, and fallback auth
     if (cleanEmail) {
       const accountIndexRef = doc(db, 'user_accounts', cleanEmail.replace(/[^a-zA-Z0-9_.-]/g, '_'));
       const accountData: any = {
@@ -72,6 +87,18 @@ export const saveUserProfileToCloud = async (
 };
 
 export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfile | null> => {
+  // 1. Try server proxy endpoint first
+  try {
+    const resp = await fetch(`/api/user/get-profile?uid=${encodeURIComponent(uid)}`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.profile) return data.profile as UserProfile;
+    }
+  } catch (e) {
+    console.warn('Server proxy get profile fallback to client SDK:', e);
+  }
+
+  // 2. Client SDK fallback
   try {
     const userDocRef = doc(db, 'users', uid);
     const docSnap = await getDoc(userDocRef);
@@ -90,17 +117,30 @@ export const checkUserExistsInFirestore = async (
   nickname?: string
 ): Promise<{ exists: boolean; reason?: 'email' | 'nickname' }> => {
   const cleanEmail = email.toLowerCase().trim();
-  const safeDocId = cleanEmail.replace(/[^a-zA-Z0-9_.-]/g, '_');
 
+  // 1. Try server proxy first
   try {
-    // 1. Check account index by email
+    const resp = await fetch('/api/auth/check-dup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, nickname })
+    });
+    if (resp.ok) {
+      return await resp.json();
+    }
+  } catch (e) {
+    console.warn('Server proxy check-dup fallback to client SDK:', e);
+  }
+
+  // 2. Client SDK fallback
+  const safeDocId = cleanEmail.replace(/[^a-zA-Z0-9_.-]/g, '_');
+  try {
     const accountIndexRef = doc(db, 'user_accounts', safeDocId);
     const docSnap = await getDoc(accountIndexRef);
     if (docSnap.exists()) {
       return { exists: true, reason: 'email' };
     }
 
-    // 2. Query users collection by email
     const usersRef = collection(db, 'users');
     const qEmail = query(usersRef, where('email', '==', cleanEmail));
     const querySnapEmail = await getDocs(qEmail);
@@ -108,7 +148,6 @@ export const checkUserExistsInFirestore = async (
       return { exists: true, reason: 'email' };
     }
 
-    // 3. Query nickname if provided
     if (nickname) {
       const qNick = query(usersRef, where('nickname', '==', nickname.trim()));
       const querySnapNick = await getDocs(qNick);
@@ -126,8 +165,20 @@ export const checkUserExistsInFirestore = async (
 // Find account by email in Firestore
 export const findUserAccountByEmail = async (email: string): Promise<any | null> => {
   const cleanEmail = email.toLowerCase().trim();
-  const safeDocId = cleanEmail.replace(/[^a-zA-Z0-9_.-]/g, '_');
 
+  // 1. Server proxy first
+  try {
+    const resp = await fetch(`/api/user/get-profile?email=${encodeURIComponent(cleanEmail)}`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.profile) return { profile: data.profile, email: cleanEmail };
+    }
+  } catch (e) {
+    console.warn('Server proxy find account fallback:', e);
+  }
+
+  // 2. Client SDK fallback
+  const safeDocId = cleanEmail.replace(/[^a-zA-Z0-9_.-]/g, '_');
   try {
     const accountIndexRef = doc(db, 'user_accounts', safeDocId);
     const docSnap = await getDoc(accountIndexRef);
@@ -154,19 +205,35 @@ export const updateUserPassword = async (
   oldPasswordVerification?: string
 ): Promise<{ success: boolean; message: string }> => {
   const cleanEmail = email.toLowerCase().trim();
+
+  // 1. Server proxy password update
+  try {
+    const resp = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, newPassword, oldPassword: oldPasswordVerification })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success) return data;
+      else if (data.message) return data;
+    }
+  } catch (e) {
+    console.warn('Server proxy change-password fallback to client SDK:', e);
+  }
+
+  // 2. Client SDK fallback
   const safeDocId = cleanEmail.replace(/[^a-zA-Z0-9_.-]/g, '_');
 
   try {
-    // If logged in via Firebase Auth, update Firebase Auth password
     if (auth.currentUser) {
       try {
         await updatePassword(auth.currentUser, newPassword);
       } catch (authErr: any) {
-        console.warn('Firebase Auth updatePassword failed or requires recent login:', authErr);
+        console.warn('Firebase Auth updatePassword failed:', authErr);
       }
     }
 
-    // Update in Firestore user_accounts document
     const accountIndexRef = doc(db, 'user_accounts', safeDocId);
     const docSnap = await getDoc(accountIndexRef);
 
@@ -185,7 +252,6 @@ export const updateUserPassword = async (
 
       return { success: true, message: '密码修改成功！数据库及云端已更新。' };
     } else {
-      // Create or merge user account
       await setDoc(accountIndexRef, { email: cleanEmail, password: newPassword, updatedAt: new Date().toISOString() }, { merge: true });
       return { success: true, message: '密码更新成功！' };
     }
@@ -193,6 +259,39 @@ export const updateUserPassword = async (
     console.error('Update password error:', err);
     return { success: false, message: '修改密码失败: ' + (err.message || '网络连接超时') };
   }
+};
+
+// Server Proxy Login & Register High-Level Helpers
+export const serverProxyLogin = async (email: string, password: string) => {
+  try {
+    const resp = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    if (resp.ok) {
+      return await resp.json();
+    }
+  } catch (e) {
+    console.warn('Server proxy login error:', e);
+  }
+  return null;
+};
+
+export const serverProxyRegister = async (email: string, password: string, nickname: string, initialProfile: any) => {
+  try {
+    const resp = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, nickname, initialProfile })
+    });
+    if (resp.ok) {
+      return await resp.json();
+    }
+  } catch (e) {
+    console.warn('Server proxy register error:', e);
+  }
+  return null;
 };
 
 export {
@@ -203,4 +302,5 @@ export {
   updatePassword
 };
 export type { User };
+
 

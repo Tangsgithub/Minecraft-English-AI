@@ -9,7 +9,9 @@ import {
   fetchUserProfileFromCloud,
   checkUserExistsInFirestore,
   findUserAccountByEmail,
-  updateUserPassword
+  updateUserPassword,
+  serverProxyLogin,
+  serverProxyRegister
 } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { playClickSound, playLevelUpSound, playEmeraldSound } from '../utils/audio';
@@ -63,12 +65,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      // 1. First try Firebase Auth login
+      // 1. Primary: Server Proxy Login (bypasses China client-side network restrictions, directly queries Firestore on server)
+      const serverResult = await serverProxyLogin(targetEmail, password);
+      if (serverResult) {
+        if (serverResult.success && serverResult.profile) {
+          localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: serverResult.profile, password }));
+          onProfileLoaded(serverResult.profile);
+          playLevelUpSound();
+          setSuccessMsg(serverResult.message || '登录成功！(服务端直连 Firestore 数据库已同步)');
+          setTimeout(() => onClose(), 1000);
+          return;
+        } else if (serverResult.message) {
+          setErrorMsg(serverResult.message);
+          return;
+        }
+      }
+
+      // 2. Client SDK Firebase Auth Login fallback
       try {
         const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
         const uid = userCredential.user.uid;
         
-        // Try to load existing profile from Firestore database
         const cloudProfile = await fetchUserProfileFromCloud(uid);
         if (cloudProfile) {
           onProfileLoaded(cloudProfile);
@@ -85,42 +102,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         playLevelUpSound();
         setSuccessMsg('登录成功！云端档案已准备就绪。');
-        setTimeout(() => {
-          onClose();
-        }, 1000);
-        return;
-      } catch (authErr: any) {
-        console.warn('Firebase Auth standard login returned issue, checking Firestore database fallback:', authErr);
-      }
-
-      // 2. Query Firestore user_accounts collection directly for instant login
-      const firestoreAccount = await findUserAccountByEmail(targetEmail);
-      if (firestoreAccount) {
-        if (firestoreAccount.password && firestoreAccount.password !== password) {
-          setErrorMsg('密码不正确！请检查密码或点击上方【修改密码】重置。');
-          setLoading(false);
-          return;
-        }
-
-        const loadedProfile = firestoreAccount.profile || {
-          ...currentProfile,
-          id: firestoreAccount.uid || 'fs-' + Date.now(),
-          email: targetEmail,
-          nickname: firestoreAccount.nickname || currentProfile.nickname || 'Minecraft探险家',
-          isInitialSetupDone: true
-        };
-
-        // Save local backup as well
-        localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: loadedProfile, password }));
-
-        onProfileLoaded(loadedProfile);
-        playLevelUpSound();
-        setSuccessMsg('登录成功！已成功从 Firestore 数据库载入您的探险存档。');
         setTimeout(() => onClose(), 1000);
         return;
+      } catch (authErr: any) {
+        console.warn('Client Firebase Auth login error:', authErr);
       }
 
-      // 3. Fallback to local account check if offline or saved previously
+      // 3. Fallback to local account check if offline
       const localAccountStr = localStorage.getItem('mc_account_' + targetEmail);
       if (localAccountStr) {
         try {
@@ -135,9 +123,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             setErrorMsg('密码不正确，请重新输入或点击【修改密码】！');
             return;
           }
-        } catch (e) {
-          // ignore
-        }
+        } catch (e) {}
       }
 
       setErrorMsg('账号不存在或密码错误！若为新玩家，请切换至【注册账号】。');
@@ -174,7 +160,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      // 1. Database Deduplication Check (数据库去重校验)
+      // 1. Primary: Server Proxy Registration & Deduplication (Directly writes to Firestore from server)
+      const serverResult = await serverProxyRegister(targetEmail, password, nickname, currentProfile);
+      if (serverResult) {
+        if (serverResult.success && serverResult.profile) {
+          localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: serverResult.profile, password }));
+          onProfileLoaded(serverResult.profile);
+          playEmeraldSound();
+          setSuccessMsg(serverResult.message || '注册成功！全量数据已中转保存至 Firestore 云端数据库。');
+          setTimeout(() => onClose(), 1200);
+          return;
+        } else if (serverResult.message) {
+          setErrorMsg(serverResult.message);
+          return;
+        }
+      }
+
+      // 2. Client SDK Deduplication & Registration Fallback
       const dupCheck = await checkUserExistsInFirestore(targetEmail, nickname);
       if (dupCheck.exists) {
         if (dupCheck.reason === 'email') {
@@ -182,21 +184,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         } else {
           setErrorMsg('该玩家昵称已被占用！请使用一个独特独一无二的昵称。');
         }
-        setLoading(false);
         return;
       }
 
       let uid = 'mc-user-' + Date.now();
-
-      // 2. Try Firebase Auth registration
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, password);
         uid = userCredential.user.uid;
       } catch (authErr: any) {
-        console.warn('Firebase Auth native registration unavailable, storing account directly to Firestore:', authErr);
+        console.warn('Firebase Auth native registration unavailable:', authErr);
       }
 
-      // 3. Create new profile object
       const newProfile: UserProfile = {
         ...currentProfile,
         id: uid,
@@ -205,19 +203,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         isInitialSetupDone: true
       };
 
-      // 4. Save to Cloud Firestore database with deduplication index
       await saveUserProfileToCloud(newProfile, uid, password);
-      
-      // 5. Save local backup
       localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: newProfile, password }));
       
       onProfileLoaded(newProfile);
-
       playEmeraldSound();
-      setSuccessMsg('注册成功！云端 Firestore 数据库探险家档案及去重记录创建完毕！');
-      setTimeout(() => {
-        onClose();
-      }, 1200);
+      setSuccessMsg('注册成功！云端 Firestore 数据库探险家档案已建立！');
+      setTimeout(() => onClose(), 1200);
 
     } catch (err: any) {
       console.error('Register error:', err);

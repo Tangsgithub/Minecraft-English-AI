@@ -4,6 +4,14 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { tts as edgeTts } from "edge-tts";
 import dotenv from "dotenv";
+import { 
+  checkUserExistsServer, 
+  registerUserServer, 
+  loginUserServer, 
+  changePasswordServer, 
+  saveProfileServer, 
+  getProfileServer 
+} from "./server/auth.js";
 
 dotenv.config();
 
@@ -15,6 +23,68 @@ async function startServer() {
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", time: new Date().toISOString() });
+  });
+
+  // Server-side Firestore Authentication Proxy Endpoints (Solving China network accessibility)
+  app.post("/api/auth/check-dup", async (req, res) => {
+    try {
+      const { email, nickname } = req.body;
+      const result = await checkUserExistsServer(email, nickname);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ exists: false, error: err.message });
+    }
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password, nickname, initialProfile } = req.body;
+      const result = await registerUserServer(email, password, nickname, initialProfile);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message || '注册异常' });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const result = await loginUserServer(email, password);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message || '登录异常' });
+    }
+  });
+
+  app.post("/api/auth/change-password", async (req, res) => {
+    try {
+      const { email, newPassword, oldPassword } = req.body;
+      const result = await changePasswordServer(email, newPassword, oldPassword);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err.message || '修改密码异常' });
+    }
+  });
+
+  app.post("/api/user/save-profile", async (req, res) => {
+    try {
+      const { profile, uid } = req.body;
+      const result = await saveProfileServer(profile, uid);
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/user/get-profile", async (req, res) => {
+    try {
+      const uid = req.query.uid as string;
+      const email = req.query.email as string;
+      const profile = await getProfileServer(uid, email);
+      return res.json({ profile });
+    } catch (err: any) {
+      return res.status(500).json({ profile: null, error: err.message });
+    }
   });
 
   // Edge Neural TTS High-Quality Speech Endpoint
