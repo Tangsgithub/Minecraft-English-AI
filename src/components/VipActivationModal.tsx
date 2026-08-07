@@ -339,7 +339,7 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
                   </li>
                   <li className="flex items-start gap-1.5">
                     <span className="text-amber-300 font-bold">3. 免签第三方支付 API (如虎皮椒/ PayJS)：</span>
-                    <span>注册个人免签平台，即可将网页按钮无缝链接至收银台，回调后自动将 Firestore 数据库中的 `isVip` 更改为 true！</span>
+                    <span>注册个人免签平台，即可将网页按钮无缝链接至收银台，回调后自动将 云端 数据库中的 `isVip` 更改为 true！</span>
                   </li>
                 </ul>
               </div>

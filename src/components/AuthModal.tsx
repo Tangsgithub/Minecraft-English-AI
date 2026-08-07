@@ -65,14 +65,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      // 1. Primary: Server Proxy Login (bypasses China client-side network restrictions, directly queries Firestore on server)
+      // 1. Primary: Server Proxy Login (bypasses China client-side network restrictions, directly queries 云端 on server)
       const serverResult = await serverProxyLogin(targetEmail, password);
       if (serverResult) {
         if (serverResult.success && serverResult.profile) {
           localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: serverResult.profile, password }));
           onProfileLoaded(serverResult.profile);
           playLevelUpSound();
-          setSuccessMsg(serverResult.message || '登录成功！(服务端直连 Firestore 数据库已同步)');
+          setSuccessMsg(serverResult.message || '登录成功！(服务端直连 云端 数据库已同步)');
           setTimeout(() => onClose(), 1000);
           return;
         } else if (serverResult.reason === 'wrong_password') {
@@ -167,14 +167,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setSuccessMsg('');
 
     try {
-      // 1. Primary: Server Proxy Registration & Deduplication (Directly writes to Firestore from server)
+      // 1. Primary: Server Proxy Registration & Deduplication (Directly writes to 云端 from server)
       const serverResult = await serverProxyRegister(targetEmail, password, nickname, currentProfile);
       if (serverResult) {
         if (serverResult.success && serverResult.profile) {
           localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: serverResult.profile, password }));
           onProfileLoaded(serverResult.profile);
           playEmeraldSound();
-          setSuccessMsg(serverResult.message || '注册成功！全量数据已中转保存至 Firestore 云端数据库。');
+          setSuccessMsg(serverResult.message || '注册成功！全量数据已中转保存至 云端 云端数据库。');
           setTimeout(() => onClose(), 1200);
           return;
         } else if (serverResult.message) {
@@ -215,7 +215,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       
       onProfileLoaded(newProfile);
       playEmeraldSound();
-      setSuccessMsg('注册成功！云端 Firestore 数据库探险家档案已建立！');
+      setSuccessMsg('注册成功！云端 云端 数据库探险家档案已建立！');
       setTimeout(() => onClose(), 1200);
 
     } catch (err: any) {
@@ -339,7 +339,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>正规会员体系与权益说明</span>
               </span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">
-                Firestore去重保障
+                云端去重保障
               </span>
             </div>
             
@@ -386,7 +386,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 玩家昵称：<span className="text-emerald-300 font-bold">{currentProfile.nickname}</span> (Lv.{currentProfile.level})
               </p>
               <p className="text-slate-400 text-[11px] pt-1 border-t border-emerald-800/50">
-                ⚡ 你的绿宝石、词汇库、通关进度已在 Firebase Firestore 进行秒级实时同步！
+                ⚡ 你的绿宝石、词汇库、通关进度已在 Firebase 云端 进行秒级实时同步！
               </p>
             </div>
 
@@ -578,7 +578,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-full bg-[#487E2C] hover:bg-[#3d6e23] border-2 border-black text-white py-3 rounded-2xl font-mono text-xs font-black flex items-center justify-center space-x-2 shadow-[0_4px_0_0_#224013] active:translate-y-0.5 mt-2"
               >
                 {loading ? (
-                  <span className="animate-pulse">正在同步 Firestore 数据库...</span>
+                  <span className="animate-pulse">正在同步 云端 数据库...</span>
                 ) : (
                   <>
                     <Cloud className="w-4 h-4 text-[#7CFC00]" />
@@ -597,10 +597,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div className="mt-4 pt-3 border-t border-white/10 text-center">
               <p className="text-[11px] text-slate-400 font-mono">
                 {mode === 'register' 
-                  ? '系统在注册时会自动在 Firestore 数据库进行邮箱及昵称去重校验。'
+                  ? '系统在注册时会自动在 云端 数据库进行邮箱及昵称去重校验。'
                   : mode === 'change_password'
-                    ? '密码修改后将立即同步更新至 Firestore 数据库及本地存储。'
-                    : '登录后您的学习成就、绿宝石及单词本将永久保存在 Firestore 云端数据库。'}
+                    ? '密码修改后将立即同步更新至 云端 数据库及本地存储。'
+                    : '登录后您的学习成就、绿宝石及单词本将永久保存在 云端 云端数据库。'}
               </p>
             </div>
           </div>
