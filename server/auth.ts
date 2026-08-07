@@ -138,7 +138,7 @@ export async function loginUserServer(email: string, password: string) {
           return { success: false, reason: 'wrong_password', message: '密码不正确，请重新输入或使用【修改密码】！' };
         }
         if (!accData.password) {
-          return { success: false, reason: 'needs_client_auth', message: '请使用客户端进行安全验证登录。' };
+          return { success: false, reason: 'needs_client_auth', message: '该账号为早期注册，缺少服务端密码。请前往【修改密码】直接设置新密码后即可登录！' };
         }
 
         let userProfile = accData.profile;
@@ -172,7 +172,7 @@ export async function loginUserServer(email: string, password: string) {
           return { success: false, reason: 'wrong_password', message: '密码不正确，请重新输入或使用【修改密码】！' };
         }
         if (!userDoc.password) {
-          return { success: false, reason: 'needs_client_auth', message: '请使用客户端进行安全验证登录。' };
+          return { success: false, reason: 'needs_client_auth', message: '该账号缺少服务端密码。请前往【修改密码】直接设置新密码后即可登录！' };
         }
         return {
           success: true,

@@ -80,7 +80,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setLoading(false);
           return;
         } else if (serverResult.reason === 'needs_client_auth') {
-          console.log('Server proxy requested client auth fallback.');
+          setErrorMsg(serverResult.message);
+          setLoading(false);
+          return;
         } else if (serverResult.message && serverResult.message.includes('网络')) {
           console.log('Server proxy network issue, falling back...');
         }

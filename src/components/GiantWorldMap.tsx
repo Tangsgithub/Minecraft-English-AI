@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, BiomeChapter, getBiomeChapterByUnit } from '../data/storyData';
+import { LessonStudyModal } from './LessonStudyModal';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
@@ -567,142 +568,14 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
       {/* LESSON DETAIL MODAL */}
       {activeLesson && (
-        <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-white border-4 border-black rounded-3xl w-full max-w-lg text-[#2D2D2D] shadow-[14px_14px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden my-auto max-h-[90dvh] flex flex-col">
-            
-            {/* Modal Header */}
-            <div className="bg-[#487E2C] p-4 sm:p-5 border-b-4 border-black text-white flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-black/30 border-2 border-white/30 rounded-xl flex items-center justify-center text-2xl shrink-0">
-                  {getBiomeChapterByUnit(activeLesson.unit).icon}
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2 text-[11px] font-mono text-amber-300 font-bold">
-                    <span>Unit {activeLesson.unit}</span>
-                    <span>•</span>
-                    <span>Lesson {activeLesson.id}</span>
-                  </div>
-                  <h3 className="text-lg font-black font-mono leading-tight">
-                    {activeLesson.title}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-100">
-                    {activeLesson.titleZh}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setActiveLesson(null)}
-                className="bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-xl font-mono text-base font-black border-2 border-white/30 flex items-center justify-center transition-colors shrink-0"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body Content */}
-            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
-              
-              {/* Scene Description */}
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 space-y-1">
-                <div className="flex items-center justify-between text-amber-900 font-mono font-black">
-                  <span className="flex items-center space-x-1">
-                    <MapPin className="w-4 h-4 text-[#FF6321]" />
-                    <span>场景故事: {activeLesson.minecraftScene}</span>
-                  </span>
-                </div>
-                <p className="text-amber-950 font-bold leading-relaxed text-[11px]">
-                  {activeLesson.sceneDescription}
-                </p>
-              </div>
-
-              {/* Target Sentences */}
-              <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 space-y-2">
-                <div className="flex items-center justify-between text-[#487E2C] font-mono font-black">
-                  <span className="flex items-center space-x-1">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    <span>核心句型</span>
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {activeLesson.targetSentences.map((sentence, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 bg-white rounded-xl border-2 border-slate-200 flex items-center justify-between shadow-sm"
-                    >
-                      <div>
-                        <p className="font-mono font-black text-[#2D2D2D] text-xs">
-                          "{sentence}"
-                        </p>
-                        <p className="text-[10px] text-slate-500 font-bold">
-                          {activeLesson.targetSentenceTranslations[idx]}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => speakText(sentence)}
-                        className="p-1.5 bg-green-50 hover:bg-green-100 text-[#487E2C] border border-[#487E2C] rounded-lg shrink-0"
-                        title="朗读"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Minecraft Vocabulary */}
-              <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 space-y-2">
-                <span className="font-mono font-black text-[#487E2C] block">
-                  🧱 核心 MC 词汇:
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {activeLesson.vocabulary.map(v => (
-                    <div key={v.id} className="p-2 bg-white rounded-xl border border-slate-300 flex items-center space-x-2">
-                      <span className="text-xl">{v.mcItemIcon || '🧱'}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-mono font-black text-xs truncate">{v.word}</p>
-                        <p className="text-[10px] text-[#FF6321] font-bold truncate">{v.meaning}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Modal Actions */}
-            <div className="p-4 bg-slate-100 border-t-2 border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const lesson = activeLesson;
-                  setActiveLesson(null);
-                  onSelectLessonForChat(lesson);
-                }}
-                className="w-full bg-[#487E2C] hover:bg-[#355E20] text-white border-2 border-black py-3 rounded-2xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5"
-              >
-                <MessageSquare className="w-4 h-4 text-amber-300" />
-                <span>💬 与 Alex 老师练习对话</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const lessonId = activeLesson.id;
-                  setActiveLesson(null);
-                  onCompleteLesson(lessonId);
-                }}
-                className="w-full bg-amber-400 hover:bg-amber-300 text-amber-950 border-2 border-black py-3 rounded-2xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5"
-              >
-                <CheckCircle className="w-4 h-4 text-amber-900" />
-                <span>❇️ 打卡通关 (+10 绿宝石)</span>
-              </button>
-            </div>
-
-          </div>
-        </div>
+        <LessonStudyModal
+          lesson={activeLesson}
+          onClose={() => setActiveLesson(null)}
+          onStartPractice={(lesson) => {
+            setActiveLesson(null);
+            onSelectLessonForChat(lesson);
+          }}
+        />
       )}
 
       {/* NPC INTERACTION DIALOGUE MODAL */}

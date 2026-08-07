@@ -535,6 +535,11 @@ export default function App() {
               setMessages={setChatMessages}
               onAwardEmeralds={handleAwardEmeralds}
               onOpenSettings={() => setIsSettingsOpen(true)}
+              onCompleteLesson={handleCompleteLesson}
+              onBackToMap={() => {
+                setActiveTab('map');
+                setSelectedLessonForChat(null);
+              }}
             />
           )}
 

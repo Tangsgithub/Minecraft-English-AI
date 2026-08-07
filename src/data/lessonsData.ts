@@ -1,5 +1,6 @@
 import { Lesson, CourseVolumeId } from '../types';
 import { getAuthenticVocabForLesson } from './authenticLessonVocab';
+import { AUTHENTIC_LESSON_DIALOGUES } from './authenticLessonDialogues';
 
 // ============================================================================
 // 《新概念英语》1/2/3册 权威原版课文与词汇/句型库 (Authentic New Concept English Curriculum)
@@ -260,7 +261,7 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
 
   // 根据课号内容精准设计词汇与例句，绝不依赖取模逻辑！
   const genVocab = generateVocabForLesson(lessonId, cleanTitle, cleanTitleZh, volumeId);
-  const genSentences = generateSentencesForLesson(cleanTitle, cleanTitleZh, genVocab);
+  const genSentences = generateSentencesForLesson(lessonId, cleanTitle, cleanTitleZh, genVocab, volumeId);
 
   return {
     id: lessonId,
@@ -275,20 +276,22 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
     vocabulary: genVocab,
     targetSentences: genSentences.map(s => s.en),
     targetSentenceTranslations: genSentences.map(s => s.zh),
-    dialogueScript: [
-      {
-        speaker: 'Alex',
-        text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! ${genSentences[0]?.en || ''}`,
-        translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！${genSentences[0]?.zh || ''}`,
-        avatar: '👩'
-      },
-      {
-        speaker: 'Steve',
-        text: genSentences[1]?.en || `I am excited to learn and build in Minecraft today!`,
-        translation: genSentences[1]?.zh || `今天能在我的世界里边学英语边建造，我太兴奋了！`,
-        avatar: '👦'
-      }
-    ],
+    dialogueScript: (volumeId === 'vol1' && AUTHENTIC_LESSON_DIALOGUES[lessonId])
+      ? AUTHENTIC_LESSON_DIALOGUES[lessonId].dialogue
+      : [
+          {
+            speaker: 'Alex',
+            text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! ${genSentences[0]?.en || ''}`,
+            translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！${genSentences[0]?.zh || ''}`,
+            avatar: '👩'
+          },
+          {
+            speaker: 'Steve',
+            text: genSentences[1]?.en || `I am excited to learn and build in Minecraft today!`,
+            translation: genSentences[1]?.zh || `今天能在我的世界里边学英语边建造，我太兴奋了！`,
+            avatar: '👦'
+          }
+        ],
     grammarNote: `【语法要点】${titleData.grammar}。在《新概念英语》第 ${lessonId} 课中，该语法是地道口语与写作的核心重点。`
   };
 }
@@ -342,7 +345,10 @@ function generateVocabForLesson(lessonId: number, title: string, titleZh: string
 }
 
 // 辅助函数：根据真实标题生成精准匹配的句子
-function generateSentencesForLesson(title: string, titleZh: string, vocab: any[]) {
+function generateSentencesForLesson(lessonId: number, title: string, titleZh: string, vocab: any[], volumeId: string) {
+  if (volumeId === 'vol1' && AUTHENTIC_LESSON_DIALOGUES[lessonId]) {
+    return AUTHENTIC_LESSON_DIALOGUES[lessonId].sentences;
+  }
   return [
     { en: `${title}`, zh: `${titleZh}` },
     { en: `How do we practice ${title}?`, zh: `我们如何练习《${titleZh}》？` },

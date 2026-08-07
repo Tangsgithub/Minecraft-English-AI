@@ -109,6 +109,8 @@ export interface UserProfile {
   isVip?: boolean;
   vipCodeUsed?: string;
   vipActivatedAt?: string;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export interface VocabItem {
