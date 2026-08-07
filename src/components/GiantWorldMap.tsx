@@ -276,94 +276,10 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
       {/* Top Controls & Biome Quick Navigation Bar */}
       <div className="bg-white/95 border-4 border-black rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] space-y-4">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Zoom & View Controls */}
-          <div className="flex flex-1 items-center justify-between">
-            <div className="hidden sm:flex items-center space-x-2 text-xs font-mono font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border-2 border-slate-200">
-              <span>🗺️ 12 个大生态领地 • 144 个英语关卡 • NPC 实战交流</span>
-            </div>
-            <div className="flex items-center space-x-2">
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound();
-                setZoomLevel(prev => Math.max(0.85, prev - 0.15));
-              }}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 border-2 border-black rounded-xl text-slate-800 font-mono font-bold flex items-center space-x-1 text-xs shadow-sm"
-              title="缩小地图"
-            >
-              <ZoomOut className="w-4 h-4" />
-              <span className="hidden sm:inline">缩小</span>
-            </button>
 
-            <span className="px-3 py-1.5 bg-slate-200 border-2 border-black rounded-xl text-xs font-mono font-black text-slate-800">
-              {Math.round(zoomLevel * 100)}%
-            </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound();
-                setZoomLevel(prev => Math.min(1.25, prev + 0.15));
-              }}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 border-2 border-black rounded-xl text-slate-800 font-mono font-bold flex items-center space-x-1 text-xs shadow-sm"
-              title="放大地图"
-            >
-              <ZoomIn className="w-4 h-4" />
-              <span className="hidden sm:inline">放大</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound();
-                setZoomLevel(1);
-              }}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 border-2 border-black rounded-xl text-slate-800 font-mono font-bold flex items-center space-x-1 text-xs shadow-sm"
-              title="重置缩放"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline">重置</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound();
-                setShowBgImage(prev => !prev);
-              }}
-              className={`p-2.5 border-2 border-black rounded-xl font-mono font-bold flex items-center space-x-1 text-xs shadow-sm transition-colors ${
-                showBgImage
-                  ? 'bg-[#487E2C] text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-              title="切换 3D Isometric 视效底图"
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span className="hidden sm:inline">底图: {showBgImage ? '开启' : '关闭'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                playClickSound();
-                setIsDaylight(prev => !prev);
-              }}
-              className={`p-2.5 border-2 border-black rounded-xl font-mono font-bold flex items-center space-x-1 text-xs shadow-sm transition-colors ${
-                isDaylight
-                  ? 'bg-amber-400 text-amber-950 font-black'
-                  : 'bg-indigo-900 text-amber-200'
-              }`}
-              title="切换白昼 / 夜晚地图渲染主题"
-            >
-              <span>{isDaylight ? '☀️ 白昼平原' : '🌙 探险暗夜'}</span>
-            </button>
-          </div>
-          </div>
-        </div>
 
         {/* 12 Biome Tabs Quick Navigator */}
-        <div className="pt-2 border-t-2 border-slate-200">
+        <div className="">
           <p className="text-xs font-mono font-black text-slate-600 mb-2 flex items-center space-x-1">
             <Compass className="w-4 h-4 text-[#487E2C]" />
             <span>传送定位到生态领地:</span>
