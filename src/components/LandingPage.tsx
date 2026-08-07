@@ -58,7 +58,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const handleEnterClick = (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => {
-    if (!currentUser) {
+    if (!currentUser && !isAuthenticated) {
       playClickSound();
       onOpenAuth();
     } else {
