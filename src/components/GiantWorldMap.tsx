@@ -277,27 +277,12 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
       <div className="bg-white/95 border-4 border-black rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] space-y-4">
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-[#487E2C] border-3 border-black rounded-2xl flex items-center justify-center text-2xl text-white shadow-md shrink-0">
-              🌍
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono font-black bg-amber-300 text-amber-950 px-2.5 py-0.5 rounded-full border border-black/30">
-                  全景 2D Minecraft 英语大地图
-                </span>
-                <span className="text-xs text-slate-500 font-mono font-bold hidden sm:inline">
-                  12 个大生态领地 • 144 个英语关卡 • NPC 实战交流
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-xl font-black font-mono text-[#2D2D2D] mt-0.5">
-                《新概念英语第一册》Minecraft 探险全景图
-              </h2>
-            </div>
-          </div>
-
           {/* Zoom & View Controls */}
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-1 items-center justify-between">
+            <div className="hidden sm:flex items-center space-x-2 text-xs font-mono font-black text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl border-2 border-slate-200">
+              <span>🗺️ 12 个大生态领地 • 144 个英语关卡 • NPC 实战交流</span>
+            </div>
+            <div className="flex items-center space-x-2">
             <button
               type="button"
               onClick={() => {
@@ -373,6 +358,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
             >
               <span>{isDaylight ? '☀️ 白昼平原' : '🌙 探险暗夜'}</span>
             </button>
+          </div>
           </div>
         </div>
 
