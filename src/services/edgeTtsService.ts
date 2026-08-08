@@ -14,29 +14,36 @@ export const EDGE_VOICES: EdgeVoiceOption[] = [
   { id: 'en-US-AriaNeural', name: 'Aria (情感美音)', gender: 'Female', accent: '美音 (US)', description: '自然丰富的情感表达，极具对话真实感' }
 ];
 
-// Global dummy audio element for unlocking browser autoplay restrictions
-let unlockAudioElement: HTMLAudioElement | null = null;
+// Reusable shared audio element for preserving browser autoplay gesture permission
+let sharedAudioElement: HTMLAudioElement | null = null;
 let isMobileAudioUnlocked = false;
 
-// Currently playing speech audio element
-let currentActiveAudio: HTMLAudioElement | null = null;
+// Currently playing audio URL object for cleanup
+let activeAudioObjectUrl: string | null = null;
+
+function getSharedAudio(): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  if (!sharedAudioElement) {
+    sharedAudioElement = new Audio();
+    sharedAudioElement.setAttribute('playsinline', 'true');
+    sharedAudioElement.setAttribute('webkit-playsinline', 'true');
+  }
+  return sharedAudioElement;
+}
 
 /**
- * Mobile Audio Unlocker: Call on user touchstart/click to bypass iOS/Android autoplay restrictions
+ * Mobile Audio Unlocker: Call on user touchstart/click to bypass iOS/Android/Chrome autoplay restrictions
  */
 export function unlockMobileAudio() {
   if (typeof window === 'undefined') return;
 
-  if (!unlockAudioElement) {
-    unlockAudioElement = new Audio();
-    unlockAudioElement.setAttribute('playsinline', 'true');
-    unlockAudioElement.setAttribute('webkit-playsinline', 'true');
-  }
+  const audio = getSharedAudio();
+  if (!audio) return;
 
   if (!isMobileAudioUnlocked) {
-    // Play short silent sound to unlock mobile audio context
-    unlockAudioElement.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAARKwAAESsAAAABAAgAZGF0YQAAAAA=';
-    unlockAudioElement.play()
+    // Play short silent sound on the shared audio element to unlock browser media session
+    audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAARKwAAESsAAAABAAgAZGF0YQAAAAA=';
+    audio.play()
       .then(() => {
         isMobileAudioUnlocked = true;
       })
@@ -50,13 +57,17 @@ export function unlockMobileAudio() {
 const audioCache = new Map<string, ArrayBuffer>();
 
 export function stopEdgeTtsAudio() {
-  if (currentActiveAudio) {
+  if (sharedAudioElement) {
     try {
-      currentActiveAudio.pause();
-      currentActiveAudio.currentTime = 0;
-      currentActiveAudio.src = '';
+      sharedAudioElement.pause();
+      sharedAudioElement.currentTime = 0;
     } catch {}
-    currentActiveAudio = null;
+  }
+  if (activeAudioObjectUrl) {
+    try {
+      URL.revokeObjectURL(activeAudioObjectUrl);
+    } catch {}
+    activeAudioObjectUrl = null;
   }
 }
 
@@ -67,11 +78,15 @@ export async function speakEdgeTtsText(
   text: string,
   options?: { voice?: string; rate?: string; onEnd?: () => void }
 ): Promise<boolean> {
-  if (typeof window !== 'undefined' && !isMobileAudioUnlocked) {
+  stopEdgeTtsAudio();
+
+  const audio = getSharedAudio();
+  if (!audio) return false;
+
+  // Prime the shared audio element immediately during user gesture
+  if (!isMobileAudioUnlocked) {
     unlockMobileAudio();
   }
-
-  stopEdgeTtsAudio();
 
   const voice = options?.voice || 'en-US-AnaNeural';
   const rate = options?.rate || '+0%';
@@ -108,13 +123,14 @@ export async function speakEdgeTtsText(
     }
 
     const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
+    if (activeAudioObjectUrl) {
+      try { URL.revokeObjectURL(activeAudioObjectUrl); } catch {}
+    }
     const audioUrl = URL.createObjectURL(blob);
+    activeAudioObjectUrl = audioUrl;
 
-    const audio = new Audio(audioUrl);
-    audio.setAttribute('playsinline', 'true');
-    audio.setAttribute('webkit-playsinline', 'true');
+    audio.src = audioUrl;
     audio.volume = 1.0;
-    currentActiveAudio = audio;
 
     return new Promise((resolve) => {
       let isDone = false;
@@ -122,12 +138,6 @@ export async function speakEdgeTtsText(
       const finish = (success: boolean) => {
         if (isDone) return;
         isDone = true;
-        if (currentActiveAudio === audio) {
-          currentActiveAudio = null;
-        }
-        try {
-          URL.revokeObjectURL(audioUrl);
-        } catch {}
         if (options?.onEnd) options.onEnd();
         resolve(success);
       };
