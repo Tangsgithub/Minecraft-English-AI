@@ -10,7 +10,7 @@ import {
   changePasswordServer, 
   saveProfileServer, 
   getProfileServer 
-} from "./server/auth.js";
+} from "./server/auth";
 
 dotenv.config();
 const app = express();
@@ -21,6 +21,23 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
   if (req.method === "OPTIONS") {
     return res.status(200).end();
+  }
+  next();
+});
+
+app.use((req, _res, next) => {
+  if (req.url.startsWith('/api/index')) {
+    req.url = req.url.replace('/api/index', '/api');
+  }
+  if (!req.url.startsWith('/api') && (
+    req.url.startsWith('/auth') ||
+    req.url.startsWith('/user') ||
+    req.url.startsWith('/tts') ||
+    req.url.startsWith('/chat') ||
+    req.url.startsWith('/health') ||
+    req.url.startsWith('/test-key')
+  )) {
+    req.url = '/api' + req.url;
   }
   next();
 });

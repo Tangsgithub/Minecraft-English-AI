@@ -184,6 +184,9 @@ export const serverProxyRegister = async (email: string, password: string, nickn
       try {
         return JSON.parse(errText);
       } catch (e) {
+        if (errText.includes('FUNCTION_INVOCATION_FAILED')) {
+          return { success: false, message: '⚠️ 服务端响应异常 (500)：Vercel 无服务器函数调用失败，请检查环境变量及日志。' };
+        }
         return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
       }
     }
