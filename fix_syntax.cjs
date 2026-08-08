@@ -1,5 +1,6 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/data/nceBook1FullVocab.ts', 'utf8');
-content = content.replace('export const NCE_BOOK1_FULL_VOCAB: NCEVocabEntry[\n', 'export const NCE_BOOK1_FULL_VOCAB: NCEVocabEntry[] = [\n');
-fs.writeFileSync('src/data/nceBook1FullVocab.ts', content);
-console.log('Fixed syntax 2!');
+let code = fs.readFileSync('src/components/AuthModal.tsx', 'utf8');
+
+code = code.replace(/      \}\n\n      \} else \{/g, '      } else {');
+
+fs.writeFileSync('src/components/AuthModal.tsx', code);

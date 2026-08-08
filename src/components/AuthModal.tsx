@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../lib/firebase';
 import { 
   auth,
   signInWithEmailAndPassword, 
@@ -86,58 +86,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         } else if (serverResult.message && serverResult.message.includes('网络')) {
           console.log('Server proxy network issue, falling back...');
         }
+      } else {
+        setErrorMsg('服务器代理请求失败，请检查网络连接！');
       }
-
-      // 2. Client SDK Firebase Auth Login fallback
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
-        const uid = userCredential.user.uid;
-        
-        const cloudProfile = await fetchUserProfileFromCloud(uid);
-        if (cloudProfile) {
-          onProfileLoaded(cloudProfile);
-        } else {
-          const updated = {
-            ...currentProfile,
-            id: uid,
-            email: userCredential.user.email || targetEmail,
-            nickname: nickname || currentProfile.nickname || 'Minecraft探险家'
-          };
-          await saveUserProfileToCloud(updated, uid, password);
-          onProfileLoaded(updated);
-        }
-
-        playLevelUpSound();
-        setSuccessMsg('登录成功！云端档案已准备就绪。');
-        setTimeout(() => onClose(), 1000);
-        return;
-      } catch (authErr: any) {
-        console.warn('Client Firebase Auth login error:', authErr);
-      }
-
-      // 3. Fallback to local account check if offline
-      const localAccountStr = localStorage.getItem('mc_account_' + targetEmail);
-      if (localAccountStr) {
-        try {
-          const localAcc = JSON.parse(localAccountStr);
-          if (localAcc.password === password) {
-            onProfileLoaded(localAcc.profile);
-            playLevelUpSound();
-            setSuccessMsg('登录成功！(已自动切入本地离线无缝存档)');
-            setTimeout(() => onClose(), 1000);
-            return;
-          } else {
-            setErrorMsg('密码不正确，请重新输入或点击【修改密码】！');
-            return;
-          }
-        } catch (e) {}
-      }
-
-      setErrorMsg('账号不存在或密码错误！若为新玩家，请切换至【注册账号】。');
-
     } catch (err: any) {
-      console.error('Login error:', err);
-      setErrorMsg(err.message || '登录遇到网络波动，请重试或检查账户！');
+      setErrorMsg('登录失败: ' + (err.message || '未知网络错误'));
     } finally {
       setLoading(false);
     }
@@ -181,46 +134,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setErrorMsg(serverResult.message);
           return;
         }
+      } else {
+        setErrorMsg('服务器代理请求失败，请检查网络连接！');
       }
-
-      // 2. Client SDK Deduplication & Registration Fallback
-      const dupCheck = await checkUserExistsInFirestore(targetEmail, nickname);
-      if (dupCheck.exists) {
-        if (dupCheck.reason === 'email') {
-          setErrorMsg('该邮箱/用户名已被注册！请切换至【登录账号】或【修改密码】。');
-        } else {
-          setErrorMsg('该玩家昵称已被占用！请使用一个独特独一无二的昵称。');
-        }
-        return;
-      }
-
-      let uid = 'mc-user-' + Date.now();
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, targetEmail, password);
-        uid = userCredential.user.uid;
-      } catch (authErr: any) {
-        console.warn('Firebase Auth native registration unavailable:', authErr);
-      }
-
-      const newProfile: UserProfile = {
-        ...currentProfile,
-        id: uid,
-        email: targetEmail,
-        nickname: nickname.trim(),
-        isInitialSetupDone: true
-      };
-
-      await saveUserProfileToCloud(newProfile, uid, password);
-      localStorage.setItem('mc_account_' + targetEmail, JSON.stringify({ profile: newProfile, password }));
-      
-      onProfileLoaded(newProfile);
-      playEmeraldSound();
-      setSuccessMsg('注册成功！云端 云端 数据库探险家档案已建立！');
-      setTimeout(() => onClose(), 1200);
-
     } catch (err: any) {
-      console.error('Register error:', err);
-      setErrorMsg('注册失败：' + (err.message || '网络连接超时'));
+      setErrorMsg('注册失败: ' + (err.message || '未知网络错误'));
     } finally {
       setLoading(false);
     }

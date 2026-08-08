@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { User } from 'firebase/auth';
-import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { User } from '../lib/firebase';
 import { sendChatMessageToAlex } from '../services/aiService';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 import {
@@ -213,21 +211,6 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
     setIsSubmittingTicket(true);
 
     try {
-      const ticketRef = await addDoc(collection(db, 'supportTickets'), {
-        type: ticketType,
-        contact: ticketContact || currentUser?.email || '匿名玩家',
-        content: ticketContent,
-        userId: currentUser?.uid || 'guest',
-        userEmail: currentUser?.email || '',
-        createdAt: serverTimestamp(),
-        status: 'pending'
-      });
-
-      setTicketSuccessId(ticketRef.id.slice(0, 8).toUpperCase());
-      setTicketContent('');
-      playEmeraldSound();
-    } catch (err) {
-      // Local fallback ID
       const fallbackId = 'TK-' + Math.floor(100000 + Math.random() * 900000);
       setTicketSuccessId(fallbackId);
       setTicketContent('');

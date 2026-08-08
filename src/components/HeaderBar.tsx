@@ -3,7 +3,7 @@ import { UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
 import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic, Headphones, ChevronDown } from 'lucide-react';
 import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio } from '../utils/audio';
-import { User } from 'firebase/auth';
+import { User } from '../lib/firebase';
 
 interface HeaderBarProps {
   selectedVolumeId: CourseVolumeId;

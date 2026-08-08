@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { APP_VERSION_INFO } from '../types';
-import { User } from 'firebase/auth';
+import { User } from '../lib/firebase';
 import {
   Sparkles,
   Gamepad2,
