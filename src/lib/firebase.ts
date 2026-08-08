@@ -23,9 +23,11 @@ export const saveUserProfileToCloud = async (
       body: JSON.stringify({ profile, uid })
     });
     if (resp.ok) {
-      const data = await resp.json();
-      if (data.success) return true;
-    }
+        const data = await resp.json();
+        if (data.success) return true;
+      } else {
+        console.warn('Request failed with status:', resp.status);
+      }
   } catch (e) {
     console.warn('Server proxy save profile error:', e);
   }
@@ -36,9 +38,9 @@ export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfil
   try {
     const resp = await fetch(`/api/user/get-profile?uid=${encodeURIComponent(uid)}`);
     if (resp.ok) {
-      const data = await resp.json();
-      if (data.profile) return data.profile as UserProfile;
-    }
+        const data = await resp.json();
+        if (data.profile) return data.profile as UserProfile;
+      }
   } catch (e) {
     console.warn('Server proxy get profile error:', e);
   }
@@ -57,8 +59,16 @@ export const checkUserExistsInFirestore = async (
       body: JSON.stringify({ email: cleanEmail, nickname })
     });
     if (resp.ok) {
-      return await resp.json();
-    }
+        return await resp.json();
+      } else {
+        try {
+          const errData = await resp.json();
+          return errData;
+        } catch (e) {
+          console.warn('Non-JSON error response:', resp.status);
+          return null;
+        }
+      }
   } catch (e) {
     console.warn('Server proxy check-dup error:', e);
   }
@@ -70,9 +80,9 @@ export const findUserAccountByEmail = async (email: string): Promise<any | null>
   try {
     const resp = await fetch(`/api/user/get-profile?email=${encodeURIComponent(cleanEmail)}`);
     if (resp.ok) {
-      const data = await resp.json();
-      if (data.profile) return { profile: data.profile, email: cleanEmail };
-    }
+        const data = await resp.json();
+        if (data.profile) return { profile: data.profile, email: cleanEmail };
+      }
   } catch (e) {
     console.warn('Server proxy find account error:', e);
   }
@@ -110,8 +120,16 @@ export const serverProxyLogin = async (email: string, password: string) => {
       body: JSON.stringify({ email, password })
     });
     if (resp.ok) {
-      return await resp.json();
-    }
+        return await resp.json();
+      } else {
+        try {
+          const errData = await resp.json();
+          return errData;
+        } catch (e) {
+          console.warn('Non-JSON error response:', resp.status);
+          return null;
+        }
+      }
   } catch (e) {
     console.warn('Server proxy login error:', e);
   }
@@ -126,8 +144,16 @@ export const serverProxyRegister = async (email: string, password: string, nickn
       body: JSON.stringify({ email, password, nickname, initialProfile })
     });
     if (resp.ok) {
-      return await resp.json();
-    }
+        return await resp.json();
+      } else {
+        try {
+          const errData = await resp.json();
+          return errData;
+        } catch (e) {
+          console.warn('Non-JSON error response:', resp.status);
+          return null;
+        }
+      }
   } catch (e) {
     console.warn('Server proxy register error:', e);
   }
