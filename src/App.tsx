@@ -15,11 +15,9 @@ import { StudyGuideManualModal } from './components/StudyGuideManualModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
-import { AuthModal } from './components/AuthModal';
 import { LandingPage } from './components/LandingPage';
 import { VipActivationModal } from './components/VipActivationModal';
 import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
-import { auth, onAuthStateChanged, fetchUserProfileFromCloud, saveUserProfileToCloud, User } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
@@ -83,29 +81,11 @@ export default function App() {
     return DEFAULT_PROFILE;
   });
 
-  const [isLandingView, setIsLandingView] = useState<boolean>(true);
+  const [isLandingView, setIsLandingView] = useState<boolean>(false);
   const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>(profile.selectedVolumeId || 'vol1');
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
-  
-  // Firebase Auth State
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mc_english_user_profile');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          return !!(parsed.isInitialSetupDone && (parsed.email || parsed.id !== 'user_001'));
-        } catch {
-          return false;
-        }
-      }
-    }
-    return false;
-  });
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   // Active Lesson Context for Alex Chat
   const [selectedLessonForChat, setSelectedLessonForChat] = useState<Lesson | null>(null);
@@ -119,48 +99,12 @@ export default function App() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
 
-  // Initial profile sync for proxy-authenticated users
-  useEffect(() => {
-    const initSync = async () => {
-      if (isAuthenticated && !currentUser && profile.id && profile.id !== 'user_001') {
-        const cloudProfile = await fetchUserProfileFromCloud(profile.id);
-        if (cloudProfile && cloudProfile.updatedAt) {
-          setProfile(cloudProfile);
-        }
-      }
-    };
-    initSync();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Listen to Firebase Auth state
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        setIsAuthenticated(true);
-        setIsLandingView(false);
-        const cloudProfile = await fetchUserProfileFromCloud(user.uid);
-        if (cloudProfile) {
-          setProfile(cloudProfile);
-        } else {
-          // Push initial profile to Firestore for newly authenticated user
-          await saveUserProfileToCloud(profile, user.uid);
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Sync profile to localStorage and Cloud Firestore
+  // Sync profile to localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('mc_english_user_profile', JSON.stringify(profile));
     }
-    if (isAuthenticated && profile.id && profile.id !== 'user_001') {
-      saveUserProfileToCloud(profile, profile.id);
-    }
-  }, [profile, isAuthenticated]);
+  }, [profile]);
 
   // Continuous study timer for Eye Care
   const [continuousMinutes, setContinuousMinutes] = useState<number>(0);
@@ -320,50 +264,24 @@ export default function App() {
   };
 
   const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
-    if (!isAuthenticated && !currentUser) {
-      playClickSound();
-      setIsAuthOpen(true);
-      return;
-    }
     if (targetTab) setActiveTab(targetTab);
     setIsLandingView(false);
   };
-
-  // Strictly enforce that unauthenticated users cannot bypass landing page
-  useEffect(() => {
-    if (!isAuthenticated && !currentUser && !isLandingView) {
-      setIsLandingView(true);
-      setIsAuthOpen(true);
-    }
-  }, [isAuthenticated, currentUser, isLandingView]);
 
   if (isLandingView) {
     return (
       <>
         <LandingPage
-          currentUser={currentUser}
-          isAuthenticated={isAuthenticated}
+          currentUser={null}
+          isAuthenticated={true}
           profile={profile}
           onEnterApp={handleEnterApp}
-          onOpenAuth={() => setIsAuthOpen(true)}
+          onOpenAuth={() => setIsLandingView(false)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
           onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
           onOpenVipModal={() => setIsVipModalOpen(true)}
         />
         <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
-        {isAuthOpen && (
-          <AuthModal
-            currentUser={currentUser}
-            currentProfile={profile}
-            isOpen={isAuthOpen}
-            onClose={() => setIsAuthOpen(false)}
-            onProfileLoaded={(loaded) => {
-              setProfile(loaded);
-              setIsAuthenticated(true);
-              setIsLandingView(false);
-            }}
-          />
-        )}
         {isParentDashboardOpen && (
           <ParentDashboardModal
             profile={profile}
@@ -383,9 +301,8 @@ export default function App() {
           isOpen={isCustomerServiceOpen}
           onClose={() => setIsCustomerServiceOpen(false)}
           profile={profile}
-          currentUser={currentUser}
+          currentUser={null}
           onOpenVipModal={() => setIsVipModalOpen(true)}
-          onOpenAuthModal={() => setIsAuthOpen(true)}
         />
       </>
     );
@@ -399,8 +316,8 @@ export default function App() {
         selectedVolumeId={selectedVolumeId}
         onChangeVolumeId={setSelectedVolumeId}
         profile={profile}
-        currentUser={currentUser}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        currentUser={null}
+        onOpenAuth={() => {}}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
@@ -643,28 +560,14 @@ export default function App() {
         />
       )}
 
-      {isAuthOpen && (
-        <AuthModal
-          currentUser={currentUser}
-          currentProfile={profile}
-          isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
-          onProfileLoaded={(loaded) => {
-            setProfile(loaded);
-            setIsLandingView(false);
-          }}
-        />
-      )}
-
       <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
 
       <CustomerServiceModal
         isOpen={isCustomerServiceOpen}
         onClose={() => setIsCustomerServiceOpen(false)}
         profile={profile}
-        currentUser={currentUser}
+        currentUser={null}
         onOpenVipModal={() => setIsVipModalOpen(true)}
-        onOpenAuthModal={() => setIsAuthOpen(true)}
       />
 
     </div>

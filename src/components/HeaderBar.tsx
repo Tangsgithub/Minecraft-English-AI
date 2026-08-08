@@ -9,8 +9,8 @@ interface HeaderBarProps {
   selectedVolumeId: CourseVolumeId;
   onChangeVolumeId: (id: CourseVolumeId) => void;
   profile: UserProfile;
-  currentUser: User | null;
-  onOpenAuth: () => void;
+  currentUser?: User | null;
+  onOpenAuth?: () => void;
   onOpenSettings: () => void;
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
@@ -25,8 +25,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   selectedVolumeId,
   onChangeVolumeId,
   profile,
-  currentUser,
-  onOpenAuth,
   onOpenSettings,
   onOpenHelpWizard,
   onOpenParentDashboard,
@@ -169,25 +167,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <span className="hidden md:inline">官网首页</span>
             </button>
           )}
-
-          {/* Cloud Auth Account Button */}
-          <button
-            onClick={() => {
-              playClickSound();
-              onOpenAuth();
-            }}
-            className={`px-2 sm:px-3 py-1 sm:py-2 border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_rgba(0,0,0,0.5)] active:translate-y-0.5 ${
-              currentUser
-                ? 'bg-emerald-600 hover:bg-emerald-500'
-                : 'bg-amber-500 hover:bg-amber-400 text-amber-950 font-black'
-            }`}
-            title={currentUser ? `云端同步中: ${currentUser.email}` : '注册/登录云端数据库账号'}
-          >
-            <Cloud className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${currentUser ? 'text-emerald-200 animate-pulse' : 'text-amber-950'}`} />
-            <span className="hidden sm:inline">
-              {currentUser ? '云端已挂载' : '注册/登录'}
-            </span>
-          </button>
 
           {/* Study Guide Manual Button */}
           <button

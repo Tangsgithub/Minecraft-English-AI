@@ -58,13 +58,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const handleEnterClick = (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => {
-    if (!currentUser && !isAuthenticated) {
-      playClickSound();
-      onOpenAuth();
-    } else {
-      playEmeraldSound();
-      onEnterApp(targetTab);
-    }
+    playEmeraldSound();
+    onEnterApp(targetTab);
   };
 
   const toggleFaq = (index: number) => {
@@ -125,39 +120,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>家长控制</span>
             </button>
 
-            {currentUser || isAuthenticated ? (
-              <>
-                <button
-                  onClick={() => {
-                    playClickSound();
-                    onOpenAuth();
-                  }}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border-2 border-slate-950 shadow-[2px_2px_0_0_#000] text-xs font-bold transition-all active:translate-y-0.5 flex items-center space-x-1"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 truncate max-w-[90px]">{profile?.nickname || profile?.email?.split('@')[0] || currentUser?.email?.split('@')[0] || '账号中心'}</span>
-                </button>
-
-                <button
-                  onClick={() => handleEnterClick('map')}
-                  className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
-                >
-                  <Gamepad2 className="w-4 h-4" />
-                  <span>进入学习大厅</span>
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => {
-                  playClickSound();
-                  onOpenAuth();
-                }}
-                className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
-              >
-                <KeyRound className="w-4 h-4 text-slate-950" />
-                <span>注册 / 登录</span>
-              </button>
-            )}
+            <button
+              onClick={() => handleEnterClick('map')}
+              className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs border-2 border-slate-950 shadow-[3px_3px_0_0_#000] transition-all flex items-center space-x-1 active:translate-y-0.5 active:shadow-none"
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span>进入学习大厅</span>
+            </button>
           </div>
         </div>
       </header>
@@ -191,17 +160,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onClick={() => handleEnterClick('map')}
               className="w-full sm:w-auto px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-base border-4 border-slate-950 shadow-[4px_4px_0_0_#000] transition-all flex items-center justify-center space-x-2 active:translate-y-0.5 active:shadow-none"
             >
-              {currentUser || isAuthenticated ? (
-                <>
-                  <Gamepad2 className="w-5 h-5 text-slate-950" />
-                  <span>🎮 进入学习大厅 (已登录)</span>
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5 text-slate-950" />
-                  <span>🔑 注册 / 登录开启学习</span>
-                </>
-              )}
+              <Gamepad2 className="w-5 h-5 text-slate-950" />
+              <span>🎮 直接进入学习大厅</span>
             </button>
 
             <button
@@ -213,19 +173,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* 登录状态醒目标示 */}
+          {/* 学习状态提示 */}
           <div className="pt-1">
-            {currentUser || isAuthenticated ? (
-              <div className="text-emerald-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-emerald-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">
-                <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>已安全登录并连接云端同步，随时可以开始练习！</span>
-              </div>
-            ) : (
-              <div className="text-amber-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-amber-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">
-                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>🔒 提示：首页不提供直接进入，必须先注册或登录账号才可进入学习页面</span>
-              </div>
-            )}
+            <div className="text-emerald-300 text-xs sm:text-sm font-bold font-mono inline-flex items-center gap-1.5 bg-slate-900/90 px-4 py-2 border-2 border-emerald-500/60 shadow-[2px_2px_0_0_#000] rounded-lg">
+              <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>无需繁琐登录注册，随时随地开启冒险学习！</span>
+            </div>
           </div>
 
           {/* 精简 Hero 视觉展示卡片 */}

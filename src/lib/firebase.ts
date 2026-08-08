@@ -10,40 +10,13 @@ export const db: any = null;
 
 export const saveUserProfileToCloud = async (
   profile: UserProfile, 
-  userUid?: string, 
+  userUid?: string,
   password?: string
 ) => {
-  const uid = userUid || auth.currentUser?.uid || profile.id;
-  if (!uid) return false;
-
-  try {
-    const resp = await fetch('/api/user/save-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profile, uid })
-    });
-    if (resp.ok) {
-        const data = await resp.json();
-        if (data.success) return true;
-      } else {
-        console.warn('Request failed with status:', resp.status);
-      }
-  } catch (e) {
-    console.warn('Server proxy save profile error:', e);
-  }
-  return false;
+  return true;
 };
 
 export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfile | null> => {
-  try {
-    const resp = await fetch(`/api/user/get-profile?uid=${encodeURIComponent(uid)}`);
-    if (resp.ok) {
-        const data = await resp.json();
-        if (data.profile) return data.profile as UserProfile;
-      }
-  } catch (e) {
-    console.warn('Server proxy get profile error:', e);
-  }
   return null;
 };
 
@@ -51,169 +24,44 @@ export const checkUserExistsInFirestore = async (
   email: string, 
   nickname?: string
 ): Promise<{ exists: boolean; reason?: 'email' | 'nickname' }> => {
-  const cleanEmail = email.toLowerCase().trim();
-  try {
-    const resp = await fetch('/api/auth/check-dup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, nickname })
-    });
-    if (resp.ok) {
-        return await resp.json();
-      } else {
-        try {
-          const errData = await resp.json();
-          return errData;
-        } catch (e) {
-          console.warn('Non-JSON error response:', resp.status);
-          return null;
-        }
-      }
-  } catch (e) {
-    console.warn('Server proxy check-dup error:', e);
-  }
   return { exists: false };
 };
 
 export const findUserAccountByEmail = async (email: string): Promise<any | null> => {
-  const cleanEmail = email.toLowerCase().trim();
-  try {
-    const resp = await fetch(`/api/user/get-profile?email=${encodeURIComponent(cleanEmail)}`);
-    if (resp.ok) {
-        const data = await resp.json();
-        if (data.profile) return { profile: data.profile, email: cleanEmail };
-      }
-  } catch (e) {
-    console.warn('Server proxy find account error:', e);
-  }
   return null;
 };
 
-export const updateUserPassword = async (
-  email: string,
-  newPassword: string,
-  oldPasswordVerification?: string
-): Promise<{ success: boolean; message: string }> => {
-  const cleanEmail = email.toLowerCase().trim();
-  try {
-    const resp = await fetch('/api/auth/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, newPassword, oldPassword: oldPasswordVerification })
-    });
-
-    if (resp.status === 405) {
-      return { success: false, message: '⚠️ 环境限制(405错误)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
-    }
-
-    const contentType = resp.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-       return { success: false, message: '⚠️ 环境限制(Cookie拦截)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
-    }
-
-    if (resp.ok) {
-      const data = await resp.json();
-      return data;
-    } else {
-      const errText = await resp.text();
-      try {
-        return JSON.parse(errText);
-      } catch (e) {
-        return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
-      }
-    }
-  } catch (e: any) {
-    console.warn('Server proxy change-password error:', e);
-    return { success: false, message: `网络连接异常，请重试: ${e.message}` };
-  }
+export const updateUserPassword = async (): Promise<{ success: boolean; message: string }> => {
+  return { success: false, message: '登录注册功能已取消' };
 };
 
-export const serverProxyLogin = async (email: string, password: string) => {
-  try {
-    const resp = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    if (resp.status === 405) {
-      return { success: false, message: '⚠️ 环境限制(405错误)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
-    }
-
-    const contentType = resp.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-       return { success: false, message: '⚠️ 环境限制(Cookie拦截)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
-    }
-
-    if (resp.ok) {
-      return await resp.json();
-    } else {
-      const errText = await resp.text();
-      try {
-        return JSON.parse(errText);
-      } catch (e) {
-        return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
-      }
-    }
-  } catch (e: any) {
-    return { success: false, message: `网络连接异常，请重试: ${e.message}` };
-  }
+export const serverProxyLogin = async () => {
+  return { success: false, message: '登录注册功能已取消' };
 };
 
-export const serverProxyRegister = async (email: string, password: string, nickname: string, initialProfile: any) => {
-  try {
-    const resp = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, nickname, initialProfile })
-    });
-
-    if (resp.status === 405) {
-      return { success: false, message: '⚠️ 环境限制(405错误)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
-    }
-
-    const contentType = resp.headers.get('content-type');
-    if (contentType && contentType.includes('text/html')) {
-       return { success: false, message: '⚠️ 环境限制(Cookie拦截)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
-    }
-
-    if (resp.ok) {
-      return await resp.json();
-    } else {
-      const errText = await resp.text();
-      try {
-        return JSON.parse(errText);
-      } catch (e) {
-        if (errText.includes('FUNCTION_INVOCATION_FAILED')) {
-          return { success: false, message: '⚠️ 服务端响应异常 (500)：Vercel 无服务器函数调用失败，请检查环境变量及日志。' };
-        }
-        return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
-      }
-    }
-  } catch (e: any) {
-    return { success: false, message: `网络连接异常，请重试: ${e.message}` };
-  }
+export const serverProxyRegister = async () => {
+  return { success: false, message: '登录注册功能已取消' };
 };
 
 export const signInWithEmailAndPassword = async () => {
-  throw new Error("Local auth disabled. Use server proxy.");
+  throw new Error("Local auth disabled.");
 };
 
 export const createUserWithEmailAndPassword = async () => {
-  throw new Error("Local auth disabled. Use server proxy.");
+  throw new Error("Local auth disabled.");
 };
 
-export const signOut = async (authObj?: any) => {
+export const signOut = async () => {
   auth.currentUser = null;
   localStorage.removeItem('mc_english_user_profile');
 };
 
-export const onAuthStateChanged = (authObj: any, callback: any) => {
-  // Call once with null immediately
+export const onAuthStateChanged = (_authObj: any, callback: any) => {
   setTimeout(() => callback(null), 0);
   return () => {};
 };
 
 export const updatePassword = async () => {
-  throw new Error("Local auth disabled. Use server proxy.");
+  throw new Error("Local auth disabled.");
 };
+
