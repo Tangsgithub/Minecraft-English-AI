@@ -1,5 +1,4 @@
-import { fileURLToPath } from 'url';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
   doc, 
@@ -13,66 +12,84 @@ import {
 import fs from 'fs';
 import path from 'path';
 
+// Embedded default fallback config to ensure serverless/Vercel environments never fail to load Firebase
+const DEFAULT_FIREBASE_CONFIG = {
+  projectId: "norse-guild-nv8b6",
+  appId: "1:83817873016:web:03d44cabd25d0d863f378d",
+  apiKey: "AIzaSyDJzMAKbssDBC4k-cqMNobMQIXJi9ordJI",
+  authDomain: "norse-guild-nv8b6.firebaseapp.com",
+  firestoreDatabaseId: "ai-studio-minecraftenglish-09c013a2-2881-4a93-95fb-4e535f6d9608",
+  storageBucket: "norse-guild-nv8b6.firebasestorage.app",
+  messagingSenderId: "83817873016",
+  measurementId: "",
+  oAuthClientId: "83817873016-jspo7stlruk61mhpvbi19va4i10s6khl.apps.googleusercontent.com",
+  recaptchaSiteKey: ""
+};
 
 let db: any = null;
-try {
-  // Use absolute path fallback for Vercel, or try requiring it directly
-  let configData;
-  if (process.env.FIREBASE_APPLET_CONFIG) {
-    try {
-      configData = JSON.parse(process.env.FIREBASE_APPLET_CONFIG);
-    } catch (e) {
-      console.warn("Could not parse FIREBASE_APPLET_CONFIG env var", e);
-    }
-  }
 
-  if (!configData) {
-    try {
-     // Dynamic require so esbuild/Vercel tracks it if possible, or we fallback to reading it
-     const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-     if (fs.existsSync(configPath)) {
-       configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-     } else {
-       const dirConfigPath = path.join(__dirname, '../firebase-applet-config.json');
-       if (fs.existsSync(dirConfigPath)) {
-         configData = JSON.parse(fs.readFileSync(dirConfigPath, 'utf8'));
-       }
-     }
-  } catch (e) {
-       console.warn("Could not read config via fs", e);
-    }
-  }
+function getDbInstance() {
+  if (db) return db;
 
-  if (configData) {
-    const app = initializeApp(configData);
-    db = getFirestore(app, configData.firestoreDatabaseId || '(default)');
-    console.log('[Server Firestore Proxy] Initialized successfully with DB:', configData.firestoreDatabaseId);
-  } else {
-    console.warn('[Server Firestore Proxy] firebase-applet-config.json not found');
+  try {
+    let configData: any = null;
+
+    if (process.env.FIREBASE_APPLET_CONFIG) {
+      try {
+        configData = JSON.parse(process.env.FIREBASE_APPLET_CONFIG);
+      } catch (e) {
+        console.warn("[Server Firestore] Could not parse FIREBASE_APPLET_CONFIG env var", e);
+      }
+    }
+
+    if (!configData) {
+      try {
+        const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+        if (fs.existsSync(configPath)) {
+          configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        }
+      } catch (e) {
+        console.warn("[Server Firestore] Could not read config file via fs", e);
+      }
+    }
+
+    if (!configData) {
+      configData = DEFAULT_FIREBASE_CONFIG;
+    }
+
+    const app = getApps().length > 0 ? getApp() : initializeApp(configData);
+    db = getFirestore(app, configData.firestoreDatabaseId || 'ai-studio-minecraftenglish-09c013a2-2881-4a93-95fb-4e535f6d9608');
+    console.log('[Server Firestore Proxy] Initialized successfully with DB:', configData.firestoreDatabaseId || 'default');
+    return db;
+  } catch (err) {
+    console.error('[Server Firestore Proxy] Initialization failed:', err);
+    return null;
   }
-} catch (err) {
-  console.error('[Server Firestore Proxy] Initialization failed:', err);
 }
+
+// Initialize db instance at module evaluation
+db = getDbInstance();
 
 
 const getSafeDocId = (email: string) => email.toLowerCase().trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
 
 export async function checkUserExistsServer(email: string, nickname?: string): Promise<{ exists: boolean; reason?: 'email' | 'nickname' }> {
-  if (!db) return { exists: false };
+  const firestoreDb = db || getDbInstance();
+  if (!firestoreDb) return { exists: false };
 
   const cleanEmail = email.toLowerCase().trim();
   const safeDocId = getSafeDocId(cleanEmail);
 
   try {
     // 1. Check account index document
-    const indexRef = doc(db, 'user_accounts', safeDocId);
+    const indexRef = doc(firestoreDb, 'user_accounts', safeDocId);
     const indexSnap = await getDoc(indexRef);
     if (indexSnap.exists()) {
       return { exists: true, reason: 'email' };
     }
 
     // 2. Query users collection by email
-    const usersRef = collection(db, 'users');
+    const usersRef = collection(firestoreDb, 'users');
     const qEmail = query(usersRef, where('email', '==', cleanEmail));
     const snapEmail = await getDocs(qEmail);
     if (!snapEmail.empty) {
@@ -118,14 +135,15 @@ export async function registerUserServer(email: string, password: string, nickna
     updatedAt: new Date().toISOString()
   };
 
-  if (db) {
+  const firestoreDb = db || getDbInstance();
+  if (firestoreDb) {
     try {
       // Write user profile to users collection
-      const userRef = doc(db, 'users', uid);
+      const userRef = doc(firestoreDb, 'users', uid);
       await setDoc(userRef, cleanProfile, { merge: true });
 
       // Write index to user_accounts collection
-      const indexRef = doc(db, 'user_accounts', safeDocId);
+      const indexRef = doc(firestoreDb, 'user_accounts', safeDocId);
       await setDoc(indexRef, {
         uid,
         email: cleanEmail,
@@ -153,10 +171,11 @@ export async function loginUserServer(email: string, password: string) {
   const cleanEmail = email.toLowerCase().trim();
   const safeDocId = getSafeDocId(cleanEmail);
 
-  if (db) {
+  const firestoreDb = db || getDbInstance();
+  if (firestoreDb) {
     try {
       // 1. Try index doc
-      const indexRef = doc(db, 'user_accounts', safeDocId);
+      const indexRef = doc(firestoreDb, 'user_accounts', safeDocId);
       const indexSnap = await getDoc(indexRef);
 
       if (indexSnap.exists()) {
@@ -170,7 +189,7 @@ export async function loginUserServer(email: string, password: string) {
 
         let userProfile = accData.profile;
         if (!userProfile && accData.uid) {
-          const userSnap = await getDoc(doc(db, 'users', accData.uid));
+          const userSnap = await getDoc(doc(firestoreDb, 'users', accData.uid));
           if (userSnap.exists()) {
             userProfile = userSnap.data();
           }
@@ -189,7 +208,7 @@ export async function loginUserServer(email: string, password: string) {
       }
 
       // 2. Query users collection
-      const usersRef = collection(db, 'users');
+      const usersRef = collection(firestoreDb, 'users');
       const q = query(usersRef, where('email', '==', cleanEmail));
       const snap = await getDocs(q);
 
@@ -222,12 +241,13 @@ export async function changePasswordServer(email: string, newPassword: string, o
   const cleanEmail = email.toLowerCase().trim();
   const safeDocId = getSafeDocId(cleanEmail);
 
-  if (!db) {
+  const firestoreDb = db || getDbInstance();
+  if (!firestoreDb) {
     return { success: false, message: '服务器数据库连接异常，请重试' };
   }
 
   try {
-    const indexRef = doc(db, 'user_accounts', safeDocId);
+    const indexRef = doc(firestoreDb, 'user_accounts', safeDocId);
     const indexSnap = await getDoc(indexRef);
 
     if (indexSnap.exists()) {
@@ -242,7 +262,7 @@ export async function changePasswordServer(email: string, newPassword: string, o
       }, { merge: true });
 
       if (accData.uid) {
-        await setDoc(doc(db, 'users', accData.uid), {
+        await setDoc(doc(firestoreDb, 'users', accData.uid), {
           password: newPassword,
           updatedAt: new Date().toISOString()
         }, { merge: true });
@@ -266,10 +286,11 @@ export async function changePasswordServer(email: string, newPassword: string, o
 }
 
 export async function saveProfileServer(profile: any, uid: string) {
-  if (!db || !uid) return { success: false };
+  const firestoreDb = db || getDbInstance();
+  if (!firestoreDb || !uid) return { success: false };
 
   try {
-    const userRef = doc(db, 'users', uid);
+    const userRef = doc(firestoreDb, 'users', uid);
     await setDoc(userRef, {
       ...profile,
       updatedAt: new Date().toISOString()
@@ -277,7 +298,7 @@ export async function saveProfileServer(profile: any, uid: string) {
 
     if (profile.email) {
       const safeDocId = getSafeDocId(profile.email);
-      const indexRef = doc(db, 'user_accounts', safeDocId);
+      const indexRef = doc(firestoreDb, 'user_accounts', safeDocId);
       await setDoc(indexRef, {
         profile,
         updatedAt: new Date().toISOString()
@@ -292,17 +313,18 @@ export async function saveProfileServer(profile: any, uid: string) {
 }
 
 export async function getProfileServer(uid?: string, email?: string) {
-  if (!db) return null;
+  const firestoreDb = db || getDbInstance();
+  if (!firestoreDb) return null;
 
   try {
     if (uid) {
-      const userSnap = await getDoc(doc(db, 'users', uid));
+      const userSnap = await getDoc(doc(firestoreDb, 'users', uid));
       if (userSnap.exists()) return userSnap.data();
     }
 
     if (email) {
       const safeDocId = getSafeDocId(email);
-      const indexSnap = await getDoc(doc(db, 'user_accounts', safeDocId));
+      const indexSnap = await getDoc(doc(firestoreDb, 'user_accounts', safeDocId));
       if (indexSnap.exists()) {
         const data = indexSnap.data();
         if (data.profile) return data.profile;
