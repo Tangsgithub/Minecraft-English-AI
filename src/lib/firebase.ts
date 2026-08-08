@@ -142,7 +142,7 @@ export const createUserWithEmailAndPassword = async () => {
   throw new Error("Local auth disabled. Use server proxy.");
 };
 
-export const signOut = async () => {
+export const signOut = async (authObj?: any) => {
   auth.currentUser = null;
   localStorage.removeItem('mc_english_user_profile');
 };

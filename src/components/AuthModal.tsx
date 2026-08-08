@@ -73,7 +73,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onProfileLoaded(serverResult.profile);
           playLevelUpSound();
           setSuccessMsg(serverResult.message || '登录成功！(服务端直连 云端 数据库已同步)');
-          setTimeout(() => onClose(), 1000);
+          setLoading(false);
+          setTimeout(() => onClose(), 800);
           return;
         } else if (serverResult.reason === 'wrong_password') {
           setErrorMsg(serverResult.message);
@@ -83,8 +84,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setErrorMsg(serverResult.message);
           setLoading(false);
           return;
-        } else if (serverResult.message && serverResult.message.includes('网络')) {
-          console.log('Server proxy network issue, falling back...');
+        } else if (serverResult.message) {
+          setErrorMsg(serverResult.message);
+          setLoading(false);
+          return;
         }
       } else {
         setErrorMsg('服务器代理请求失败，请检查网络连接！');
@@ -128,7 +131,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onProfileLoaded(serverResult.profile);
           playEmeraldSound();
           setSuccessMsg(serverResult.message || '注册成功！全量数据已中转保存至 云端 云端数据库。');
-          setTimeout(() => onClose(), 1200);
+          setLoading(false);
+          setTimeout(() => onClose(), 800);
           return;
         } else if (serverResult.message) {
           setErrorMsg(serverResult.message);
