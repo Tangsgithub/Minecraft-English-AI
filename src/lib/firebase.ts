@@ -120,20 +120,18 @@ export const serverProxyLogin = async (email: string, password: string) => {
       body: JSON.stringify({ email, password })
     });
     if (resp.ok) {
-        return await resp.json();
-      } else {
-        try {
-          const errData = await resp.json();
-          return errData;
-        } catch (e) {
-          console.warn('Non-JSON error response:', resp.status);
-          return null;
-        }
+      return await resp.json();
+    } else {
+      const errText = await resp.text();
+      try {
+        return JSON.parse(errText);
+      } catch (e) {
+        return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
       }
-  } catch (e) {
-    console.warn('Server proxy login error:', e);
+    }
+  } catch (e: any) {
+    return { success: false, message: `Network Exception: ${e.message}` };
   }
-  return null;
 };
 
 export const serverProxyRegister = async (email: string, password: string, nickname: string, initialProfile: any) => {
@@ -144,20 +142,18 @@ export const serverProxyRegister = async (email: string, password: string, nickn
       body: JSON.stringify({ email, password, nickname, initialProfile })
     });
     if (resp.ok) {
-        return await resp.json();
-      } else {
-        try {
-          const errData = await resp.json();
-          return errData;
-        } catch (e) {
-          console.warn('Non-JSON error response:', resp.status);
-          return null;
-        }
+      return await resp.json();
+    } else {
+      const errText = await resp.text();
+      try {
+        return JSON.parse(errText);
+      } catch (e) {
+        return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
       }
-  } catch (e) {
-    console.warn('Server proxy register error:', e);
+    }
+  } catch (e: any) {
+    return { success: false, message: `Network Exception: ${e.message}` };
   }
-  return null;
 };
 
 export const signInWithEmailAndPassword = async () => {
