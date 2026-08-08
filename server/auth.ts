@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'url';
 import { initializeApp } from 'firebase/app';
 import { 
   getFirestore, 
@@ -12,12 +13,37 @@ import {
 import fs from 'fs';
 import path from 'path';
 
-let db: any = null;
 
+let db: any = null;
 try {
-  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-  if (fs.existsSync(configPath)) {
-    const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  // Use absolute path fallback for Vercel, or try requiring it directly
+  let configData;
+  if (process.env.FIREBASE_APPLET_CONFIG) {
+    try {
+      configData = JSON.parse(process.env.FIREBASE_APPLET_CONFIG);
+    } catch (e) {
+      console.warn("Could not parse FIREBASE_APPLET_CONFIG env var", e);
+    }
+  }
+
+  if (!configData) {
+    try {
+     // Dynamic require so esbuild/Vercel tracks it if possible, or we fallback to reading it
+     const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+     if (fs.existsSync(configPath)) {
+       configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+     } else {
+       const dirConfigPath = path.join(__dirname, '../firebase-applet-config.json');
+       if (fs.existsSync(dirConfigPath)) {
+         configData = JSON.parse(fs.readFileSync(dirConfigPath, 'utf8'));
+       }
+     }
+  } catch (e) {
+       console.warn("Could not read config via fs", e);
+    }
+  }
+
+  if (configData) {
     const app = initializeApp(configData);
     db = getFirestore(app, configData.firestoreDatabaseId || '(default)');
     console.log('[Server Firestore Proxy] Initialized successfully with DB:', configData.firestoreDatabaseId);
@@ -27,6 +53,7 @@ try {
 } catch (err) {
   console.error('[Server Firestore Proxy] Initialization failed:', err);
 }
+
 
 const getSafeDocId = (email: string) => email.toLowerCase().trim().replace(/[^a-zA-Z0-9_.-]/g, '_');
 

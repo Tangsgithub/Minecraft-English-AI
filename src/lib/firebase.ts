@@ -101,15 +101,31 @@ export const updateUserPassword = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, newPassword, oldPassword: oldPasswordVerification })
     });
+
+    if (resp.status === 405) {
+      return { success: false, message: '⚠️ 环境限制(405错误)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
+    }
+
+    const contentType = resp.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+       return { success: false, message: '⚠️ 环境限制(Cookie拦截)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
+    }
+
     if (resp.ok) {
       const data = await resp.json();
-      if (data.success) return data;
-      else if (data.message) return data;
+      return data;
+    } else {
+      const errText = await resp.text();
+      try {
+        return JSON.parse(errText);
+      } catch (e) {
+        return { success: false, message: `HTTP Error ${resp.status}: ${errText.substring(0, 50)}` };
+      }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.warn('Server proxy change-password error:', e);
+    return { success: false, message: `网络连接异常，请重试: ${e.message}` };
   }
-  return { success: false, message: '修改密码失败：网络连接异常，请重试！' };
 };
 
 export const serverProxyLogin = async (email: string, password: string) => {
@@ -119,6 +135,16 @@ export const serverProxyLogin = async (email: string, password: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
+    
+    if (resp.status === 405) {
+      return { success: false, message: '⚠️ 环境限制(405错误)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
+    }
+
+    const contentType = resp.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+       return { success: false, message: '⚠️ 环境限制(Cookie拦截)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
+    }
+
     if (resp.ok) {
       return await resp.json();
     } else {
@@ -130,7 +156,7 @@ export const serverProxyLogin = async (email: string, password: string) => {
       }
     }
   } catch (e: any) {
-    return { success: false, message: `Network Exception: ${e.message}` };
+    return { success: false, message: `网络连接异常，请重试: ${e.message}` };
   }
 };
 
@@ -141,6 +167,16 @@ export const serverProxyRegister = async (email: string, password: string, nickn
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, nickname, initialProfile })
     });
+
+    if (resp.status === 405) {
+      return { success: false, message: '⚠️ 环境限制(405错误)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
+    }
+
+    const contentType = resp.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+       return { success: false, message: '⚠️ 环境限制(Cookie拦截)：AI Studio 预览窗口拦截了 API 请求。请点击右上角的「在新标签页中打开 (Open in new tab)」按钮后重试！' };
+    }
+
     if (resp.ok) {
       return await resp.json();
     } else {
@@ -152,7 +188,7 @@ export const serverProxyRegister = async (email: string, password: string, nickn
       }
     }
   } catch (e: any) {
-    return { success: false, message: `Network Exception: ${e.message}` };
+    return { success: false, message: `网络连接异常，请重试: ${e.message}` };
   }
 };
 

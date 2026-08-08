@@ -14,10 +14,8 @@ import {
 } from "./server/auth.js";
 
 dotenv.config();
-
-async function startServer() {
-  const app = express();
-  app.use(express.json());
+const app = express();
+app.use(express.json());
   const PORT = 3000;
 
   // Health check endpoint
@@ -153,7 +151,7 @@ async function startServer() {
     try {
       const { messages, systemPrompt, config } = req.body;
       const provider = config?.provider || 'deepseek';
-      const apiKey = config?.apiKey || process.env.GEMINI_API_KEY || '';
+      const apiKey = config?.apiKey || (provider === 'deepseek' ? process.env.DEEPSEEK_API_KEY : process.env.GEMINI_API_KEY) || process.env.GEMINI_API_KEY || '';
       const baseUrl = config?.baseUrl || 'https://api.deepseek.com';
       const model = config?.model || (provider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.6-flash');
 
@@ -248,7 +246,7 @@ async function startServer() {
     try {
       const { config } = req.body;
       const provider = config?.provider || 'deepseek';
-      const apiKey = config?.apiKey || process.env.GEMINI_API_KEY || '';
+      const apiKey = config?.apiKey || (provider === 'deepseek' ? process.env.DEEPSEEK_API_KEY : process.env.GEMINI_API_KEY) || process.env.GEMINI_API_KEY || '';
       const baseUrl = config?.baseUrl || 'https://api.deepseek.com';
 
       if (provider === 'gemini' || (!config?.apiKey && process.env.GEMINI_API_KEY)) {
@@ -293,7 +291,9 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
+  
+// Vite middleware for development
+async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -308,9 +308,15 @@ async function startServer() {
     });
   }
 
+  const PORT = 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Minecraft English AI Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+export default app;
+
