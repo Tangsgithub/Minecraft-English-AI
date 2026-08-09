@@ -115,12 +115,7 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
             <div className="h-1 flex-1 bg-white/30 mx-2 sm:mx-3 rounded-full" />
             <div className={`flex items-center space-x-1.5 sm:space-x-2 ${step >= 2 ? 'text-[#7CFC00] font-black' : 'text-white/50'}`}>
               <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-black border-2 ${step >= 2 ? 'border-white bg-black/30' : 'border-white/30'}`}>2</span>
-              <span className="text-xs font-mono">DeepSeek AI</span>
-            </div>
-            <div className="h-1 flex-1 bg-white/30 mx-2 sm:mx-3 rounded-full" />
-            <div className={`flex items-center space-x-1.5 sm:space-x-2 ${step >= 3 ? 'text-[#7CFC00] font-black' : 'text-white/50'}`}>
-              <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-black border-2 ${step >= 3 ? 'border-white bg-black/30' : 'border-white/30'}`}>3</span>
-              <span className="text-xs font-mono">开始冒险</span>
+              <span className="text-xs font-mono">高级AI Key (选填)</span>
             </div>
           </div>
         </div>
@@ -200,17 +195,24 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
               </div>
             </div>
 
-            <div className="p-3.5 sm:p-4 bg-slate-50 border-t-2 border-slate-200 flex justify-end shrink-0">
+            <div className="p-3.5 sm:p-4 bg-slate-50 border-t-2 border-slate-200 flex items-center justify-between shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   playClickSound();
                   setStep(2);
                 }}
+                className="text-slate-500 hover:text-slate-700 text-xs font-mono font-bold px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                ⚙️ 高级 AI Key (选填)
+              </button>
+
+              <button
+                type="button"
+                onClick={handleFinish}
                 className="bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white px-6 py-2.5 rounded-xl font-mono font-black text-xs sm:text-sm flex items-center space-x-2 shadow-[0_3px_0_0_#2A4718] active:translate-y-0.5"
               >
-                <span>下一步：配置 AI Key</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>开启 Minecraft 英语冒险 🚀</span>
               </button>
             </div>
           </div>
@@ -223,10 +225,10 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
               <div className="text-center space-y-1">
                 <h3 className="text-base sm:text-lg font-black text-[#FF6321] flex items-center justify-center space-x-2">
                   <Key className="w-5 h-5" />
-                  <span>配置用户 DeepSeek API Key</span>
+                  <span>自定义 AI 密钥 (高级选填)</span>
                 </h3>
-                <p className="text-xs text-slate-500 font-bold">
-                  本程序基于“自带 API Key 零服务器成本”设计。数据全保存在本地！
+                <p className="text-xs text-emerald-700 font-bold bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                  ✨ 系统默认使用内置云端 AI，无需配置即可直接对话！如有自备 DeepSeek/Gemini Key 可在此填入。
                 </p>
               </div>
 

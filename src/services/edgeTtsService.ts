@@ -56,9 +56,37 @@ export function unlockMobileAudio() {
 // In-memory audio cache for zero-latency replay of repeated words/sentences
 const audioCache = new Map<string, ArrayBuffer>();
 
+// Active Web Audio API source node for precise pitch modulation & stopping
+let activeAudioSource: AudioBufferSourceNode | null = null;
+let audioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+
 export function stopEdgeTtsAudio() {
+  if (activeAudioSource) {
+    try {
+      activeAudioSource.onended = null;
+      activeAudioSource.stop();
+      activeAudioSource.disconnect();
+    } catch {}
+    activeAudioSource = null;
+  }
   if (sharedAudioElement) {
     try {
+      sharedAudioElement.onended = null;
+      sharedAudioElement.onerror = null;
       sharedAudioElement.pause();
       sharedAudioElement.currentTime = 0;
     } catch {}
@@ -79,14 +107,6 @@ export async function speakEdgeTtsText(
   options?: { voice?: string; rate?: string; onEnd?: () => void }
 ): Promise<boolean> {
   stopEdgeTtsAudio();
-
-  const audio = getSharedAudio();
-  if (!audio) return false;
-
-  // Prime the shared audio element immediately during user gesture
-  if (!isMobileAudioUnlocked) {
-    unlockMobileAudio();
-  }
 
   const voice = options?.voice || 'en-US-AnaNeural';
   const rate = options?.rate || '+0%';
@@ -122,6 +142,56 @@ export async function speakEdgeTtsText(
       audioCache.set(cacheKey, arrayBuffer);
     }
 
+    // Determine voice character pitch shift
+    const isMale = voice.includes('Guy') || voice.includes('Steve') || voice.includes('Male');
+    const isChild = voice.includes('Ana') || voice.includes('Child');
+
+    let pitchFactor = 1.0;
+    if (isMale) {
+      pitchFactor = 0.84; // Deep masculine tone for Steve (👦)
+    } else if (isChild) {
+      pitchFactor = 1.20; // Playful child tone
+    } else {
+      pitchFactor = 1.08; // Bright female tone for Alex (👩)
+    }
+
+    // Try Web Audio API decoding first for zero-latency, distinct pitch control
+    const ctx = getAudioContext();
+    if (ctx) {
+      try {
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.playbackRate.value = pitchFactor;
+
+        return new Promise((resolve) => {
+          let isDone = false;
+          const finish = (success: boolean) => {
+            if (isDone) return;
+            isDone = true;
+            activeAudioSource = null;
+            if (options?.onEnd) options.onEnd();
+            resolve(success);
+          };
+
+          source.onended = () => finish(true);
+          source.connect(ctx.destination);
+          activeAudioSource = source;
+          source.start(0);
+        });
+      } catch (decodeErr) {
+        console.warn('Web Audio API decode failed, falling back to HTML5 Audio:', decodeErr);
+      }
+    }
+
+    // Fallback: HTML5 Audio element
+    const audio = getSharedAudio();
+    if (!audio) return false;
+
+    if (!isMobileAudioUnlocked) {
+      unlockMobileAudio();
+    }
+
     const blob = new Blob([arrayBuffer], { type: 'audio/mpeg' });
     if (activeAudioObjectUrl) {
       try { URL.revokeObjectURL(activeAudioObjectUrl); } catch {}
@@ -129,8 +199,22 @@ export async function speakEdgeTtsText(
     const audioUrl = URL.createObjectURL(blob);
     activeAudioObjectUrl = audioUrl;
 
+    audio.onended = null;
+    audio.onerror = null;
     audio.src = audioUrl;
     audio.volume = 1.0;
+    
+    // Disable pitch preservation so playbackRate shifts voice pitch distinctly
+    if ('preservesPitch' in audio) {
+      (audio as any).preservesPitch = false;
+    }
+    if ('mozPreservesPitch' in audio) {
+      (audio as any).mozPreservesPitch = false;
+    }
+    if ('webkitPreservesPitch' in audio) {
+      (audio as any).webkitPreservesPitch = false;
+    }
+    audio.playbackRate = pitchFactor;
 
     return new Promise((resolve) => {
       let isDone = false;
@@ -138,28 +222,28 @@ export async function speakEdgeTtsText(
       const finish = (success: boolean) => {
         if (isDone) return;
         isDone = true;
+        try {
+          audio.onended = null;
+          audio.onerror = null;
+        } catch {}
         if (options?.onEnd) options.onEnd();
         resolve(success);
       };
 
       audio.onended = () => finish(true);
       audio.onerror = (e) => {
-        console.warn('Edge TTS play error, fallbacking:', e);
+        console.warn('Edge TTS play error:', e);
         finish(false);
       };
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise
-          .then(() => {
-            // Audio successfully started
-          })
+          .then(() => {})
           .catch(err => {
             console.warn('Audio play prevented on browser:', err);
             finish(false);
           });
-      } else {
-        // Synchronous start
       }
     });
   } catch (err) {

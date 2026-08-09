@@ -123,7 +123,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex items-center space-x-2.5">
             <Settings className="w-5 h-5 text-[#FFD700]" />
             <h2 className="text-base sm:text-lg font-black font-mono text-white">
-              设置与 DeepSeek API 配置
+              系统设置与高级配置
             </h2>
           </div>
           <button
@@ -136,12 +136,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1 min-h-0 text-xs font-mono">
           
-          {/* DeepSeek Key Config */}
+          {/* DeepSeek / Gemini Key Config */}
           <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
-            <h3 className="font-black text-[#FF6321] text-sm flex items-center space-x-2">
-              <Key className="w-4 h-4" />
-              <span>AI 服务提供商配置 (用户自带 Key)</span>
-            </h3>
+            <div>
+              <h3 className="font-black text-[#FF6321] text-sm flex items-center space-x-2">
+                <Key className="w-4 h-4" />
+                <span>自定义 AI 密钥 (高级选填)</span>
+              </h3>
+              <p className="text-[11px] text-[#487E2C] font-bold mt-1 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                ✨ 提示：系统已内置开箱即用的云端智能 AI，无需填入 Key 即可正常对话！仅在您想使用自己的 DeepSeek/Gemini 账号配额时才需配置。
+              </p>
+            </div>
 
             {/* Provider Selector */}
             <div className="grid grid-cols-2 gap-2">

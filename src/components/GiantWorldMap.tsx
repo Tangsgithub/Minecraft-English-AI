@@ -259,7 +259,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
     setActiveNPC(npc);
     setNpcQuizAnswered(false);
     setUserQuizChoice(null);
-    speakText(npc.greetingEn);
+    speakText(npc.greetingEn, { speaker: npc.name });
   };
 
   const handleSolveNPCQuiz = () => {
@@ -615,7 +615,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 <span>💬 NPC English Line:</span>
                 <button
                   type="button"
-                  onClick={() => speakText(activeNPC.greetingEn)}
+                  onClick={() => speakText(activeNPC.greetingEn, { speaker: activeNPC.name })}
                   className="p-1 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 rounded-lg flex items-center space-x-1 text-[10px]"
                 >
                   <Volume2 className="w-3.5 h-3.5" />

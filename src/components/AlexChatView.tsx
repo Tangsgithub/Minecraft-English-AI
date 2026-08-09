@@ -132,7 +132,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setMessages(prev => [...prev, alexMsg]);
 
     // Speak Alex's response automatically
-    speakText(alexRes.text);
+    speakText(alexRes.text, { speaker: 'Alex' });
 
     // Award small emeralds & XP for speaking English
     playEmeraldSound();
@@ -282,7 +282,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
                   
                   {isAlex && (
                     <button
-                      onClick={() => speakText(msg.text)}
+                      onClick={() => speakText(msg.text, { speaker: 'Alex' })}
                       className="text-slate-400 hover:text-[#487E2C] flex items-center space-x-1"
                       title="朗读 Alex 语音"
                     >

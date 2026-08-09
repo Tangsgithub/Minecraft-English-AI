@@ -288,16 +288,91 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   }
 }
 
+export interface SpeakOptions {
+  lang?: string;
+  rate?: number;
+  pitch?: number;
+  voice?: string;
+  speaker?: string;
+  gender?: 'male' | 'female';
+}
+
+export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'female', explicitVoice?: string): string {
+  if (explicitVoice) return explicitVoice;
+
+  if (speaker) {
+    const s = speaker.toLowerCase().trim();
+    // Male character voices (Steve, Dave, Tom, Mr., etc.)
+    if (
+      s.includes('steve') ||
+      s.includes('dave') ||
+      s.includes('tom') ||
+      s.includes('hans') ||
+      s.includes('sam') ||
+      s.includes('paul') ||
+      s.includes('robert') ||
+      s.includes('george') ||
+      s.includes('john') ||
+      s.includes('jack') ||
+      s.includes('mr.') ||
+      s.includes('mr ') ||
+      s.includes('sir') ||
+      s.includes('father') ||
+      s.includes('dad') ||
+      s.includes('boy') ||
+      s.includes('brother') ||
+      s.includes('uncle') ||
+      s.includes('man') ||
+      s.includes('blacksmith') ||
+      s.includes('villager') ||
+      s.includes('golem')
+    ) {
+      return 'en-US-GuyNeural';
+    }
+
+    // Female character voices (Alex, Karen, Mrs., etc.)
+    if (
+      s.includes('alex') ||
+      s.includes('karen') ||
+      s.includes('penny') ||
+      s.includes('mary') ||
+      s.includes('jane') ||
+      s.includes('stella') ||
+      s.includes('linda') ||
+      s.includes('sarah') ||
+      s.includes('mrs.') ||
+      s.includes('mrs ') ||
+      s.includes('ms.') ||
+      s.includes('ms ') ||
+      s.includes('lady') ||
+      s.includes('mother') ||
+      s.includes('mom') ||
+      s.includes('girl') ||
+      s.includes('sister') ||
+      s.includes('witch') ||
+      s.includes('queen') ||
+      s.includes('teacher')
+    ) {
+      return 'en-US-JennyNeural';
+    }
+  }
+
+  if (gender === 'male') return 'en-US-GuyNeural';
+  if (gender === 'female') return 'en-US-JennyNeural';
+
+  return getSelectedEdgeVoice();
+}
+
 export async function speakText(
   text: string,
-  onEndOrOptions?: (() => void) | { lang?: string; rate?: number; pitch?: number },
-  opts?: { lang?: string; rate?: number; pitch?: number }
+  onEndOrOptions?: (() => void) | SpeakOptions,
+  opts?: SpeakOptions
 ) {
   if (typeof window === 'undefined') return;
   unlockAudio();
 
   let onEnd: (() => void) | undefined;
-  let options: { lang?: string; rate?: number; pitch?: number } | undefined;
+  let options: SpeakOptions | undefined;
 
   if (typeof onEndOrOptions === 'function') {
     onEnd = onEndOrOptions;
@@ -333,13 +408,13 @@ export async function speakText(
 
   // 1. High Quality Edge Neural Speech (Ultra natural, 100-200ms latency)
   if (engine === 'edge') {
-    const edgeVoice = getSelectedEdgeVoice();
+    const edgeVoice = resolveVoiceForSpeaker(options?.speaker, options?.gender, options?.voice);
     const success = await speakEdgeTtsText(cleanText, {
       voice: edgeVoice,
       onEnd
     });
     if (success) {
-      return; // Edge Neural Speech played successfully!
+      return true; // Edge Neural Speech played successfully!
     }
   }
 
@@ -356,12 +431,12 @@ export async function speakText(
 
     const result = await Promise.race([kokoroPromise, timeoutPromise]);
     if (result) {
-      return;
+      return true;
     }
   }
 
   // 3. Fallback to Web Speech API
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window)) return false;
 
   window.speechSynthesis.cancel();
 
@@ -375,10 +450,17 @@ export async function speakText(
   utterance.pitch = options?.pitch ?? 1.0;
 
   if (cachedVoices.length > 0) {
-    let bestVoice = cachedVoices.find(v => 
-      v.lang.startsWith(targetLang.slice(0, 2)) && 
-      (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Jenny') || v.name.includes('Zira'))
-    );
+    const isMale = (options?.speaker && resolveVoiceForSpeaker(options.speaker, options.gender).includes('Guy')) || options?.gender === 'male';
+    const isFemale = (options?.speaker && resolveVoiceForSpeaker(options.speaker, options.gender).includes('Jenny')) || options?.gender === 'female';
+
+    let bestVoice = cachedVoices.find(v => {
+      const matchLang = v.lang.startsWith(targetLang.slice(0, 2));
+      const name = v.name.toLowerCase();
+      if (!matchLang) return false;
+      if (isMale) return name.includes('david') || name.includes('guy') || name.includes('mark') || name.includes('george') || name.includes('male');
+      if (isFemale) return name.includes('zira') || name.includes('jenny') || name.includes('samantha') || name.includes('victoria') || name.includes('female');
+      return name.includes('natural') || name.includes('online') || name.includes('google');
+    });
 
     if (!bestVoice) {
       bestVoice = cachedVoices.find(v => v.lang.startsWith(targetLang.slice(0, 2)));
@@ -387,14 +469,34 @@ export async function speakText(
     if (bestVoice) {
       utterance.voice = bestVoice;
     }
+
+    if (isMale) {
+      utterance.pitch = options?.pitch ?? 0.88;
+    } else if (isFemale) {
+      utterance.pitch = options?.pitch ?? 1.12;
+    }
   }
 
-  if (onEnd) {
-    utterance.onend = onEnd;
-    utterance.onerror = onEnd;
-  }
+  return new Promise<boolean>((resolve) => {
+    let finished = false;
+    const finish = (res: boolean) => {
+      if (finished) return;
+      finished = true;
+      if (onEnd) onEnd();
+      resolve(res);
+    };
 
-  window.speechSynthesis.speak(utterance);
+    utterance.onend = () => finish(true);
+    utterance.onerror = () => finish(false);
+
+    // Fallback safety timeout for Web Speech API
+    const estimateMs = Math.max(2500, (cleanText.length / 8) * 1000);
+    setTimeout(() => {
+      if (!finished) finish(true);
+    }, estimateMs + 2000);
+
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 export function stopSpeech() {

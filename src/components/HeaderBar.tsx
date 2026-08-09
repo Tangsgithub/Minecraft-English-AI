@@ -222,17 +222,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
           </button>
 
-          {/* Settings / API Key */}
+          {/* Settings */}
           <button
             onClick={() => {
               playClickSound();
               onOpenSettings();
             }}
             className="px-2 sm:px-3 py-1 sm:py-2 bg-[#FF6321] hover:bg-[#e05316] border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 sm:space-x-1.5 text-xs font-black font-mono shadow-[0_2px_0_0_#993300] active:translate-y-0.5"
-            title="配置 DeepSeek API Key 与系统设置"
+            title="系统设置与个性化"
           >
             <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline">Key</span>
+            <span className="hidden xs:inline">设置</span>
           </button>
         </div>
 

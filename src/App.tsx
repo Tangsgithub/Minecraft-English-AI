@@ -44,7 +44,7 @@ const DEFAULT_PROFILE: UserProfile = {
     baseUrl: 'https://api.deepseek.com',
     model: 'deepseek-chat'
   },
-  isInitialSetupDone: false
+  isInitialSetupDone: true
 };
 
 export default function App() {
@@ -91,7 +91,7 @@ export default function App() {
   const [selectedLessonForChat, setSelectedLessonForChat] = useState<Lesson | null>(null);
 
   // Modals
-  const [isFirstLaunchOpen, setIsFirstLaunchOpen] = useState<boolean>(!profile.isInitialSetupDone);
+  const [isFirstLaunchOpen, setIsFirstLaunchOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isParentDashboardOpen, setIsParentDashboardOpen] = useState<boolean>(false);

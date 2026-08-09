@@ -23,14 +23,14 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
     };
   }, []);
 
-  const handlePlayAudio = (id: string, text: string) => {
+  const handlePlayAudio = (id: string, text: string, speaker?: string) => {
     if (isPlayingAllDialogue) {
       stopPlayRef.current = true;
       stopSpeech();
       setIsPlayingAllDialogue(false);
       setCurrentDialogueIndex(null);
     }
-    speakText(text);
+    speakText(text, { speaker });
     setPlayedAudioIds(prev => {
       const next = new Set(prev);
       next.add(id);
@@ -65,7 +65,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
         return next;
       });
 
-      await speakText(turn.text);
+      await speakText(turn.text, { speaker: turn.speaker });
 
       if (stopPlayRef.current) break;
 
@@ -189,7 +189,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
                           )}
                         </div>
                         <button
-                          onClick={() => handlePlayAudio(audioId, turn.text)}
+                          onClick={() => handlePlayAudio(audioId, turn.text, turn.speaker)}
                           className={`p-1.5 rounded-lg border transition-colors ${
                             isCurrentlyPlaying
                               ? 'bg-emerald-600 text-white border-black'
