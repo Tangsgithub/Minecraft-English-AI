@@ -480,6 +480,12 @@ app.use(express.json());
     }
   });
 
+  // Global API error handler ensuring all /api requests return JSON
+  app.use("/api", (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error("API Express Error:", err);
+    res.status(500).json({ success: false, error: "服务器内部异常，请稍后重试" });
+  });
+
   
 // Vite middleware for development
 async function startServer() {

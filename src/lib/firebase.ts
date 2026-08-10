@@ -47,18 +47,24 @@ export const serverProxyRegister = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account, password, nickname })
     });
-    const data = await resp.json();
+    const text = await resp.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, message: '服务器网络建立中，请稍后再试 (' + resp.status + ')' };
+    }
     if (resp.ok && data.success) {
       auth.currentUser = data.user;
       if (data.profile) {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
       }
-      return { success: true, message: data.message, user: data.user, profile: data.profile };
+      return { success: true, message: data.message || '注册成功', user: data.user, profile: data.profile };
     } else {
       return { success: false, message: data.error || data.message || '注册失败' };
     }
   } catch (err: any) {
-    return { success: false, message: '网络连接失败，请重试 (' + (err?.message || '网络超时') + ')' };
+    return { success: false, message: '网络连接失败，请检查网络后再试' };
   }
 };
 
@@ -72,18 +78,24 @@ export const serverProxyLogin = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account, password })
     });
-    const data = await resp.json();
+    const text = await resp.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, message: '服务器网络建立中，请稍后再试 (' + resp.status + ')' };
+    }
     if (resp.ok && data.success) {
       auth.currentUser = data.user;
       if (data.profile) {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
       }
-      return { success: true, message: data.message, user: data.user, profile: data.profile };
+      return { success: true, message: data.message || '登录成功', user: data.user, profile: data.profile };
     } else {
       return { success: false, message: data.error || data.message || '登录失败' };
     }
   } catch (err: any) {
-    return { success: false, message: '网络连接失败，请重试 (' + (err?.message || '网络超时') + ')' };
+    return { success: false, message: '网络连接失败，请检查网络后再试' };
   }
 };
 
@@ -99,8 +111,13 @@ export const saveUserProfileToCloud = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid, profile })
     });
-    const data = await resp.json();
-    return data.success === true;
+    const text = await resp.text();
+    try {
+      const data = JSON.parse(text);
+      return data.success === true;
+    } catch {
+      return false;
+    }
   } catch {
     return false;
   }
@@ -113,9 +130,14 @@ export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfil
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid })
     });
-    const data = await resp.json();
-    if (resp.ok && data.success && data.profile) {
-      return data.profile;
+    const text = await resp.text();
+    try {
+      const data = JSON.parse(text);
+      if (resp.ok && data.success && data.profile) {
+        return data.profile;
+      }
+    } catch {
+      return null;
     }
     return null;
   } catch {
@@ -134,10 +156,16 @@ export const updateUserPassword = async (
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ account, newPassword, nickname })
     });
-    const data = await resp.json();
+    const text = await resp.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, message: '服务器响应异常，请稍后再试' };
+    }
     return { success: data.success === true, message: data.message || data.error || '密码重置完成' };
   } catch (err: any) {
-    return { success: false, message: '网络请求失败：' + err.message };
+    return { success: false, message: '网络请求失败，请检查网络设置' };
   }
 };
 
