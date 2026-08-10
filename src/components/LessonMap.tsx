@@ -304,8 +304,9 @@ export const LessonMap: React.FC<LessonMapProps> = ({
         /* 144 Lessons Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
           {filteredCatalog.map(item => {
-            const isCompleted = item.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
-            const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
+            const unlockedList = profile.unlockedLessonIds || [1];
+            const isCompleted = item.id < profile.currentLessonId || (unlockedList.includes(item.id) && unlockedList.includes(item.id + 1));
+            const isUnlocked = unlockedList.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
             const isCurrent = profile.currentLessonId === item.id;
 
             return (

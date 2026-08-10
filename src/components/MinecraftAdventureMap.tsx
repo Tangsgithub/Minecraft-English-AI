@@ -253,9 +253,11 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
     ? getBiomeChapterByUnit(selectedUnit)
     : getBiomeChapterByLesson(profile.currentLessonId);
 
+  const unlockedLessonIds = profile.unlockedLessonIds || [1];
+
   // Compute stats
   const completedInView = displayLessons.filter(l => {
-    return l.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(l.id) && profile.unlockedLessonIds.includes(l.id + 1));
+    return l.id < profile.currentLessonId || (unlockedLessonIds.includes(l.id) && unlockedLessonIds.includes(l.id + 1));
   }).length;
   const progressPercent = Math.round((completedInView / displayLessons.length) * 100) || 0;
 
@@ -391,8 +393,8 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const chapter = getBiomeChapterByUnit(unitNum);
             const storySnippet = chapter.lessonsStory[item.id] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 展开第 ${item.id} 课对话。`;
 
-            const isCompleted = item.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
-            const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
+            const isCompleted = item.id < profile.currentLessonId || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(item.id + 1));
+            const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
             const isCurrent = profile.currentLessonId === item.id;
             const isBossNode = item.id % 12 === 0;
             const isFirstInUnit = (item.id - 1) % 12 === 0;
@@ -456,7 +458,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                   {/* Animated Connecting Pathway Wire */}
                   {index < displayLessons.length - 1 && (() => {
                     const nextLesson = displayLessons[index + 1];
-                    const isNextCompleted = nextLesson && (nextLesson.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(nextLesson.id)));
+                    const isNextCompleted = nextLesson && (nextLesson.id < profile.currentLessonId || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(nextLesson.id)));
                     const isSegmentCompleted = isCompleted && isNextCompleted;
                     const isSegmentActive = isCompleted && nextLesson && nextLesson.id === profile.currentLessonId;
 

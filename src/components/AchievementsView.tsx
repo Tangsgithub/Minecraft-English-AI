@@ -132,7 +132,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({ profile }) =
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {BADGES_DATA.map(badge => {
-            const isUnlocked = profile.unlockedBadgeIds.includes(badge.id) || badge.isUnlocked;
+            const isUnlocked = (profile.unlockedBadgeIds || []).includes(badge.id) || badge.isUnlocked;
 
             return (
               <div

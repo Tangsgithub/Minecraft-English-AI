@@ -86,14 +86,28 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               </div>
             </div>
 
-            {/* Player Name & Title Tier */}
-            <div className="flex items-center space-x-1 sm:space-x-2 text-[10px] sm:text-xs text-white/90">
-              <span className="font-bold text-[#FFD700] truncate max-w-[80px] sm:max-w-none">👤 {profile.nickname || 'Olaf'}</span>
+            {/* Player Name & Title Tier (Click to Open Auth) */}
+            <button
+              onClick={() => {
+                if (onOpenAuth) {
+                  playClickSound();
+                  onOpenAuth();
+                }
+              }}
+              className="flex items-center space-x-1 sm:space-x-2 text-[10px] sm:text-xs text-white/90 hover:text-white transition-colors group cursor-pointer text-left"
+              title={currentUser ? `已登录: ${currentUser.nickname || currentUser.account} (点击查看账号与同步)` : "未登录账号，点击注册/登录"}
+            >
+              <div className="flex items-center space-x-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="font-extrabold text-[#FFD700] truncate max-w-[90px] sm:max-w-none group-hover:underline">
+                  {currentUser ? (currentUser.nickname || currentUser.account) : (profile.nickname || '未登录')}
+                </span>
+              </div>
               <span className="opacity-60">•</span>
               <span className="px-1 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[11px] bg-black/20 border border-white/30 font-bold backdrop-blur-sm whitespace-nowrap">
                 {tier.icon} Lv.{profile.level}
               </span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -134,7 +148,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Right Actions: Auth Cloud, Sound & Settings */}
         <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
           
-          {/* Auth Registration & Cloud Sync Button */}
+          {/* Auth Registration & User Avatar Cloud Button */}
           {onOpenAuth && (
             <button
               onClick={() => {
@@ -143,19 +157,30 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               }}
               className={`px-2 sm:px-3 py-1 sm:py-2 border-2 border-black rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black font-mono active:translate-y-0.5 ${
                 currentUser
-                  ? 'bg-emerald-900/90 hover:bg-emerald-800 text-emerald-300 border-emerald-400 shadow-[0_2px_0_0_#065f46]'
+                  ? 'bg-slate-900/95 hover:bg-slate-800 text-emerald-300 border-emerald-400/80 shadow-[0_2px_0_0_#065f46]'
                   : 'bg-gradient-to-r from-emerald-400 to-green-400 hover:from-emerald-300 hover:to-green-300 text-slate-950 shadow-[0_2px_0_0_#000] animate-pulse'
               }`}
-              title={currentUser ? `已登录: ${currentUser.nickname || currentUser.account} (点击管理账号)` : "免费注册/登录账号 (境内直连无需VPN)"}
+              title={currentUser ? `已登录云端: ${currentUser.nickname || currentUser.account} (点击查看账号详情)` : "注册/登录账号 (境内直连无需VPN)"}
             >
-              <Cloud className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${currentUser ? 'text-emerald-400' : 'text-slate-950'}`} />
-              <span className="hidden sm:inline">
-                {currentUser ? (currentUser.nickname || currentUser.account) : '注册/登录'}
-              </span>
-              {!currentUser && (
-                <span className="text-[9px] bg-amber-300 text-black px-1.5 py-0.2 rounded font-black hidden md:inline">
-                  直连
-                </span>
+              {currentUser ? (
+                <div className="flex items-center space-x-1.5">
+                  {/* User Avatar Pixel Icon */}
+                  <div className="w-5 h-5 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-xs relative">
+                    <span>{profile.avatar === 'alex' ? '👩‍🦰' : '🟩'}</span>
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-slate-900 animate-ping" />
+                  </div>
+                  <span className="max-w-[70px] sm:max-w-[100px] truncate text-emerald-300 font-extrabold">
+                    {currentUser.nickname || currentUser.account}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Cloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950" />
+                  <span className="hidden sm:inline">注册 / 登录</span>
+                  <span className="text-[9px] bg-amber-300 text-black px-1.5 py-0.2 rounded font-black hidden md:inline">
+                    直连
+                  </span>
+                </>
               )}
             </button>
           )}

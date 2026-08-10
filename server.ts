@@ -316,11 +316,15 @@ app.use(express.json());
         account: account.trim(),
         selectedVolumeId: 'vol1',
         currentLessonId: 1,
-        unlockedLessonIds: [1],
+        unlockedLessonIds: [1, 2],
+        completedMissionIds: [],
+        unlockedBadgeIds: ['badge_first_words'],
+        masteredWords: [],
         emeralds: 100,
         xp: 0,
         level: 1,
         avatar: 'steve',
+        selectedAvatar: '👦',
         customAvatarUrl: '',
         learningGoal: 15,
         todayMinutes: 0,
@@ -331,7 +335,14 @@ app.use(express.json());
         unlockedCraftingIds: [],
         enderChestCount: 0,
         eyeCareEnabled: false,
-        eyeCareMinutes: 20
+        eyeCareMinutes: 20,
+        apiKeyConfig: {
+          provider: 'deepseek',
+          apiKey: '',
+          baseUrl: 'https://api.deepseek.com',
+          model: 'deepseek-chat'
+        },
+        isInitialSetupDone: true
       };
 
       const userObj = {

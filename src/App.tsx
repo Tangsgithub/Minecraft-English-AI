@@ -48,32 +48,38 @@ const DEFAULT_PROFILE: UserProfile = {
   isInitialSetupDone: true
 };
 
+const sanitizeProfile = (raw: any): UserProfile => {
+  if (!raw || typeof raw !== 'object') return DEFAULT_PROFILE;
+  const merged = {
+    ...DEFAULT_PROFILE,
+    ...raw,
+    unlockedLessonIds: Array.isArray(raw.unlockedLessonIds) ? raw.unlockedLessonIds : [1, 2],
+    completedMissionIds: Array.isArray(raw.completedMissionIds)
+      ? raw.completedMissionIds
+      : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []),
+    unlockedBadgeIds: Array.isArray(raw.unlockedBadgeIds) ? raw.unlockedBadgeIds : ['badge_first_words'],
+    masteredWords: Array.isArray(raw.masteredWords) ? raw.masteredWords : []
+  };
+  if (merged.nickname === 'Tom') merged.nickname = 'Olaf';
+  const unlockedSet = new Set<number>(merged.unlockedLessonIds);
+  unlockedSet.add(1);
+  if (merged.currentLessonId) {
+    for (let i = 1; i <= merged.currentLessonId; i++) {
+      unlockedSet.add(i);
+    }
+  }
+  merged.unlockedLessonIds = Array.from(unlockedSet).sort((a, b) => a - b);
+  merged.level = getLevelFromXp(merged.xp || 40);
+  return merged;
+};
+
 export default function App() {
   const [profile, setProfile] = useState<UserProfile>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('mc_english_user_profile');
       if (saved) {
         try {
-          const parsed = JSON.parse(saved);
-          if (parsed.nickname === 'Tom') {
-            parsed.nickname = 'Olaf';
-          }
-          // Repair and ensure valid unlockedLessonIds continuous sequence
-          if (Array.isArray(parsed.unlockedLessonIds)) {
-            const unlockedSet = new Set<number>(parsed.unlockedLessonIds);
-            unlockedSet.add(1);
-            if (parsed.currentLessonId) {
-              for (let i = 1; i <= parsed.currentLessonId; i++) {
-                unlockedSet.add(i);
-              }
-            }
-            parsed.unlockedLessonIds = Array.from(unlockedSet).sort((a, b) => a - b);
-          } else {
-            parsed.unlockedLessonIds = [1, 2];
-          }
-          // Recalibrate level strictly from XP to prevent level-XP mismatch
-          parsed.level = getLevelFromXp(parsed.xp || 40);
-          return parsed;
+          return sanitizeProfile(JSON.parse(saved));
         } catch {
           return DEFAULT_PROFILE;
         }
@@ -82,14 +88,14 @@ export default function App() {
     return DEFAULT_PROFILE;
   });
 
-  const [isLandingView, setIsLandingView] = useState<boolean>(false);
+  // User Auth State
+  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
+  const [isLandingView, setIsLandingView] = useState<boolean>(() => !auth.currentUser);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+
   const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>(profile.selectedVolumeId || 'vol1');
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-
-  // User Auth State
-  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   // Active Lesson Context for Alex Chat
   const [selectedLessonForChat, setSelectedLessonForChat] = useState<Lesson | null>(null);
@@ -312,7 +318,7 @@ export default function App() {
           currentUser={currentUser}
           onUserChange={(user, newProfile) => {
             setCurrentUser(user);
-            if (newProfile) setProfile(newProfile);
+            if (newProfile) setProfile(sanitizeProfile(newProfile));
             if (user && isLandingView) {
               setIsLandingView(false);
             } else if (!user) {
@@ -582,7 +588,7 @@ export default function App() {
         currentUser={currentUser}
         onUserChange={(user, newProfile) => {
           setCurrentUser(user);
-          if (newProfile) setProfile(newProfile);
+          if (newProfile) setProfile(sanitizeProfile(newProfile));
           if (user && isLandingView) {
             setIsLandingView(false);
           } else if (!user) {

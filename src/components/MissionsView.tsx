@@ -21,7 +21,8 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   const todayStr = new Date().toISOString().split('T')[0];
   const chestOpened = profile.lastEnderChestClaimDate === todayStr;
 
-  const completedCount = INITIAL_MISSIONS.filter(m => profile.completedMissionIds.includes(m.id)).length;
+  const completedMissionIds = profile.completedMissionIds || [];
+  const completedCount = INITIAL_MISSIONS.filter(m => completedMissionIds.includes(m.id)).length;
   const isChestReady = completedCount >= 2;
 
   const handleClaimReward = (mission: Mission) => {
@@ -144,7 +145,7 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
       {/* Mission Cards */}
       <div className="space-y-4">
         {INITIAL_MISSIONS.map(mission => {
-          const isCompleted = profile.completedMissionIds.includes(mission.id);
+          const isCompleted = (profile.completedMissionIds || []).includes(mission.id);
           const maxUnlocked = Math.max(...(profile.unlockedLessonIds || [1]), 1);
           const isUnlockedByLesson = !mission.requiredLessonId || mission.requiredLessonId <= maxUnlocked;
 

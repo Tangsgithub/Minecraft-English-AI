@@ -103,7 +103,8 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   const unlockedVocabList = combinedList.filter(
     item => !item.requiredLessonId || item.requiredLessonId <= maxUnlockedLesson
   );
-  const masteredUnlockedCount = unlockedVocabList.filter(item => profile.masteredWords.includes(item.word)).length;
+  const masteredWords = profile.masteredWords || [];
+  const masteredUnlockedCount = unlockedVocabList.filter(item => masteredWords.includes(item.word)).length;
 
   const categories = [
     { id: 'all', label: '全部种类', icon: '📚' },
@@ -434,7 +435,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
               {filteredVocab.map(item => {
-                const isMastered = profile.masteredWords.includes(item.word);
+                const isMastered = (profile.masteredWords || []).includes(item.word);
                 const reqLesson = item.requiredLessonId || 1;
                 const isUnlocked = !item.requiredLessonId || reqLesson <= maxUnlockedLesson;
 

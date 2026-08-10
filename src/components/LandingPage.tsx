@@ -27,6 +27,7 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
+  currentUser,
   onEnterApp,
   onOpenAuth,
   onOpenParentDashboard,
@@ -75,10 +76,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 playClickSound();
                 onOpenAuth();
               }}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                currentUser
+                  ? 'bg-emerald-950/80 hover:bg-emerald-900/90 text-emerald-300 border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                  : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+              }`}
             >
-              <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>注册 / 登录</span>
+              {currentUser ? (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="max-w-[100px] truncate text-emerald-300 font-extrabold">
+                    {currentUser.nickname || currentUser.account}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>注册 / 登录</span>
+                </>
+              )}
             </button>
 
             {onOpenCustomerService && (
