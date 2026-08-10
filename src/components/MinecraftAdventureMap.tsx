@@ -14,7 +14,6 @@ interface MinecraftAdventureMapProps {
   onSelectLesson: (lessonId: number) => void;
   onStartChat: (lesson: Lesson) => void;
   onOralTest?: (target: { text: string; translation?: string; phonetic?: string }) => void;
-  onOpenVipModal?: () => void;
 }
 
 // Rich Minecraft Biome Theme Data
@@ -235,8 +234,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   selectedUnit,
   onSelectLesson,
   onStartChat,
-  onOralTest,
-  onOpenVipModal
+  onOralTest
 }) => {
   // Active selected lesson object for FIXED OVERLAY MODAL
   const [modalLesson, setModalLesson] = useState<Lesson | null>(null);
@@ -274,12 +272,6 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   };
 
   const handleOpenNodeModal = (lessonId: number, isUnlocked: boolean) => {
-    if (lessonId > 10 && !profile.isVip) {
-      if (onOpenVipModal) {
-        onOpenVipModal();
-      }
-      return;
-    }
     if (!isUnlocked) return;
     playBlockBreakSound();
     setBreakingNodeId(lessonId);

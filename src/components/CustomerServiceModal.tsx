@@ -32,7 +32,6 @@ interface CustomerServiceModalProps {
   onClose: () => void;
   profile: UserProfile;
   currentUser: User | null;
-  onOpenVipModal?: () => void;
   onOpenAuthModal?: () => void;
 }
 
@@ -89,7 +88,6 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
   onClose,
   profile,
   currentUser,
-  onOpenVipModal,
   onOpenAuthModal
 }) => {
   const [activeTab, setActiveTab] = useState<'ai' | 'faq' | 'human' | 'ticket'>('ai');
@@ -99,7 +97,7 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
     {
       id: 'welcome',
       sender: 'service',
-      text: `👋 嗨！我是 Minecraft English 的官方 AI 智能客服小史蒂夫（Steve）。\n\n很高兴为您服务！请问您在体验 1-10 免费试用课、VIP 激活兑换或云端账号使用上有任何疑问吗？`,
+      text: `👋 嗨！我是 Minecraft English 的官方 AI 智能客服小史蒂夫（Steve）。\n\n很高兴为您服务！请问您在体验 144 个探险关卡、Alex AI 语音对练或系统使用上有任何疑问吗？`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -541,36 +539,10 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
                       </button>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      适合提交对齐较长的技术诊断报告与批量激活需求
+                      适合提交对齐较长的技术诊断与反馈建议
                     </p>
                   </div>
 
-                </div>
-
-                {/* VIP Quick Action Entry */}
-                <div className="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border-2 border-amber-500/40 rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-2">
-                  <div className="text-xs font-mono space-y-0.5">
-                    <div className="text-amber-300 font-bold flex items-center gap-1">
-                      <span>💎 拥有 VIP 激活码卡片？</span>
-                      <span className="text-[10px] text-slate-300">无需等待客服，直接自主激活</span>
-                    </div>
-                    <p className="text-slate-400 text-[11px]">
-                      在系统中一键输入 16 位大写卡号即可秒级开通全量 144 课。
-                    </p>
-                  </div>
-
-                  {onOpenVipModal && (
-                    <button
-                      onClick={() => {
-                        playClickSound();
-                        onClose();
-                        onOpenVipModal();
-                      }}
-                      className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl border-2 border-slate-950 shadow-[2px_2px_0_0_#000] shrink-0 transition-all active:translate-y-0.5"
-                    >
-                      去兑换 VIP 激活码
-                    </button>
-                  )}
                 </div>
 
               </div>

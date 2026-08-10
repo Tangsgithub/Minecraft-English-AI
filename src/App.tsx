@@ -16,8 +16,9 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { LandingPage } from './components/LandingPage';
-import { VipActivationModal } from './components/VipActivationModal';
+import { AuthModal } from './components/AuthModal';
 import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
+import { auth, User, saveUserProfileToCloud } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
@@ -85,7 +86,10 @@ export default function App() {
   const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>(profile.selectedVolumeId || 'vol1');
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
+
+  // User Auth State
+  const [currentUser, setCurrentUser] = useState<User | null>(() => auth.currentUser);
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   // Active Lesson Context for Alex Chat
   const [selectedLessonForChat, setSelectedLessonForChat] = useState<Lesson | null>(null);
@@ -99,12 +103,15 @@ export default function App() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
 
-  // Sync profile to localStorage
+  // Sync profile to localStorage and Cloud
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('mc_english_user_profile', JSON.stringify(profile));
+      if (currentUser?.uid) {
+        saveUserProfileToCloud(profile, currentUser.uid);
+      }
     }
-  }, [profile]);
+  }, [profile, currentUser]);
 
   // Continuous study timer for Eye Care
   const [continuousMinutes, setContinuousMinutes] = useState<number>(0);
@@ -264,6 +271,10 @@ export default function App() {
   };
 
   const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
+    if (!currentUser) {
+      setIsAuthOpen(true);
+      return;
+    }
     if (targetTab) setActiveTab(targetTab);
     setIsLandingView(false);
   };
@@ -272,14 +283,13 @@ export default function App() {
     return (
       <>
         <LandingPage
-          currentUser={null}
-          isAuthenticated={true}
+          currentUser={currentUser}
+          isAuthenticated={!!currentUser}
           profile={profile}
           onEnterApp={handleEnterApp}
-          onOpenAuth={() => setIsLandingView(false)}
+          onOpenAuth={() => setIsAuthOpen(true)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
           onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
-          onOpenVipModal={() => setIsVipModalOpen(true)}
         />
         <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
         {isParentDashboardOpen && (
@@ -288,21 +298,28 @@ export default function App() {
             onUpdateProfile={handleUpdateProfile}
             onClose={() => setIsParentDashboardOpen(false)}
             onTriggerEyeCareTest={() => setIsEyeCareOpen(true)}
-            onOpenVipModal={() => setIsVipModalOpen(true)}
           />
         )}
-        <VipActivationModal
-          isOpen={isVipModalOpen}
-          onClose={() => setIsVipModalOpen(false)}
-          profile={profile}
-          onUpdateProfile={handleUpdateProfile}
-        />
         <CustomerServiceModal
           isOpen={isCustomerServiceOpen}
           onClose={() => setIsCustomerServiceOpen(false)}
           profile={profile}
-          currentUser={null}
-          onOpenVipModal={() => setIsVipModalOpen(true)}
+          currentUser={currentUser}
+        />
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          currentUser={currentUser}
+          onUserChange={(user, newProfile) => {
+            setCurrentUser(user);
+            if (newProfile) setProfile(newProfile);
+            if (user && isLandingView) {
+              setIsLandingView(false);
+            } else if (!user) {
+              setIsLandingView(true);
+            }
+          }}
+          currentProfile={profile}
         />
       </>
     );
@@ -316,13 +333,12 @@ export default function App() {
         selectedVolumeId={selectedVolumeId}
         onChangeVolumeId={setSelectedVolumeId}
         profile={profile}
-        currentUser={null}
-        onOpenAuth={() => {}}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
-        onOpenVipModal={() => setIsVipModalOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
@@ -439,7 +455,6 @@ export default function App() {
                 onSelectLessonForChat={handleSelectLessonForChat}
                 onCompleteLesson={handleCompleteLesson}
                 onAwardEmeralds={handleAwardEmeralds}
-                onOpenVipModal={() => setIsVipModalOpen(true)}
               />
             </>
           )}
@@ -538,16 +553,8 @@ export default function App() {
           onUpdateProfile={handleUpdateProfile}
           onClose={() => setIsParentDashboardOpen(false)}
           onTriggerEyeCareTest={() => setIsEyeCareOpen(true)}
-          onOpenVipModal={() => setIsVipModalOpen(true)}
         />
       )}
-
-      <VipActivationModal
-        isOpen={isVipModalOpen}
-        onClose={() => setIsVipModalOpen(false)}
-        profile={profile}
-        onUpdateProfile={handleUpdateProfile}
-      />
 
       {isEyeCareOpen && (
         <EyeCareModal
@@ -566,8 +573,23 @@ export default function App() {
         isOpen={isCustomerServiceOpen}
         onClose={() => setIsCustomerServiceOpen(false)}
         profile={profile}
-        currentUser={null}
-        onOpenVipModal={() => setIsVipModalOpen(true)}
+        currentUser={currentUser}
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        currentUser={currentUser}
+        onUserChange={(user, newProfile) => {
+          setCurrentUser(user);
+          if (newProfile) setProfile(newProfile);
+          if (user && isLandingView) {
+            setIsLandingView(false);
+          } else if (!user) {
+            setIsLandingView(true);
+          }
+        }}
+        currentProfile={profile}
       />
 
     </div>

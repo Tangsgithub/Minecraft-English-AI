@@ -8,15 +8,13 @@ interface ParentDashboardModalProps {
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onClose: () => void;
   onTriggerEyeCareTest: () => void;
-  onOpenVipModal?: () => void;
 }
 
 export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
   profile,
   onUpdateProfile,
   onClose,
-  onTriggerEyeCareTest,
-  onOpenVipModal
+  onTriggerEyeCareTest
 }) => {
   // Simple parent lock math question to prevent child mis-touch
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -171,36 +169,22 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
           /* Unlocked Parent Dashboard Content */
           <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs font-mono">
             
-            {/* VIP Membership Status Card */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-3xl border-2 border-amber-400/60 text-white space-y-3 shadow-md">
+            {/* Learning Status Card */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-5 rounded-3xl border-2 border-emerald-400/60 text-white space-y-3 shadow-md">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center justify-center text-lg">
-                    👑
+                  <div className="w-8 h-8 rounded-xl bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 flex items-center justify-center text-lg">
+                    🎓
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-white">
-                      账号会员状态: {profile.isVip ? '💎 终身VIP会员' : '🎁 普通试学账号'}
+                      系统状态: 全量 144 课与 AI 伴读全开放
                     </h3>
                     <p className="text-[10px] text-slate-400">
-                      {profile.isVip
-                        ? '全量 144 个关卡、PPT 与 Alex AI 语音全开放'
-                        : '当前仅可试学前 3 个主线关卡，升级获取 144 课'}
+                      包含 144 个新概念探险关卡、Alex AI 语音对话评测与词汇实验室
                     </p>
                   </div>
                 </div>
-
-                {onOpenVipModal && (
-                  <button
-                    onClick={() => {
-                      playClickSound();
-                      onOpenVipModal();
-                    }}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-slate-950 font-black text-xs transition-all shadow"
-                  >
-                    {profile.isVip ? '查看会员权益' : '🔑 输入激活码解锁VIP'}
-                  </button>
-                )}
               </div>
             </div>
 

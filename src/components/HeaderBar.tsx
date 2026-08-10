@@ -15,7 +15,6 @@ interface HeaderBarProps {
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
   onOpenCustomerService?: () => void;
-  onOpenVipModal?: () => void;
   onGoToLandingPage?: () => void;
   soundEnabled: boolean;
   setSoundEnabled: (val: boolean) => void;
@@ -25,11 +24,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   selectedVolumeId,
   onChangeVolumeId,
   profile,
+  currentUser,
+  onOpenAuth,
   onOpenSettings,
   onOpenHelpWizard,
   onOpenParentDashboard,
   onOpenCustomerService,
-  onOpenVipModal,
   onGoToLandingPage,
   soundEnabled,
   setSoundEnabled
@@ -131,25 +131,32 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
         </div>
 
-        {/* Right Actions: VIP, Auth Cloud, Sound & Settings */}
+        {/* Right Actions: Auth Cloud, Sound & Settings */}
         <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
           
-          {/* VIP Membership Badge Button */}
-          {onOpenVipModal && (
+          {/* Auth Registration & Cloud Sync Button */}
+          {onOpenAuth && (
             <button
               onClick={() => {
                 playClickSound();
-                onOpenVipModal();
+                onOpenAuth();
               }}
-              className={`px-2 sm:px-3 py-1 sm:py-2 border-2 border-black rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_rgba(0,0,0,0.5)] active:translate-y-0.5 ${
-                profile.isVip
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-amber-300'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white animate-pulse'
+              className={`px-2 sm:px-3 py-1 sm:py-2 border-2 border-black rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black font-mono active:translate-y-0.5 ${
+                currentUser
+                  ? 'bg-emerald-900/90 hover:bg-emerald-800 text-emerald-300 border-emerald-400 shadow-[0_2px_0_0_#065f46]'
+                  : 'bg-gradient-to-r from-emerald-400 to-green-400 hover:from-emerald-300 hover:to-green-300 text-slate-950 shadow-[0_2px_0_0_#000] animate-pulse'
               }`}
-              title={profile.isVip ? '您已开通终身VIP会员' : '点击兑换/解锁 144 课 VIP 权限'}
+              title={currentUser ? `已登录: ${currentUser.nickname || currentUser.account} (点击管理账号)` : "免费注册/登录账号 (境内直连无需VPN)"}
             >
-              <span className="text-xs">{profile.isVip ? '👑' : '💎'}</span>
-              <span className="hidden sm:inline">{profile.isVip ? '终身VIP' : '开通VIP'}</span>
+              <Cloud className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${currentUser ? 'text-emerald-400' : 'text-slate-950'}`} />
+              <span className="hidden sm:inline">
+                {currentUser ? (currentUser.nickname || currentUser.account) : '注册/登录'}
+              </span>
+              {!currentUser && (
+                <span className="text-[9px] bg-amber-300 text-black px-1.5 py-0.2 rounded font-black hidden md:inline">
+                  直连
+                </span>
+              )}
             </button>
           )}
 

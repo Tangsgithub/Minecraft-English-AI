@@ -14,7 +14,6 @@ interface GiantWorldMapProps {
   onSelectLessonForChat: (lesson: Lesson) => void;
   onCompleteLesson: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
-  onOpenVipModal?: () => void;
 }
 
 interface MapNPC {
@@ -209,8 +208,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   profile,
   onSelectLessonForChat,
   onCompleteLesson,
-  onAwardEmeralds,
-  onOpenVipModal
+  onAwardEmeralds
 }) => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 0.85, 1, 1.2
@@ -238,13 +236,6 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   };
 
   const handleOpenLessonDetail = (lessonId: number, isUnlocked: boolean) => {
-    // If lesson > 10 and user is NOT VIP, open VIP modal
-    if (lessonId > 10 && !profile.isVip) {
-      if (onOpenVipModal) {
-        onOpenVipModal();
-      }
-      return;
-    }
     if (!isUnlocked) return;
     playBlockBreakSound();
     setBreakingLessonId(lessonId);

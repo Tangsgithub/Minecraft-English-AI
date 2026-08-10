@@ -16,7 +16,6 @@ interface LessonMapProps {
   onSelectLessonForChat: (lesson: Lesson) => void;
   onCompleteLesson: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
-  onOpenVipModal?: () => void;
 }
 
 export const LessonMap: React.FC<LessonMapProps> = ({
@@ -24,8 +23,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   profile,
   onSelectLessonForChat,
   onCompleteLesson,
-  onAwardEmeralds,
-  onOpenVipModal
+  onAwardEmeralds
 }) => {
     const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'world' | 'map' | 'grid'>('world');
@@ -92,13 +90,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   });
 
   const handleOpenLessonDetail = (lessonId: number) => {
-    // If lesson > 10 and user is NOT VIP, pop up VIP activation modal
-    if (lessonId > 10 && !profile.isVip) {
-      if (onOpenVipModal) {
-        onOpenVipModal();
-      }
-      return;
-    }
     playClickSound();
     // Retrieve authentic New Concept lesson definition for current volume
     const lessonData = getLessonById(lessonId, selectedVolumeId);
@@ -109,38 +100,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
 
   return (
     <div className="space-y-6">
-
-      {/* ===== 正规会员免费体验 10 课权益 Banner ===== */}
-      {!profile.isVip && (
-        <div className="p-3.5 bg-slate-900 border-4 border-slate-950 rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,0.8)] text-white flex flex-col sm:flex-row items-center justify-between gap-3 font-mono">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-emerald-500/20 border-2 border-emerald-400/50 rounded-xl flex items-center justify-center text-xl shrink-0">
-              🎁
-            </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center space-x-2 text-xs font-black text-emerald-400">
-                <span>注册会员特权：前 10 课全量免费试用</span>
-                <span className="text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded font-black">
-                  无需开卡
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-tight">
-                所有注册账号均享 <strong className="text-amber-300">第 1 - 10 课全量关卡与 AI 语音对练</strong>。第 11-144 课为 VIP 尊享关卡。
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              playClickSound();
-              if (onOpenVipModal) onOpenVipModal();
-            }}
-            className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs border-2 border-black rounded-xl shadow-[3px_3px_0_0_#000] shrink-0 transition-transform active:translate-y-0.5"
-          >
-            💎 升 VIP 畅学 144 课
-          </button>
-        </div>
-      )}
       
       {/* Search & Unit Navigation */}
       <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] space-y-3 sm:space-y-4">
@@ -332,7 +291,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           onSelectLessonForChat={onSelectLessonForChat}
           onCompleteLesson={onCompleteLesson}
           onAwardEmeralds={onAwardEmeralds}
-          onOpenVipModal={onOpenVipModal}
         />
       ) : viewMode === 'map' ? (
         <MinecraftAdventureMap
@@ -341,7 +299,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           onSelectLesson={handleOpenLessonDetail}
           onStartChat={onSelectLessonForChat}
           onOralTest={(target) => setOralTarget(target)}
-          onOpenVipModal={onOpenVipModal}
         />
       ) : (
         /* 144 Lessons Grid */
@@ -350,23 +307,18 @@ export const LessonMap: React.FC<LessonMapProps> = ({
             const isCompleted = item.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
             const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
             const isCurrent = profile.currentLessonId === item.id;
-            const isVipLocked = item.id > 10 && !profile.isVip;
 
             return (
               <div
                 key={item.id}
                 onClick={() => {
-                  if (isVipLocked) {
-                    if (onOpenVipModal) onOpenVipModal();
-                  } else if (isUnlocked) {
+                  if (isUnlocked) {
                     handleOpenLessonDetail(item.id);
                   }
                 }}
                 className={`rounded-3xl border-4 p-4 transition-all duration-200 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                   isCurrent
                     ? 'bg-white border-[#FF6321] shadow-[8px_8px_0px_0px_rgba(255,99,33,0.25)] ring-2 ring-[#FF6321]/50 transform hover:-translate-y-1'
-                    : isVipLocked
-                    ? 'bg-amber-50/70 border-amber-400 hover:border-amber-600 shadow-[6px_6px_0px_0px_rgba(217,119,6,0.15)] transform hover:-translate-y-1'
                     : isUnlocked
                     ? 'bg-white border-[#487E2C] hover:border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.08)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.12)] transform hover:-translate-y-1'
                     : 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed shadow-none'
@@ -376,12 +328,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                 {isCurrent && (
                   <div className="absolute top-0 right-0 bg-[#FF6321] text-white font-mono font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-sm uppercase tracking-wider">
                     当前关卡
-                  </div>
-                )}
-
-                {isVipLocked && !isCurrent && (
-                  <div className="absolute top-0 right-0 bg-amber-500 text-slate-950 font-mono font-black text-[10px] px-2 py-0.5 rounded-bl-xl shadow-sm uppercase tracking-wider flex items-center gap-1">
-                    💎 VIP 关卡
                   </div>
                 )}
 
@@ -448,6 +394,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
             setActiveLesson(null);
             onSelectLessonForChat(lesson);
           }}
+          onAwardEmeralds={onAwardEmeralds}
         />
       )}
 

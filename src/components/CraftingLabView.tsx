@@ -581,12 +581,14 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                 {gridSlots.map((itemIcon, idx) => (
                   <div
                     key={idx}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 bg-[#3D2811] border-2 border-[#8B6133] rounded-lg flex items-center justify-center text-2xl sm:text-3xl shadow-inner transition-transform ${
-                      isCraftingAnimation ? 'animate-pulse scale-95' : ''
+                    onClick={() => handleRemoveFromGrid(idx)}
+                    className={`w-14 h-14 sm:w-16 sm:h-16 bg-[#3D2811] border-2 border-[#8B6133] rounded-lg flex items-center justify-center text-2xl sm:text-3xl shadow-inner transition-transform cursor-pointer ${
+                      isCraftingAnimation ? 'animate-pulse scale-95' : 'hover:border-amber-400'
                     }`}
+                    title={itemIcon ? '点击从合成格移除' : '点击放置原料'}
                   >
                     {itemIcon ? (
-                      <span className="transform hover:scale-110 transition-transform cursor-pointer select-none">
+                      <span className="transform hover:scale-110 transition-transform select-none">
                         {itemIcon}
                       </span>
                     ) : (
@@ -632,6 +634,35 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                   <Hammer className="w-4 h-4" />
                   <span>{isCraftingAnimation ? '正在锻造中...' : '开始合成 (Craft)'}</span>
                 </button>
+              </div>
+            </div>
+
+            {/* Material Ingredients Palette below grid */}
+            <div className="w-full bg-[#5A3C1A] border-2 border-[#3D2811] rounded-xl p-3 my-2 flex flex-col space-y-2">
+              <div className="text-xs font-mono font-bold text-amber-200 flex items-center justify-between">
+                <span>🧰 点击基础素材放入网格 (Ingredients Palette):</span>
+                <span className="text-[10px] text-amber-300/80">或点击左侧秘籍一键填充</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { name: '木板 (Plank)', icon: '🪵' },
+                  { name: '木棒 (Stick)', icon: '🥢' },
+                  { name: '圆石 (Stone)', icon: '🪨' },
+                  { name: '煤炭 (Coal)', icon: '⬛' },
+                  { name: '铁锭 (Iron)', icon: '🪙' },
+                  { name: '钻石 (Diamond)', icon: '💎' },
+                  { name: '羊毛 (Wool)', icon: '🧶' },
+                ].map((mat, mIdx) => (
+                  <button
+                    key={mIdx}
+                    onClick={() => handleAddIngredientToGrid(mat.icon)}
+                    className="px-2.5 py-1.5 bg-[#8B6133] hover:bg-[#a3723d] active:scale-95 border-2 border-[#3D2811] hover:border-[#FFD700] rounded-lg text-xs font-mono font-bold text-white flex items-center space-x-1 shadow-sm transition-all"
+                    title={`把 ${mat.name} 放入合成格`}
+                  >
+                    <span className="text-base">{mat.icon}</span>
+                    <span>{mat.name}</span>
+                  </button>
+                ))}
               </div>
             </div>
 

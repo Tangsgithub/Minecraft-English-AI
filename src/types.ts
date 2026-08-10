@@ -106,9 +106,6 @@ export interface UserProfile {
   parentSettings?: ParentSettings;
   lastEnderChestClaimDate?: string;
   selectedVolumeId?: CourseVolumeId;
-  isVip?: boolean;
-  vipCodeUsed?: string;
-  vipActivatedAt?: string;
   createdAt?: number;
   updatedAt?: number;
 }
