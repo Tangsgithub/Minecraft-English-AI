@@ -85,6 +85,7 @@ export interface ParentSettings {
 
 export interface UserProfile {
   id: string;
+  account?: string;
   email?: string;
   nickname: string;
   age: number;
@@ -94,6 +95,15 @@ export interface UserProfile {
   streakDays: number;
   lastActiveDate: string;
   selectedAvatar: string;
+  customAvatarUrl?: string;
+  learningGoal?: number;
+  todayMinutes?: number;
+  vocabulary?: any[];
+  completedMissions?: any[];
+  unlockedCraftingIds?: string[];
+  enderChestCount?: number;
+  eyeCareEnabled?: boolean;
+  eyeCareMinutes?: number;
   currentLessonId: number;
   unlockedLessonIds: number[];
   completedMissionIds: string[];

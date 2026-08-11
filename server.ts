@@ -14,31 +14,48 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(USERS_FILE)) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify({}), 'utf-8');
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(USERS_FILE)) {
+      fs.writeFileSync(USERS_FILE, JSON.stringify({}), 'utf-8');
+    }
+  } catch (e) {
+    console.error("ensureDataFile error:", e);
   }
 }
 
 function loadUsers(): Record<string, any> {
-  ensureDataFile();
   try {
-    const raw = fs.readFileSync(USERS_FILE, 'utf-8');
-    return JSON.parse(raw) || {};
-  } catch {
+    ensureDataFile();
+    if (fs.existsSync(USERS_FILE)) {
+      const raw = fs.readFileSync(USERS_FILE, 'utf-8');
+      return JSON.parse(raw) || {};
+    }
+    return {};
+  } catch (err) {
+    console.error("loadUsers error:", err);
     return {};
   }
 }
 
 function saveUsers(users: Record<string, any>) {
-  ensureDataFile();
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  try {
+    ensureDataFile();
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+  } catch (err) {
+    console.error("saveUsers error:", err);
+  }
 }
 
 function hashPassword(password: string, salt: string): string {
-  return crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  try {
+    const safeSalt = salt || 'mc_salt_2026';
+    return crypto.pbkdf2Sync(password, safeSalt, 1000, 64, 'sha512').toString('hex');
+  } catch {
+    return crypto.createHash('sha256').update(password + (salt || '')).digest('hex');
+  }
 }
 
 app.use((req, res, next) => {
@@ -286,12 +303,12 @@ app.use(express.json());
   // Register Endpoint
   app.post("/api/auth/register", (req, res) => {
     try {
-      const { account, password, nickname } = req.body;
+      const { account, password, nickname } = req.body || {};
       if (!account || typeof account !== 'string' || account.trim().length < 3) {
-        return res.status(400).json({ success: false, error: "账号至少需要3个字符" });
+        return res.status(200).json({ success: false, error: "账号至少需要3个字符" });
       }
       if (!password || typeof password !== 'string' || password.length < 6) {
-        return res.status(400).json({ success: false, error: "密码至少需要6位" });
+        return res.status(200).json({ success: false, error: "密码至少需要6位" });
       }
 
       const cleanAccount = account.trim().toLowerCase();
@@ -299,10 +316,10 @@ app.use(express.json());
 
       // Check if account exists
       const existingKey = Object.keys(users).find(
-        key => users[key].account?.toLowerCase() === cleanAccount
+        key => users[key]?.account?.toLowerCase() === cleanAccount
       );
       if (existingKey) {
-        return res.status(400).json({ success: false, error: "该账号已被注册，请直接登录" });
+        return res.status(200).json({ success: false, error: "该账号已被注册，请直接登录" });
       }
 
       const salt = crypto.randomBytes(16).toString('hex');
@@ -368,34 +385,34 @@ app.use(express.json());
       });
     } catch (err: any) {
       console.error("Auth Register Error:", err);
-      return res.status(500).json({ success: false, error: "服务器注册处理失败" });
+      return res.status(200).json({ success: false, error: "注册服务响应异常，请重试" });
     }
   });
 
   // Login Endpoint
   app.post("/api/auth/login", (req, res) => {
     try {
-      const { account, password } = req.body;
+      const { account, password } = req.body || {};
       if (!account || !password) {
-        return res.status(400).json({ success: false, error: "请提供账号和密码" });
+        return res.status(200).json({ success: false, error: "请提供账号和密码" });
       }
 
       const cleanAccount = account.trim().toLowerCase();
       const users = loadUsers();
 
       const uid = Object.keys(users).find(
-        key => users[key].account?.toLowerCase() === cleanAccount
+        key => users[key]?.account?.toLowerCase() === cleanAccount
       );
 
       if (!uid || !users[uid]) {
-        return res.status(400).json({ success: false, error: "账号不存在，请先注册" });
+        return res.status(200).json({ success: false, error: "账号不存在，请先注册" });
       }
 
       const userObj = users[uid];
       const candidateHash = hashPassword(password, userObj.salt);
 
       if (candidateHash !== userObj.hash) {
-        return res.status(400).json({ success: false, error: "密码不正确，请重新输入" });
+        return res.status(200).json({ success: false, error: "密码不正确，请重新输入" });
       }
 
       userObj.updatedAt = Date.now();
@@ -410,16 +427,16 @@ app.use(express.json());
       });
     } catch (err: any) {
       console.error("Auth Login Error:", err);
-      return res.status(500).json({ success: false, error: "服务器登录处理失败" });
+      return res.status(200).json({ success: false, error: "登录服务响应异常，请重试" });
     }
   });
 
   // Sync Progress Endpoint
   app.post("/api/auth/sync", (req, res) => {
     try {
-      const { uid, profile } = req.body;
+      const { uid, profile } = req.body || {};
       if (!uid || !profile) {
-        return res.status(400).json({ success: false, error: "缺少同步参数" });
+        return res.status(200).json({ success: false, error: "缺少同步参数" });
       }
 
       const users = loadUsers();
@@ -429,42 +446,42 @@ app.use(express.json());
         saveUsers(users);
         return res.json({ success: true, message: "学习进度已实时同步至云端" });
       }
-      return res.status(404).json({ success: false, error: "未找到该用户记录" });
+      return res.status(200).json({ success: false, error: "未找到该用户记录" });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: "同步进度失败" });
+      return res.status(200).json({ success: false, error: "同步进度失败" });
     }
   });
 
   // Fetch Profile Endpoint
   app.post("/api/auth/profile", (req, res) => {
     try {
-      const { uid } = req.body;
+      const { uid } = req.body || {};
       const users = loadUsers();
       if (uid && users[uid]) {
         return res.json({ success: true, profile: users[uid].profile });
       }
-      return res.status(404).json({ success: false, error: "未找到用户档案" });
+      return res.status(200).json({ success: false, error: "未找到用户档案" });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: "读取用户档案失败" });
+      return res.status(200).json({ success: false, error: "读取用户档案失败" });
     }
   });
 
   // Reset Password Endpoint
   app.post("/api/auth/reset-password", (req, res) => {
     try {
-      const { account, newPassword } = req.body;
+      const { account, newPassword } = req.body || {};
       if (!account || !newPassword || newPassword.length < 6) {
-        return res.status(400).json({ success: false, error: "请提供账号与至少6位新密码" });
+        return res.status(200).json({ success: false, error: "请提供账号与至少6位新密码" });
       }
 
       const cleanAccount = account.trim().toLowerCase();
       const users = loadUsers();
       const uid = Object.keys(users).find(
-        key => users[key].account?.toLowerCase() === cleanAccount
+        key => users[key]?.account?.toLowerCase() === cleanAccount
       );
 
       if (!uid || !users[uid]) {
-        return res.status(400).json({ success: false, error: "找不到对应注册账号" });
+        return res.status(200).json({ success: false, error: "找不到对应注册账号" });
       }
 
       const salt = crypto.randomBytes(16).toString('hex');
@@ -476,7 +493,7 @@ app.use(express.json());
 
       return res.json({ success: true, message: "密码重置成功，请使用新密码登录" });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: "重置密码处理失败" });
+      return res.status(200).json({ success: false, error: "重置密码处理失败" });
     }
   });
 
