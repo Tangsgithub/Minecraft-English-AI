@@ -650,8 +650,31 @@ async function startServer() {
   }
 
   const PORT = 3000;
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", async () => {
     console.log(`Minecraft English AI Server running on http://localhost:${PORT}`);
+    
+    // Auto-sync local file users to Firestore on startup
+    if (firestoreDb) {
+      try {
+        const localUsers = loadUsers();
+        const keys = Object.keys(localUsers);
+        if (keys.length > 0) {
+          console.log(`[Firestore Sync] Auto-syncing ${keys.length} local user accounts to Firestore...`);
+          for (const k of keys) {
+            const u = localUsers[k];
+            const acc = (u.account || k).toLowerCase();
+            await setDoc(doc(firestoreDb, 'users', acc), {
+              ...u,
+              account: acc,
+              updatedAt: Date.now()
+            }, { merge: true });
+          }
+          console.log(`[Firestore Sync] Successfully synced local accounts to Firestore collection 'users'!`);
+        }
+      } catch (e) {
+        console.warn("[Firestore Sync] Startup sync warning:", e);
+      }
+    }
   });
 }
 
