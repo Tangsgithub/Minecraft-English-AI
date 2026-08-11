@@ -37,29 +37,48 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     try {
       let combinedMap = new Map<string, any>();
 
-      // 1. Fetch from Firestore database directly (Works on Vercel)
-      try {
-        const firestoreUsers = await fetchAllUsersFromFirestore();
-        firestoreUsers.forEach(u => {
-          if (u.account) combinedMap.set(u.account.toLowerCase(), u);
-        });
-      } catch (fErr) {
-        console.warn("Firestore admin query warning:", fErr);
-      }
-
-      // 2. Fetch from Express Server API
+      // 1. Fetch from Express Server Admin API (Neon PostgreSQL)
       try {
         const resp = await fetch('/api/admin/users');
-        const data = await resp.json();
-        if (data.success && Array.isArray(data.users)) {
-          data.users.forEach((u: any) => {
-            if (u.account && !combinedMap.has(u.account.toLowerCase())) {
-              combinedMap.set(u.account.toLowerCase(), u);
-            }
-          });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success && Array.isArray(data.users)) {
+            data.users.forEach((u: any) => {
+              if (u.account) {
+                combinedMap.set(u.account.toLowerCase(), u);
+              }
+            });
+          }
         }
       } catch (e) {
         console.warn("Server API admin query warning:", e);
+      }
+
+      // 2. Fallback: Include local active profile if not yet in backend array
+      try {
+        const localProfileRaw = localStorage.getItem('mc_english_user_profile');
+        if (localProfileRaw) {
+          const lp = JSON.parse(localProfileRaw);
+          const acc = (lp.account || lp.nickname || '').toLowerCase();
+          if (acc && !combinedMap.has(acc)) {
+            combinedMap.set(acc, {
+              uid: lp.id || 'local_user',
+              account: lp.account || lp.nickname || '当前用户',
+              nickname: lp.nickname || '玩家学员',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              level: lp.level || 1,
+              emeralds: lp.emeralds || 0,
+              xp: lp.xp || 0,
+              streakDays: lp.streakDays || 1,
+              lastActiveDate: lp.lastActiveDate || '',
+              unlockedLessonsCount: lp.unlockedLessonIds?.length || 0,
+              profile: lp
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Local profile merge warning:", e);
       }
 
       setRegisteredUsers(Array.from(combinedMap.values()));
@@ -292,8 +311,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       </div>
                     </div>
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
-                      <div className="text-[11px] text-stone-400">数据库物理文件</div>
-                      <div className="text-xs font-bold text-amber-300 mt-1">/data/users.json</div>
+                      <div className="text-[11px] text-stone-400">云端数据库引擎</div>
+                      <div className="text-xs font-bold text-amber-300 mt-1">Neon PostgreSQL 🐘</div>
                     </div>
                   </div>
 

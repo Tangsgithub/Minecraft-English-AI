@@ -54,6 +54,9 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
   if (!accountOrUid) return null;
   const clean = accountOrUid.trim().toLowerCase();
 
+  const memUser = memoryUsersFallback.get(clean);
+  if (memUser) return memUser;
+
   const sql = getNeonSql();
   if (sql) {
     try {
@@ -65,7 +68,7 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
         if (typeof parsedProfile === 'string') {
           try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
         }
-        return {
+        const u = {
           uid: r.uid || r.account,
           account: r.account,
           nickname: r.nickname,
@@ -76,6 +79,8 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
           updatedAt: Number(r.updated_at || Date.now()),
           profile: parsedProfile || {}
         };
+        memoryUsersFallback.set(clean, u);
+        return u;
       }
       return null;
     } catch (e) {
@@ -91,6 +96,8 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
 async function saveCloudUser(account: string, userObj: any): Promise<boolean> {
   if (!account || !userObj) return false;
   const clean = account.trim().toLowerCase();
+
+  memoryUsersFallback.set(clean, userObj);
 
   const sql = getNeonSql();
   if (sql) {
@@ -126,24 +133,29 @@ async function saveCloudUser(account: string, userObj: any): Promise<boolean> {
     }
   }
 
-  // Fallback if DATABASE_URL is missing
-  memoryUsersFallback.set(clean, userObj);
   return true;
 }
 
 async function getAllCloudUsers(): Promise<any[]> {
+  const userMap = new Map<string, any>();
+
+  for (const [k, v] of memoryUsersFallback.entries()) {
+    userMap.set(k.toLowerCase(), v);
+  }
+
   const sql = getNeonSql();
   if (sql) {
     try {
       await ensureNeonTable();
       const rows = await sql`SELECT * FROM users ORDER BY updated_at DESC`;
       if (rows && rows.length > 0) {
-        return (rows as any[]).map(r => {
+        (rows as any[]).forEach(r => {
           let parsedProfile = r.profile;
           if (typeof parsedProfile === 'string') {
             try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
           }
-          return {
+          const acc = String(r.account).toLowerCase();
+          userMap.set(acc, {
             uid: r.uid || r.account,
             account: r.account,
             nickname: r.nickname,
@@ -153,18 +165,15 @@ async function getAllCloudUsers(): Promise<any[]> {
             createdAt: Number(r.created_at || Date.now()),
             updatedAt: Number(r.updated_at || Date.now()),
             profile: parsedProfile || {}
-          };
+          });
         });
       }
-      return [];
     } catch (e) {
       console.warn("Neon Postgres getAllUsers error:", e);
-      return [];
     }
   }
 
-  // Fallback if DATABASE_URL is missing
-  return Array.from(memoryUsersFallback.values());
+  return Array.from(userMap.values());
 }
 
 
