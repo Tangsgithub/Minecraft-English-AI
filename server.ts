@@ -623,6 +623,7 @@ app.use(express.json());
   app.get("/api/admin/users", async (_req, res) => {
     try {
       const users = await getAllCloudUsers();
+      const isNeonConnected = Boolean(getNeonSql());
       const userList = users.map(u => {
         const p = u.profile || {};
         return {
@@ -640,7 +641,13 @@ app.use(express.json());
           profile: p
         };
       });
-      return res.json({ success: true, count: userList.length, users: userList });
+      return res.json({
+        success: true,
+        count: userList.length,
+        neonConnected: isNeonConnected,
+        databaseUrlConfigured: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING),
+        users: userList
+      });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "读取注册用户数据失败" });
     }

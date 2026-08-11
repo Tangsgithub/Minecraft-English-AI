@@ -32,6 +32,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [userSearch, setUserSearch] = useState<string>('');
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
   const [fetchStatusMsg, setFetchStatusMsg] = useState<string | null>(null);
+  const [dbStatus, setDbStatus] = useState<{ neonConnected: boolean; databaseUrlConfigured: boolean }>({ neonConnected: false, databaseUrlConfigured: false });
 
   const fetchRegisteredUsers = async () => {
     setIsLoadingUsers(true);
@@ -45,6 +46,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         if (resp.ok) {
           const data = await resp.json();
           if (data.success && Array.isArray(data.users)) {
+            setDbStatus({
+              neonConnected: Boolean(data.neonConnected),
+              databaseUrlConfigured: Boolean(data.databaseUrlConfigured)
+            });
             data.users.forEach((u: any) => {
               if (u.account) {
                 combinedMap.set(u.account.toLowerCase(), u);
@@ -318,9 +323,33 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     </div>
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
                       <div className="text-[11px] text-stone-400">云端数据库引擎</div>
-                      <div className="text-xs font-bold text-amber-300 mt-1">Neon PostgreSQL 🐘</div>
+                      <div className="text-xs font-bold mt-1 flex items-center">
+                        {dbStatus.neonConnected ? (
+                          <span className="text-emerald-400 flex items-center">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1 inline-block" />
+                            Neon 已连接 🐘
+                          </span>
+                        ) : (
+                          <span className="text-amber-400 flex items-center">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 mr-1 inline-block" />
+                            未配置 DATABASE_URL
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {!dbStatus.databaseUrlConfigured && (
+                    <div className="bg-amber-950/80 border border-amber-600/60 p-3.5 rounded-xl text-xs text-amber-200 leading-relaxed space-y-1">
+                      <div className="font-bold text-amber-400 flex items-center space-x-1">
+                        <span>⚠️ 提示：服务端当前尚未配置 Neon 数据库连接（DATABASE_URL）</span>
+                      </div>
+                      <div>
+                        由于环境变量中缺少 Neon 数据库连接串，当前注册数据仅储存在服务器<b>临时内存缓存</b>中。
+                        要让数据真正写入 Neon 数据库，请在环境变量/Secrets设置中添加 <code className="bg-stone-900 px-1 py-0.5 rounded text-amber-300 font-mono">DATABASE_URL</code>（例：<code className="bg-stone-900 px-1 py-0.5 rounded text-amber-300 font-mono">postgres://user:pass@ep-xxx.neon.tech/neondb?sslmode=require</code>）。
+                      </div>
+                    </div>
+                  )}
 
                   {/* Filter and Refresh */}
                   <div className="flex flex-col sm:flex-row gap-2 items-center justify-between bg-stone-900 border border-stone-800 p-3 rounded-xl">
