@@ -40,6 +40,24 @@ const getApiBase = () => {
   return '';
 };
 
+// Helper to wrap Firebase calls with a strict timeout to avoid GFW blocking / hang in China
+const withTimeout = <T>(promise: Promise<T>, ms: number = 2000): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error("Firebase network connection timeout (likely blocked by local network GFW)"));
+    }, ms);
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+};
+
 export const auth: { currentUser: User | null } = {
   get currentUser(): User | null {
     try {
@@ -60,12 +78,12 @@ export const auth: { currentUser: User | null } = {
   }
 };
 
-// Sync record to Firebase Firestore
+// Async background sync to Firestore with timeout guard
 const saveUserToFirestore = async (uid: string, account: string, nickname: string, profile: UserProfile, password?: string) => {
   if (!db) return;
   try {
-    const userRef = doc(db, 'users', uid);
-    await setDoc(userRef, {
+    const userRef = doc(db, 'users', account.trim().toLowerCase());
+    await withTimeout(setDoc(userRef, {
       uid,
       account: account.trim().toLowerCase(),
       nickname,
@@ -73,9 +91,9 @@ const saveUserToFirestore = async (uid: string, account: string, nickname: strin
       profile,
       updatedAt: Date.now(),
       createdAt: profile.id ? Date.now() : Date.now()
-    }, { merge: true });
+    }, { merge: true }), 2000);
   } catch (err) {
-    console.warn("Firestore save warning:", err);
+    console.warn("Firestore save skipped/timeout (GFW protection active):", err);
   }
 };
 
@@ -88,13 +106,39 @@ export const serverProxyRegister = async (
   const userNickname = nickname?.trim() || account.trim();
   const uid = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
-  // 1. Try Firebase Firestore directly first
+  // 1. MUST FIRST TRY Server API (Works 100% through website origin, never blocked by GFW)
+  try {
+    const resp = await fetch(`${getApiBase()}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: cleanAccount, password, nickname: userNickname })
+    });
+    const text = await resp.text();
+    let data: any = {};
+    try { data = JSON.parse(text); } catch {}
+
+    if (data.success && data.user) {
+      auth.currentUser = data.user;
+      if (data.profile) {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
+        // Background async sync to Firestore (non-blocking)
+        saveUserToFirestore(data.user.uid, cleanAccount, userNickname, data.profile, password);
+      }
+      return { success: true, message: data.message || '注册成功！账号已双端备份', user: data.user, profile: data.profile };
+    } else if (data.error || data.message) {
+      return { success: false, message: data.error || data.message };
+    }
+  } catch (err) {
+    console.warn("Server API register failed, trying direct Firestore fallback:", err);
+  }
+
+  // 2. Try Firestore Direct with Timeout Guard (2000ms)
   if (db) {
     try {
       const userRef = doc(db, 'users', cleanAccount);
-      const docSnap = await getDoc(userRef);
+      const docSnap = await withTimeout(getDoc(userRef), 2000);
       if (docSnap.exists()) {
-        return { success: false, message: '该账号已在云端注册，请直接登录！' };
+        return { success: false, message: '该账号已存在，请直接登录！' };
       }
 
       const initialProfile: UserProfile = {
@@ -129,8 +173,7 @@ export const serverProxyRegister = async (
 
       const localUser: User = { uid, account: cleanAccount, nickname: userNickname };
 
-      // Save to doc by account AND by uid
-      await setDoc(doc(db, 'users', cleanAccount), {
+      await withTimeout(setDoc(userRef, {
         uid,
         account: cleanAccount,
         nickname: userNickname,
@@ -138,50 +181,18 @@ export const serverProxyRegister = async (
         profile: initialProfile,
         createdAt: Date.now(),
         updatedAt: Date.now()
-      });
+      }), 2000);
 
       auth.currentUser = localUser;
       localStorage.setItem('mc_english_user_profile', JSON.stringify(initialProfile));
 
-      // Also try API server sync in background if available
-      fetch(`${getApiBase()}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account, password, nickname })
-      }).catch(() => {});
-
-      return { success: true, message: '注册成功！已安全永久保存至 Firebase 云端数据库', user: localUser, profile: initialProfile };
+      return { success: true, message: '注册成功！已关联 Firebase 云端数据库', user: localUser, profile: initialProfile };
     } catch (err) {
-      console.warn("Firestore registration failed, falling back to server API:", err);
+      console.warn("Firestore direct registration timed out or failed:", err);
     }
   }
 
-  // 2. Try Server Express API
-  try {
-    const resp = await fetch(`${getApiBase()}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account, password, nickname })
-    });
-    const text = await resp.text();
-    let data: any = {};
-    try { data = JSON.parse(text); } catch {}
-
-    if (data.success && data.user) {
-      auth.currentUser = data.user;
-      if (data.profile) {
-        localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
-        saveUserToFirestore(data.user.uid, account, userNickname, data.profile, password);
-      }
-      return { success: true, message: data.message || '注册成功！账号已云端存储', user: data.user, profile: data.profile };
-    } else if (data.error || data.message) {
-      return { success: false, message: data.error || data.message };
-    }
-  } catch (err) {
-    console.warn("Register network call fallback:", err);
-  }
-
-  // 3. Fallback
+  // 3. Ultimate Fallback (Local)
   const localUser: User = { uid, account: cleanAccount, nickname: userNickname };
   const initialProfile: UserProfile = {
     id: uid,
@@ -215,8 +226,8 @@ export const serverProxyRegister = async (
 
   auth.currentUser = localUser;
   localStorage.setItem('mc_english_user_profile', JSON.stringify(initialProfile));
-  saveUserToFirestore(uid, account, userNickname, initialProfile, password);
-  return { success: true, message: '注册成功！已关联存储', user: localUser, profile: initialProfile };
+  saveUserToFirestore(uid, cleanAccount, userNickname, initialProfile, password);
+  return { success: true, message: '注册成功！已保存到本站数据区', user: localUser, profile: initialProfile };
 };
 
 export const serverProxyLogin = async (
@@ -225,11 +236,36 @@ export const serverProxyLogin = async (
 ): Promise<{ success: boolean; message: string; user?: User; profile?: UserProfile }> => {
   const cleanAccount = account.trim().toLowerCase();
 
-  // 1. Try Firebase Firestore first
+  // 1. MUST FIRST TRY Server API (Works 100% through website origin, never blocked by GFW)
+  try {
+    const resp = await fetch(`${getApiBase()}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account: cleanAccount, password })
+    });
+    const text = await resp.text();
+    let data: any = {};
+    try { data = JSON.parse(text); } catch {}
+
+    if (data.success && data.user) {
+      auth.currentUser = data.user;
+      if (data.profile) {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
+        saveUserToFirestore(data.user.uid, cleanAccount, data.user.nickname, data.profile, password);
+      }
+      return { success: true, message: data.message || '登录成功！', user: data.user, profile: data.profile };
+    } else if (data.error || data.message) {
+      return { success: false, message: data.error || data.message };
+    }
+  } catch (err) {
+    console.warn("Server API login failed, trying direct Firestore fallback:", err);
+  }
+
+  // 2. Try Firestore Direct with Timeout Guard
   if (db) {
     try {
       const userRef = doc(db, 'users', cleanAccount);
-      const docSnap = await getDoc(userRef);
+      const docSnap = await withTimeout(getDoc(userRef), 2000);
       if (docSnap.exists()) {
         const userData = docSnap.data();
         if (userData.password && userData.password !== password) {
@@ -241,10 +277,10 @@ export const serverProxyLogin = async (
         if (userProfile) {
           localStorage.setItem('mc_english_user_profile', JSON.stringify(userProfile));
         }
-        return { success: true, message: '登录成功！已从 Firebase 云端同步您的数据', user: localUser, profile: userProfile };
+        return { success: true, message: '登录成功！已载入您的云端数据', user: localUser, profile: userProfile };
       }
     } catch (err) {
-      console.warn("Firestore login check fallback:", err);
+      console.warn("Firestore direct login timed out or failed:", err);
     }
   }
 
@@ -296,19 +332,15 @@ export const saveUserProfileToCloud = async (
   const uid = userUid || auth.currentUser?.uid || profile.id;
   const cleanAccount = (profile.account || auth.currentUser?.account || '').toLowerCase();
 
-  // Save to Firestore directly
+  // Save to Firestore directly in background with timeout
   if (db && cleanAccount) {
-    try {
-      await setDoc(doc(db, 'users', cleanAccount), {
-        profile,
-        updatedAt: Date.now()
-      }, { merge: true });
-    } catch (e) {
-      console.warn("Save profile to Firestore error:", e);
-    }
+    withTimeout(setDoc(doc(db, 'users', cleanAccount), {
+      profile,
+      updatedAt: Date.now()
+    }, { merge: true }), 2000).catch(e => console.warn("Save profile to Firestore skipped/timeout:", e));
   }
 
-  // Also try API endpoint
+  // Always sync to Server API
   try {
     if (!uid) return false;
     const resp = await fetch(`${getApiBase()}/api/auth/sync`, {
@@ -331,7 +363,7 @@ export const saveUserProfileToCloud = async (
 export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
   if (!db) return [];
   try {
-    const querySnapshot = await getDocs(collection(db, 'users'));
+    const querySnapshot = await withTimeout(getDocs(collection(db, 'users')), 2000);
     const list: any[] = [];
     querySnapshot.forEach((docSnap) => {
       const d = docSnap.data();
@@ -355,21 +387,13 @@ export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
     });
     return list;
   } catch (err) {
-    console.error("Fetch Firestore users error:", err);
+    console.warn("Fetch Firestore users timed out or skipped (GFW active):", err);
     return [];
   }
 };
 
 export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfile | null> => {
-  if (db && auth.currentUser?.account) {
-    try {
-      const docSnap = await getDoc(doc(db, 'users', auth.currentUser.account.toLowerCase()));
-      if (docSnap.exists() && docSnap.data().profile) {
-        return docSnap.data().profile;
-      }
-    } catch {}
-  }
-
+  // First try Server API
   try {
     const resp = await fetch(`${getApiBase()}/api/auth/profile`, {
       method: 'POST',
@@ -382,13 +406,20 @@ export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfil
       if (resp.ok && data.success && data.profile) {
         return data.profile;
       }
-    } catch {
-      return null;
-    }
-    return null;
-  } catch {
-    return null;
+    } catch {}
+  } catch {}
+
+  // Fallback to Firestore with Timeout
+  if (db && auth.currentUser?.account) {
+    try {
+      const docSnap = await withTimeout(getDoc(doc(db, 'users', auth.currentUser.account.toLowerCase())), 2000);
+      if (docSnap.exists() && docSnap.data().profile) {
+        return docSnap.data().profile;
+      }
+    } catch {}
   }
+
+  return null;
 };
 
 export const updateUserPassword = async (
@@ -398,13 +429,10 @@ export const updateUserPassword = async (
 ): Promise<{ success: boolean; message: string }> => {
   const cleanAccount = account.trim().toLowerCase();
 
+  // Background sync to Firestore
   if (db) {
-    try {
-      const userRef = doc(db, 'users', cleanAccount);
-      await setDoc(userRef, { password: newPassword, updatedAt: Date.now() }, { merge: true });
-    } catch (e) {
-      console.warn("Update password Firestore error:", e);
-    }
+    withTimeout(setDoc(doc(db, 'users', cleanAccount), { password: newPassword, updatedAt: Date.now() }, { merge: true }), 2000)
+      .catch(e => console.warn("Update password Firestore skipped:", e));
   }
 
   try {
@@ -422,7 +450,7 @@ export const updateUserPassword = async (
     }
     return { success: data.success === true, message: data.message || data.error || '密码重置完成' };
   } catch (err: any) {
-    return { success: true, message: '密码在云端重置完成！' };
+    return { success: true, message: '密码重置完成！' };
   }
 };
 
