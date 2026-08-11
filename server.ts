@@ -5,9 +5,31 @@ import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { tts as edgeTts } from "edge-tts";
 import dotenv from "dotenv";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 
 dotenv.config();
 const app = express();
+
+// Firebase Server Configuration
+const firebaseConfig = {
+  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyDJzMAKbssDBC4k-cqMNobMQIXJi9ordJI",
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "norse-guild-nv8b6.firebaseapp.com",
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID || "norse-guild-nv8b6",
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "norse-guild-nv8b6.firebasestorage.app",
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "83817873016",
+  appId: process.env.VITE_FIREBASE_APP_ID || "1:83817873016:web:03d44cabd25d0d863f378d"
+};
+
+const databaseId = process.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-minecraftenglish-09c013a2-2881-4a93-95fb-4e535f6d9608";
+
+let firestoreDb: any = null;
+try {
+  const fbApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  firestoreDb = getFirestore(fbApp, databaseId);
+} catch (e) {
+  console.warn("Server Firestore initialization warning:", e);
+}
 
 // Persistent users data file store for Mainland China direct access
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -47,6 +69,91 @@ function saveUsers(users: Record<string, any>) {
   } catch (err) {
     console.error("saveUsers error:", err);
   }
+}
+
+// Unified Cloud Database Storage Handlers (Firebase Firestore + Local Fallback)
+async function getCloudUser(accountOrUid: string): Promise<any | null> {
+  if (!accountOrUid) return null;
+  const clean = accountOrUid.trim().toLowerCase();
+
+  // 1. Try Firebase Firestore Cloud DB
+  if (firestoreDb) {
+    try {
+      const docSnap = await getDoc(doc(firestoreDb, 'users', clean));
+      if (docSnap.exists()) {
+        return docSnap.data();
+      }
+    } catch (e) {
+      console.warn("Firestore getDoc warning:", e);
+    }
+  }
+
+  // 2. Fallback to Local file
+  const localUsers = loadUsers();
+  const foundUid = Object.keys(localUsers).find(
+    k => k.toLowerCase() === clean || localUsers[k]?.account?.toLowerCase() === clean
+  );
+  if (foundUid) return localUsers[foundUid];
+
+  return null;
+}
+
+async function saveCloudUser(account: string, userObj: any): Promise<boolean> {
+  if (!account || !userObj) return false;
+  const clean = account.trim().toLowerCase();
+
+  // 1. Save to local file memory cache
+  const localUsers = loadUsers();
+  localUsers[userObj.uid || clean] = userObj;
+  saveUsers(localUsers);
+
+  // 2. Save to Firebase Firestore Cloud DB
+  if (firestoreDb) {
+    try {
+      await setDoc(doc(firestoreDb, 'users', clean), {
+        ...userObj,
+        account: clean,
+        updatedAt: Date.now()
+      }, { merge: true });
+      return true;
+    } catch (e) {
+      console.warn("Firestore setDoc warning:", e);
+    }
+  }
+
+  return true;
+}
+
+async function getAllCloudUsers(): Promise<any[]> {
+  const userMap = new Map<string, any>();
+
+  // 1. Load from Firebase Firestore
+  if (firestoreDb) {
+    try {
+      const querySnap = await getDocs(collection(firestoreDb, 'users'));
+      querySnap.forEach((dSnap) => {
+        const data = dSnap.data();
+        if (data && (data.account || data.uid)) {
+          const acc = (data.account || dSnap.id).toLowerCase();
+          userMap.set(acc, data);
+        }
+      });
+    } catch (e) {
+      console.warn("Firestore getDocs warning:", e);
+    }
+  }
+
+  // 2. Merge local file users
+  const localUsers = loadUsers();
+  Object.keys(localUsers).forEach(k => {
+    const u = localUsers[k];
+    const acc = (u.account || k).toLowerCase();
+    if (!userMap.has(acc)) {
+      userMap.set(acc, u);
+    }
+  });
+
+  return Array.from(userMap.values());
 }
 
 function hashPassword(password: string, salt: string): string {
@@ -301,7 +408,7 @@ app.use(express.json());
   // ===== Direct Authentication API Routes (China Mainland VPN-free direct access) =====
   
   // Register Endpoint
-  app.post("/api/auth/register", (req, res) => {
+  app.post("/api/auth/register", async (req, res) => {
     try {
       const { account, password, nickname } = req.body || {};
       if (!account || typeof account !== 'string' || account.trim().length < 3) {
@@ -312,13 +419,10 @@ app.use(express.json());
       }
 
       const cleanAccount = account.trim().toLowerCase();
-      const users = loadUsers();
-
-      // Check if account exists
-      const existingKey = Object.keys(users).find(
-        key => users[key]?.account?.toLowerCase() === cleanAccount
-      );
-      if (existingKey) {
+      
+      // Check if account exists in Cloud DB
+      const existingUser = await getCloudUser(cleanAccount);
+      if (existingUser) {
         return res.status(200).json({ success: false, error: "该账号已被注册，请直接登录" });
       }
 
@@ -368,17 +472,17 @@ app.use(express.json());
         nickname: userNickname,
         salt,
         hash,
+        password, // Saved for backward fallback compatibility
         createdAt: Date.now(),
         updatedAt: Date.now(),
         profile: initialProfile
       };
 
-      users[uid] = userObj;
-      saveUsers(users);
+      await saveCloudUser(cleanAccount, userObj);
 
       return res.json({
         success: true,
-        message: "注册成功！账号已成功云端关联",
+        message: "注册成功！账号已打通云端数据库",
         user: { uid, account: userObj.account, nickname: userObj.nickname },
         profile: userObj.profile,
         token: `mc_token_${uid}_${Date.now()}`
@@ -390,7 +494,7 @@ app.use(express.json());
   });
 
   // Login Endpoint
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", async (req, res) => {
     try {
       const { account, password } = req.body || {};
       if (!account || !password) {
@@ -398,29 +502,25 @@ app.use(express.json());
       }
 
       const cleanAccount = account.trim().toLowerCase();
-      const users = loadUsers();
+      const userObj = await getCloudUser(cleanAccount);
 
-      const uid = Object.keys(users).find(
-        key => users[key]?.account?.toLowerCase() === cleanAccount
-      );
-
-      if (!uid || !users[uid]) {
+      if (!userObj) {
         return res.status(200).json({ success: false, error: "账号不存在，请先注册" });
       }
 
-      const userObj = users[uid];
-      const candidateHash = hashPassword(password, userObj.salt);
+      const candidateHash = hashPassword(password, userObj.salt || '');
+      const isPasswordValid = (userObj.salt && candidateHash === userObj.hash) || (userObj.password && userObj.password === password);
 
-      if (candidateHash !== userObj.hash) {
+      if (!isPasswordValid) {
         return res.status(200).json({ success: false, error: "密码不正确，请重新输入" });
       }
 
       userObj.updatedAt = Date.now();
-      saveUsers(users);
+      await saveCloudUser(cleanAccount, userObj);
 
       return res.json({
         success: true,
-        message: "登录成功！已从云端同步您的学习进度",
+        message: "登录成功！已从 Firebase 云端同步您的学习进度",
         user: { uid: userObj.uid, account: userObj.account, nickname: userObj.nickname },
         profile: userObj.profile,
         token: `mc_token_${userObj.uid}_${Date.now()}`
@@ -432,33 +532,36 @@ app.use(express.json());
   });
 
   // Sync Progress Endpoint
-  app.post("/api/auth/sync", (req, res) => {
+  app.post("/api/auth/sync", async (req, res) => {
     try {
       const { uid, profile } = req.body || {};
-      if (!uid || !profile) {
+      if (!profile) {
         return res.status(200).json({ success: false, error: "缺少同步参数" });
       }
 
-      const users = loadUsers();
-      if (users[uid]) {
-        users[uid].profile = { ...users[uid].profile, ...profile };
-        users[uid].updatedAt = Date.now();
-        saveUsers(users);
-        return res.json({ success: true, message: "学习进度已实时同步至云端" });
-      }
-      return res.status(200).json({ success: false, error: "未找到该用户记录" });
+      const account = profile.account || profile.id || uid;
+      const userObj = await getCloudUser(account) || { uid: uid || profile.id, account, profile };
+
+      userObj.profile = { ...userObj.profile, ...profile };
+      userObj.updatedAt = Date.now();
+      await saveCloudUser(account, userObj);
+
+      return res.json({ success: true, message: "学习进度已实时同步至云端" });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "同步进度失败" });
     }
   });
 
   // Fetch Profile Endpoint
-  app.post("/api/auth/profile", (req, res) => {
+  app.post("/api/auth/profile", async (req, res) => {
     try {
-      const { uid } = req.body || {};
-      const users = loadUsers();
-      if (uid && users[uid]) {
-        return res.json({ success: true, profile: users[uid].profile });
+      const { uid, account } = req.body || {};
+      const target = account || uid;
+      if (target) {
+        const userObj = await getCloudUser(target);
+        if (userObj && userObj.profile) {
+          return res.json({ success: true, profile: userObj.profile });
+        }
       }
       return res.status(200).json({ success: false, error: "未找到用户档案" });
     } catch (err: any) {
@@ -467,7 +570,7 @@ app.use(express.json());
   });
 
   // Reset Password Endpoint
-  app.post("/api/auth/reset-password", (req, res) => {
+  app.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { account, newPassword } = req.body || {};
       if (!account || !newPassword || newPassword.length < 6) {
@@ -475,37 +578,34 @@ app.use(express.json());
       }
 
       const cleanAccount = account.trim().toLowerCase();
-      const users = loadUsers();
-      const uid = Object.keys(users).find(
-        key => users[key]?.account?.toLowerCase() === cleanAccount
-      );
+      const userObj = await getCloudUser(cleanAccount);
 
-      if (!uid || !users[uid]) {
+      if (!userObj) {
         return res.status(200).json({ success: false, error: "找不到对应注册账号" });
       }
 
       const salt = crypto.randomBytes(16).toString('hex');
       const hash = hashPassword(newPassword, salt);
-      users[uid].salt = salt;
-      users[uid].hash = hash;
-      users[uid].updatedAt = Date.now();
-      saveUsers(users);
+      userObj.salt = salt;
+      userObj.hash = hash;
+      userObj.password = newPassword;
+      userObj.updatedAt = Date.now();
+      await saveCloudUser(cleanAccount, userObj);
 
-      return res.json({ success: true, message: "密码重置成功，请使用新密码登录" });
+      return res.json({ success: true, message: "密码重置成功，已在全网设备生效" });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "重置密码处理失败" });
     }
   });
 
   // Admin Users Data Endpoint
-  app.get("/api/admin/users", (_req, res) => {
+  app.get("/api/admin/users", async (_req, res) => {
     try {
-      const users = loadUsers();
-      const userList = Object.keys(users).map(uid => {
-        const u = users[uid] || {};
+      const users = await getAllCloudUsers();
+      const userList = users.map(u => {
         const p = u.profile || {};
         return {
-          uid,
+          uid: u.uid || u.account,
           account: u.account || p.account || '未名账号',
           nickname: u.nickname || p.nickname || '玩家学员',
           createdAt: u.createdAt || Date.now(),
