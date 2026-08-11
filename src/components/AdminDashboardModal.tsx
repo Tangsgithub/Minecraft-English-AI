@@ -23,7 +23,34 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [selectedLessonInspect, setSelectedLessonInspect] = useState<Lesson>(LESSONS_DATA[0]);
-  const [activeTab, setActiveTab] = useState<'quick' | 'raw' | 'lessons'>('quick');
+  const [activeTab, setActiveTab] = useState<'users' | 'quick' | 'raw' | 'lessons'>('users');
+
+  // Registered users state
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
+  const [userSearch, setUserSearch] = useState<string>('');
+  const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
+
+  const fetchRegisteredUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const resp = await fetch('/api/admin/users');
+      const data = await resp.json();
+      if (data.success && Array.isArray(data.users)) {
+        setRegisteredUsers(data.users);
+      }
+    } catch (err) {
+      console.error("Failed to fetch admin users:", err);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (isAuthenticated && activeTab === 'users') {
+      fetchRegisteredUsers();
+    }
+  }, [isAuthenticated, activeTab]);
 
   const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +195,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             {/* Top Sub-Nav */}
             <div className="bg-stone-900 p-2 border-b border-stone-800 flex gap-2 shrink-0 overflow-x-auto">
               <button
+                onClick={() => setActiveTab('users')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+                  activeTab === 'users'
+                    ? 'bg-amber-500 text-black shadow-md'
+                    : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                }`}
+              >
+                <Database className="w-4 h-4" />
+                <span>👥 全服注册用户数据 ({registeredUsers.length})</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('quick')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
                   activeTab === 'quick'
@@ -187,8 +226,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
                 }`}
               >
-                <Database className="w-4 h-4" />
-                <span>全量数据 JSON 检视</span>
+                <Terminal className="w-4 h-4" />
+                <span>当前账号 JSON 检视</span>
               </button>
 
               <button
@@ -199,7 +238,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
                 }`}
               >
-                <Terminal className="w-4 h-4" />
+                <Eye className="w-4 h-4" />
                 <span>144 课数据热查器</span>
               </button>
             </div>
@@ -207,7 +246,135 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             {/* Content Area */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
               
-              {/* TAB 1: QUICK CONTROLS */}
+              {/* TAB: REGISTERED USERS DATA */}
+              {activeTab === 'users' && (
+                <div className="space-y-4">
+                  {/* Top Stats Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">总注册账号数</div>
+                      <div className="text-xl font-black text-amber-400 mt-1">{registeredUsers.length} 人</div>
+                    </div>
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">最新注册账号</div>
+                      <div className="text-sm font-bold text-emerald-400 mt-1 truncate">
+                        {registeredUsers[registeredUsers.length - 1]?.account || '暂无'}
+                      </div>
+                    </div>
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">全服累计绿宝石</div>
+                      <div className="text-xl font-black text-emerald-400 mt-1">
+                        ❇️ {registeredUsers.reduce((acc, u) => acc + (u.emeralds || 0), 0)}
+                      </div>
+                    </div>
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">数据库物理文件</div>
+                      <div className="text-xs font-bold text-amber-300 mt-1">/data/users.json</div>
+                    </div>
+                  </div>
+
+                  {/* Filter and Refresh */}
+                  <div className="flex flex-col sm:flex-row gap-2 items-center justify-between bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                    <div className="w-full sm:w-72">
+                      <input
+                        type="text"
+                        value={userSearch}
+                        onChange={e => setUserSearch(e.target.value)}
+                        placeholder="🔍 搜索账号/昵称/ID..."
+                        className="w-full bg-stone-950 border border-stone-700 focus:border-amber-500 text-xs text-amber-200 px-3 py-2 rounded-lg outline-none"
+                      />
+                    </div>
+
+                    <button
+                      onClick={fetchRegisteredUsers}
+                      disabled={isLoadingUsers}
+                      className="w-full sm:w-auto bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1 transition-all"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                      <span>{isLoadingUsers ? '刷新中...' : '重新载入后端数据'}</span>
+                    </button>
+                  </div>
+
+                  {/* Users Table */}
+                  <div className="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-stone-950 text-amber-400 border-b border-stone-800 font-bold">
+                          <tr>
+                            <th className="p-3">账号 (Account)</th>
+                            <th className="p-3">昵称</th>
+                            <th className="p-3">等级</th>
+                            <th className="p-3">绿宝石</th>
+                            <th className="p-3">连签</th>
+                            <th className="p-3">解锁课数</th>
+                            <th className="p-3">注册时间</th>
+                            <th className="p-3 text-right">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-800 text-stone-300 font-mono">
+                          {registeredUsers
+                            .filter(u => 
+                              !userSearch || 
+                              u.account?.toLowerCase().includes(userSearch.toLowerCase()) || 
+                              u.nickname?.toLowerCase().includes(userSearch.toLowerCase()) ||
+                              u.uid?.includes(userSearch)
+                            )
+                            .map((u, idx) => (
+                              <tr key={u.uid || idx} className="hover:bg-stone-800/50 transition-colors">
+                                <td className="p-3 font-bold text-amber-300">{u.account}</td>
+                                <td className="p-3 font-semibold text-stone-200">{u.nickname}</td>
+                                <td className="p-3 text-amber-400 font-bold">Lv.{u.level}</td>
+                                <td className="p-3 text-emerald-400 font-bold">❇️ {u.emeralds}</td>
+                                <td className="p-3 text-orange-400">🔥 {u.streakDays} 天</td>
+                                <td className="p-3 text-blue-400">{u.unlockedLessonsCount} 课</td>
+                                <td className="p-3 text-stone-400 text-[11px]">
+                                  {u.createdAt ? new Date(u.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '更早以前'}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={() => setSelectedUserDetail(u)}
+                                    className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                                  >
+                                    检视 Profile
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          {registeredUsers.length === 0 && (
+                            <tr>
+                              <td colSpan={8} className="p-6 text-center text-stone-500">
+                                暂无全服注册用户，或者正在连接后端数据中...
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* User Profile JSON Inspect Modal */}
+                  {selectedUserDetail && (
+                    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                      <div className="bg-stone-900 border-2 border-amber-500 rounded-2xl p-5 w-full max-w-xl text-amber-50 space-y-3 font-mono shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+                          <h3 className="font-black text-amber-400 text-sm">
+                            玩家账号详情: {selectedUserDetail.account} ({selectedUserDetail.nickname})
+                          </h3>
+                          <button
+                            onClick={() => setSelectedUserDetail(null)}
+                            className="text-stone-400 hover:text-white text-xs bg-stone-800 px-2 py-1 rounded"
+                          >
+                            ✕ 关闭
+                          </button>
+                        </div>
+                        <pre className="bg-black/90 p-3 rounded-xl border border-stone-800 text-[11px] text-amber-300 overflow-x-auto max-h-[350px]">
+                          {JSON.stringify(selectedUserDetail.profile || selectedUserDetail, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {activeTab === 'quick' && (
                 <div className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

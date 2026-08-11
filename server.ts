@@ -497,6 +497,34 @@ app.use(express.json());
     }
   });
 
+  // Admin Users Data Endpoint
+  app.get("/api/admin/users", (_req, res) => {
+    try {
+      const users = loadUsers();
+      const userList = Object.keys(users).map(uid => {
+        const u = users[uid] || {};
+        const p = u.profile || {};
+        return {
+          uid,
+          account: u.account || p.account || '未名账号',
+          nickname: u.nickname || p.nickname || '玩家学员',
+          createdAt: u.createdAt || Date.now(),
+          updatedAt: u.updatedAt || Date.now(),
+          level: p.level || 1,
+          emeralds: p.emeralds || 0,
+          xp: p.xp || 0,
+          streakDays: p.streakDays || 1,
+          lastActiveDate: p.lastActiveDate || '',
+          unlockedLessonsCount: p.unlockedLessonIds?.length || 0,
+          profile: p
+        };
+      });
+      return res.json({ success: true, count: userList.length, users: userList });
+    } catch (err: any) {
+      return res.status(200).json({ success: false, error: "读取注册用户数据失败" });
+    }
+  });
+
   // Global API error handler ensuring all /api requests return JSON
   app.use("/api", (err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error("API Express Error:", err);
