@@ -3,6 +3,7 @@ import { UserProfile, Lesson } from '../types';
 import { LESSONS_DATA } from '../data/lessonsData';
 import { ShieldCheck, Unlock, Zap, Database, Terminal, RefreshCw, Key, Award, Check, AlertTriangle, Eye, Volume2, X } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playLevelUpSound, speakText } from '../utils/audio';
+import { fetchAllUsersFromFirestore } from '../lib/firebase';
 
 interface AdminDashboardModalProps {
   profile: UserProfile;
@@ -34,11 +35,34 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const fetchRegisteredUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      const resp = await fetch('/api/admin/users');
-      const data = await resp.json();
-      if (data.success && Array.isArray(data.users)) {
-        setRegisteredUsers(data.users);
+      let combinedMap = new Map<string, any>();
+
+      // 1. Fetch from Firestore database directly (Works on Vercel)
+      try {
+        const firestoreUsers = await fetchAllUsersFromFirestore();
+        firestoreUsers.forEach(u => {
+          if (u.account) combinedMap.set(u.account.toLowerCase(), u);
+        });
+      } catch (fErr) {
+        console.warn("Firestore admin query warning:", fErr);
       }
+
+      // 2. Fetch from Express Server API
+      try {
+        const resp = await fetch('/api/admin/users');
+        const data = await resp.json();
+        if (data.success && Array.isArray(data.users)) {
+          data.users.forEach((u: any) => {
+            if (u.account && !combinedMap.has(u.account.toLowerCase())) {
+              combinedMap.set(u.account.toLowerCase(), u);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Server API admin query warning:", e);
+      }
+
+      setRegisteredUsers(Array.from(combinedMap.values()));
     } catch (err) {
       console.error("Failed to fetch admin users:", err);
     } finally {
