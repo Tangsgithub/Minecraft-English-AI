@@ -96,5 +96,53 @@
       },
       "isInitialSetupDone": true
     }
+  },
+  "user_1786417647464_jzjxx": {
+    "uid": "user_1786417647464_jzjxx",
+    "account": "student1",
+    "nickname": "小明",
+    "salt": "c01eed84a1bb0f37aae9476f8d9f7eaf",
+    "hash": "703e03e4de0ee21a235196995e0f0459f9a55328175c35528eb719f1a4daba5b3e543b78ab0818d4aea1c32da64b876a815f6d1c1265208adb16a2f11267d412",
+    "createdAt": 1786417647464,
+    "updatedAt": 1786417657874,
+    "profile": {
+      "id": "user_1786417647464_jzjxx",
+      "nickname": "小明",
+      "account": "student1",
+      "selectedVolumeId": "vol1",
+      "currentLessonId": 1,
+      "unlockedLessonIds": [
+        1,
+        2
+      ],
+      "completedMissionIds": [],
+      "unlockedBadgeIds": [
+        "badge_first_words"
+      ],
+      "masteredWords": [],
+      "emeralds": 100,
+      "xp": 50,
+      "level": 2,
+      "avatar": "steve",
+      "selectedAvatar": "👦",
+      "customAvatarUrl": "",
+      "learningGoal": 15,
+      "todayMinutes": 0,
+      "streakDays": 1,
+      "lastActiveDate": "2026-08-11",
+      "vocabulary": [],
+      "completedMissions": [],
+      "unlockedCraftingIds": [],
+      "enderChestCount": 0,
+      "eyeCareEnabled": false,
+      "eyeCareMinutes": 20,
+      "apiKeyConfig": {
+        "provider": "deepseek",
+        "apiKey": "",
+        "baseUrl": "https://api.deepseek.com",
+        "model": "deepseek-chat"
+      },
+      "isInitialSetupDone": true
+    }
   }
 }
