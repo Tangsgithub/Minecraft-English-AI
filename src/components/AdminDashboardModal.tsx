@@ -31,9 +31,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
   const [userSearch, setUserSearch] = useState<string>('');
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
+  const [fetchStatusMsg, setFetchStatusMsg] = useState<string | null>(null);
 
   const fetchRegisteredUsers = async () => {
     setIsLoadingUsers(true);
+    setFetchStatusMsg(null);
     try {
       let combinedMap = new Map<string, any>();
 
@@ -81,9 +83,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         console.warn("Local profile merge warning:", e);
       }
 
-      setRegisteredUsers(Array.from(combinedMap.values()));
+      const list = Array.from(combinedMap.values());
+      setRegisteredUsers(list);
+      setFetchStatusMsg(`已成功刷新：共查询到 ${list.length} 个学员记录！`);
+      setTimeout(() => setFetchStatusMsg(null), 3000);
     } catch (err) {
       console.error("Failed to fetch admin users:", err);
+      setFetchStatusMsg('载入失败，请检查网络或重试');
     } finally {
       setIsLoadingUsers(false);
     }
@@ -328,14 +334,21 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       />
                     </div>
 
-                    <button
-                      onClick={fetchRegisteredUsers}
-                      disabled={isLoadingUsers}
-                      className="w-full sm:w-auto bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1 transition-all"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-                      <span>{isLoadingUsers ? '刷新中...' : '重新载入后端数据'}</span>
-                    </button>
+                    <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                      {fetchStatusMsg && (
+                        <span className="text-xs text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800 px-2.5 py-1 rounded-lg animate-fade-in">
+                          {fetchStatusMsg}
+                        </span>
+                      )}
+                      <button
+                        onClick={fetchRegisteredUsers}
+                        disabled={isLoadingUsers}
+                        className="w-full sm:w-auto bg-stone-800 hover:bg-stone-700 text-amber-300 border border-stone-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1 transition-all active:scale-95"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+                        <span>{isLoadingUsers ? '刷新中...' : '重新载入后端数据'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Users Table */}
