@@ -1,160 +1,172 @@
 import express from "express";
 import path from "path";
-import fs from "fs";
 import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
 import { tts as edgeTts } from "edge-tts";
 import dotenv from "dotenv";
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
+import { neon } from "@neondatabase/serverless";
 
 dotenv.config();
 const app = express();
 
-// Firebase Server Configuration
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyDJzMAKbssDBC4k-cqMNobMQIXJi9ordJI",
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "norse-guild-nv8b6.firebaseapp.com",
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || "norse-guild-nv8b6",
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "norse-guild-nv8b6.firebasestorage.app",
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "83817873016",
-  appId: process.env.VITE_FIREBASE_APP_ID || "1:83817873016:web:03d44cabd25d0d863f378d"
+// In-memory fallback ONLY when Neon DATABASE_URL is not configured yet in local environment
+const memoryUsersFallback = new Map<string, any>();
+
+// Neon PostgreSQL Serverless Client
+const getNeonSql = () => {
+  const connStr = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
+  if (!connStr) return null;
+  try {
+    return neon(connStr);
+  } catch (e) {
+    console.warn("Neon database client initialization warning:", e);
+    return null;
+  }
 };
 
-const databaseId = process.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-minecraftenglish-09c013a2-2881-4a93-95fb-4e535f6d9608";
-
-let firestoreDb: any = null;
-try {
-  const fbApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  firestoreDb = getFirestore(fbApp, databaseId);
-} catch (e) {
-  console.warn("Server Firestore initialization warning:", e);
-}
-
-// Persistent users data file store for Mainland China direct access
-const DATA_DIR = path.join(process.cwd(), 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-
-function ensureDataFile() {
+let neonTableInitialized = false;
+async function ensureNeonTable() {
+  const sql = getNeonSql();
+  if (!sql || neonTableInitialized) return;
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (!fs.existsSync(USERS_FILE)) {
-      fs.writeFileSync(USERS_FILE, JSON.stringify({}), 'utf-8');
-    }
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        account VARCHAR(255) PRIMARY KEY,
+        uid VARCHAR(255),
+        nickname VARCHAR(255),
+        salt TEXT,
+        hash TEXT,
+        password TEXT,
+        created_at BIGINT,
+        updated_at BIGINT,
+        profile JSONB
+      );
+    `;
+    neonTableInitialized = true;
+    console.log("[Neon Postgres] Database table 'users' initialized successfully!");
   } catch (e) {
-    console.error("ensureDataFile error:", e);
+    console.warn("[Neon Postgres] Table initialization warning:", e);
   }
 }
 
-function loadUsers(): Record<string, any> {
-  try {
-    ensureDataFile();
-    if (fs.existsSync(USERS_FILE)) {
-      const raw = fs.readFileSync(USERS_FILE, 'utf-8');
-      return JSON.parse(raw) || {};
-    }
-    return {};
-  } catch (err) {
-    console.error("loadUsers error:", err);
-    return {};
-  }
-}
-
-function saveUsers(users: Record<string, any>) {
-  try {
-    ensureDataFile();
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
-  } catch (err) {
-    console.error("saveUsers error:", err);
-  }
-}
-
-// Unified Cloud Database Storage Handlers (Firebase Firestore + Local Fallback)
+// Exclusive Neon PostgreSQL Database Handlers
 async function getCloudUser(accountOrUid: string): Promise<any | null> {
   if (!accountOrUid) return null;
   const clean = accountOrUid.trim().toLowerCase();
 
-  // 1. Try Firebase Firestore Cloud DB
-  if (firestoreDb) {
+  const sql = getNeonSql();
+  if (sql) {
     try {
-      const docSnap = await getDoc(doc(firestoreDb, 'users', clean));
-      if (docSnap.exists()) {
-        return docSnap.data();
+      await ensureNeonTable();
+      const rows = await sql`SELECT * FROM users WHERE LOWER(account) = ${clean} OR uid = ${clean} LIMIT 1`;
+      if (rows && rows.length > 0) {
+        const r: any = rows[0];
+        let parsedProfile = r.profile;
+        if (typeof parsedProfile === 'string') {
+          try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
+        }
+        return {
+          uid: r.uid || r.account,
+          account: r.account,
+          nickname: r.nickname,
+          salt: r.salt,
+          hash: r.hash,
+          password: r.password,
+          createdAt: Number(r.created_at || Date.now()),
+          updatedAt: Number(r.updated_at || Date.now()),
+          profile: parsedProfile || {}
+        };
       }
+      return null;
     } catch (e) {
-      console.warn("Firestore getDoc warning:", e);
+      console.warn("Neon Postgres get error:", e);
+      return null;
     }
   }
 
-  // 2. Fallback to Local file
-  const localUsers = loadUsers();
-  const foundUid = Object.keys(localUsers).find(
-    k => k.toLowerCase() === clean || localUsers[k]?.account?.toLowerCase() === clean
-  );
-  if (foundUid) return localUsers[foundUid];
-
-  return null;
+  // Fallback if DATABASE_URL is missing
+  return memoryUsersFallback.get(clean) || null;
 }
 
 async function saveCloudUser(account: string, userObj: any): Promise<boolean> {
   if (!account || !userObj) return false;
   const clean = account.trim().toLowerCase();
 
-  // 1. Save to local file memory cache
-  const localUsers = loadUsers();
-  localUsers[userObj.uid || clean] = userObj;
-  saveUsers(localUsers);
-
-  // 2. Save to Firebase Firestore Cloud DB
-  if (firestoreDb) {
+  const sql = getNeonSql();
+  if (sql) {
     try {
-      await setDoc(doc(firestoreDb, 'users', clean), {
-        ...userObj,
-        account: clean,
-        updatedAt: Date.now()
-      }, { merge: true });
+      await ensureNeonTable();
+      const profileJson = JSON.stringify(userObj.profile || {});
+      await sql`
+        INSERT INTO users (account, uid, nickname, salt, hash, password, created_at, updated_at, profile)
+        VALUES (
+          ${clean},
+          ${userObj.uid || clean},
+          ${userObj.nickname || '玩家'},
+          ${userObj.salt || ''},
+          ${userObj.hash || ''},
+          ${userObj.password || ''},
+          ${userObj.createdAt || Date.now()},
+          ${Date.now()},
+          ${profileJson}::jsonb
+        )
+        ON CONFLICT (account) DO UPDATE SET
+          uid = EXCLUDED.uid,
+          nickname = EXCLUDED.nickname,
+          salt = EXCLUDED.salt,
+          hash = EXCLUDED.hash,
+          password = EXCLUDED.password,
+          updated_at = EXCLUDED.updated_at,
+          profile = EXCLUDED.profile;
+      `;
       return true;
     } catch (e) {
-      console.warn("Firestore setDoc warning:", e);
+      console.warn("Neon Postgres save error:", e);
+      return false;
     }
   }
 
+  // Fallback if DATABASE_URL is missing
+  memoryUsersFallback.set(clean, userObj);
   return true;
 }
 
 async function getAllCloudUsers(): Promise<any[]> {
-  const userMap = new Map<string, any>();
-
-  // 1. Load from Firebase Firestore
-  if (firestoreDb) {
+  const sql = getNeonSql();
+  if (sql) {
     try {
-      const querySnap = await getDocs(collection(firestoreDb, 'users'));
-      querySnap.forEach((dSnap) => {
-        const data = dSnap.data();
-        if (data && (data.account || data.uid)) {
-          const acc = (data.account || dSnap.id).toLowerCase();
-          userMap.set(acc, data);
-        }
-      });
+      await ensureNeonTable();
+      const rows = await sql`SELECT * FROM users ORDER BY updated_at DESC`;
+      if (rows && rows.length > 0) {
+        return (rows as any[]).map(r => {
+          let parsedProfile = r.profile;
+          if (typeof parsedProfile === 'string') {
+            try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
+          }
+          return {
+            uid: r.uid || r.account,
+            account: r.account,
+            nickname: r.nickname,
+            salt: r.salt,
+            hash: r.hash,
+            password: r.password,
+            createdAt: Number(r.created_at || Date.now()),
+            updatedAt: Number(r.updated_at || Date.now()),
+            profile: parsedProfile || {}
+          };
+        });
+      }
+      return [];
     } catch (e) {
-      console.warn("Firestore getDocs warning:", e);
+      console.warn("Neon Postgres getAllUsers error:", e);
+      return [];
     }
   }
 
-  // 2. Merge local file users
-  const localUsers = loadUsers();
-  Object.keys(localUsers).forEach(k => {
-    const u = localUsers[k];
-    const acc = (u.account || k).toLowerCase();
-    if (!userMap.has(acc)) {
-      userMap.set(acc, u);
-    }
-  });
-
-  return Array.from(userMap.values());
+  // Fallback if DATABASE_URL is missing
+  return Array.from(memoryUsersFallback.values());
 }
+
 
 function hashPassword(password: string, salt: string): string {
   try {
@@ -653,27 +665,13 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", async () => {
     console.log(`Minecraft English AI Server running on http://localhost:${PORT}`);
     
-    // Auto-sync local file users to Firestore on startup
-    if (firestoreDb) {
-      try {
-        const localUsers = loadUsers();
-        const keys = Object.keys(localUsers);
-        if (keys.length > 0) {
-          console.log(`[Firestore Sync] Auto-syncing ${keys.length} local user accounts to Firestore...`);
-          for (const k of keys) {
-            const u = localUsers[k];
-            const acc = (u.account || k).toLowerCase();
-            await setDoc(doc(firestoreDb, 'users', acc), {
-              ...u,
-              account: acc,
-              updatedAt: Date.now()
-            }, { merge: true });
-          }
-          console.log(`[Firestore Sync] Successfully synced local accounts to Firestore collection 'users'!`);
-        }
-      } catch (e) {
-        console.warn("[Firestore Sync] Startup sync warning:", e);
-      }
+    // Initialize Neon PostgreSQL table on startup if DATABASE_URL is connected
+    const sql = getNeonSql();
+    if (sql) {
+      await ensureNeonTable();
+      console.log("[Neon Postgres] Server ready with Neon PostgreSQL database.");
+    } else {
+      console.log("[Neon Postgres] DATABASE_URL not set yet. Waiting for Neon database connection.");
     }
   });
 }
