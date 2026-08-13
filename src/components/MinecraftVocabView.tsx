@@ -42,6 +42,9 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   // Determine user's highest unlocked lesson
   const maxUnlockedLesson = Math.max(...(profile.unlockedLessonIds || [1]), 1);
 
+  // Case-insensitive Mastered Words Set for 100% accurate status matching
+  const masteredSet = new Set((profile.masteredWords || []).map(w => w.toLowerCase()));
+
   // 1. Convert NCE Full Vocab into VocabItem list
   const nceFullList: VocabItem[] = NCE_BOOK1_FULL_VOCAB.map((item, idx) => ({
     id: `nce_full_${item.lessonId}_${idx}`,
@@ -103,8 +106,10 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   const unlockedVocabList = combinedList.filter(
     item => !item.requiredLessonId || item.requiredLessonId <= maxUnlockedLesson
   );
-  const masteredWords = profile.masteredWords || [];
-  const masteredUnlockedCount = unlockedVocabList.filter(item => masteredWords.includes(item.word)).length;
+  
+  // Total mastered in whole library and within unlocked list
+  const totalMasteredInLibrary = combinedList.filter(item => masteredSet.has(item.word.toLowerCase())).length;
+  const masteredUnlockedCount = unlockedVocabList.filter(item => masteredSet.has(item.word.toLowerCase())).length;
 
   const categories = [
     { id: 'all', label: '全部种类', icon: '📚' },
@@ -117,10 +122,6 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
     const isMc = isMcVocabItem(item);
     const isUnlocked = !item.requiredLessonId || item.requiredLessonId <= maxUnlockedLesson;
 
-    // Unlock Status Filter
-    if (unlockFilter === 'unlocked' && !isUnlocked) return false;
-    if (unlockFilter === 'locked' && isUnlocked) return false;
-
     // Lesson Range Filter
     const reqLesson = item.requiredLessonId || 1;
     if (lessonRangeFilter === 'current' && reqLesson > maxUnlockedLesson) return false;
@@ -128,6 +129,15 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
     if (lessonRangeFilter === '11-30' && (reqLesson < 11 || reqLesson > 30)) return false;
     if (lessonRangeFilter === '31-70' && (reqLesson < 31 || reqLesson > 70)) return false;
     if (lessonRangeFilter === '71-144' && (reqLesson < 71 || reqLesson > 144)) return false;
+
+    // Unlock Status Filter (if specific range is selected like '11-30', allow showing all words in range)
+    if (lessonRangeFilter === 'all' || lessonRangeFilter === 'current') {
+      if (unlockFilter === 'unlocked' && !isUnlocked) return false;
+      if (unlockFilter === 'locked' && isUnlocked) return false;
+    } else {
+      if (unlockFilter === 'unlocked' && !isUnlocked && reqLesson <= maxUnlockedLesson) return false;
+      if (unlockFilter === 'locked' && isUnlocked) return false;
+    }
 
     // Category Filter
     const matchesCategory =
@@ -216,7 +226,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-500 font-mono font-bold">
-                已通关解锁至：<span className="text-[#487E2C] font-black">第 1 ~ {maxUnlockedLesson} 课</span> • 已解锁 <span className="text-[#FF6321] font-black">{unlockedVocabList.length}</span> / {combinedList.length} 词 • 掌握 <span className="text-[#487E2C] font-black">{masteredUnlockedCount}</span> 个
+                已通关解锁至：<span className="text-[#487E2C] font-black">第 1 ~ {maxUnlockedLesson} 课</span> • 已解锁 <span className="text-[#FF6321] font-black">{unlockedVocabList.length}</span> / {combinedList.length} 词 • 累积已掌握 <span className="text-[#487E2C] font-black">{totalMasteredInLibrary}</span> 词
               </p>
             </div>
           </div>
@@ -380,7 +390,13 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                 ].map(r => (
                   <button
                     key={r.id}
-                    onClick={() => { playClickSound(); setLessonRangeFilter(r.id); }}
+                    onClick={() => {
+                      playClickSound();
+                      setLessonRangeFilter(r.id);
+                      if (r.id !== 'all' && r.id !== 'current') {
+                        setUnlockFilter('all');
+                      }
+                    }}
                     className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-all shrink-0 ${
                       lessonRangeFilter === r.id
                         ? 'bg-amber-400 border-black text-amber-950 font-black shadow-xs'
@@ -435,7 +451,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
               {filteredVocab.map(item => {
-                const isMastered = (profile.masteredWords || []).includes(item.word);
+                const isMastered = masteredSet.has(item.word.toLowerCase());
                 const reqLesson = item.requiredLessonId || 1;
                 const isUnlocked = !item.requiredLessonId || reqLesson <= maxUnlockedLesson;
 

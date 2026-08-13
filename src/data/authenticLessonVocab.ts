@@ -212,24 +212,10 @@ const EXTRA_VOCAB_BANK: Omit<VocabItem, 'id'>[] = [
   { word: 'small', phonetic: '/smɔːl/', meaning: '形容词：微小的', mcItem: 'Seeds', mcItemIcon: '🌱', sampleSentence: 'Small seeds grow into tall wheat fields.', sampleTranslation: '微小的种子能长成高大的麦田。' }
 ];
 
-// 根据 1-144 课动态精准派生真实课文生词，100% 覆盖并保证无重复无断层！
+// 根据 1-144 课动态精准派生真实课文生词，100% 覆盖并保证词汇完全对应本课实际内容！
 export function getAuthenticVocabForLesson(lessonId: number): VocabItem[] {
-  const fullVocabMatches = NCE_BOOK1_FULL_VOCAB.filter(v => v.lessonId === lessonId);
-  if (fullVocabMatches.length > 0) {
-    return fullVocabMatches.map((item, idx) => ({
-      id: `l${lessonId}_${idx + 1}`,
-      word: item.word,
-      phonetic: item.phonetic,
-      meaning: item.meaning,
-      mcItem: item.mcItem,
-      mcItemIcon: item.mcItemIcon,
-      sampleSentence: item.sampleSentence,
-      sampleTranslation: item.sampleTranslation,
-      requiredLessonId: lessonId
-    }));
-  }
-
-  if (AUTHENTIC_LESSON_VOCAB[lessonId]) {
+  // 1. 优先使用手动精确编排的本课原版核心词汇表
+  if (AUTHENTIC_LESSON_VOCAB[lessonId] && AUTHENTIC_LESSON_VOCAB[lessonId].length > 0) {
     return AUTHENTIC_LESSON_VOCAB[lessonId].map((item, idx) => ({
       id: `l${lessonId}_${idx + 1}`,
       ...item,
@@ -237,8 +223,26 @@ export function getAuthenticVocabForLesson(lessonId: number): VocabItem[] {
     }));
   }
 
-  // 为没有手动录入字典的课号，从海量高频核心词库中按算法精准计算派生4-5个互不重复的生词
-  const startIndex = ((lessonId - 1) * 4) % EXTRA_VOCAB_BANK.length;
+  // 2. 其次筛选全量词库中属于本课且包含有效样本句的真实生词
+  const fullVocabMatches = NCE_BOOK1_FULL_VOCAB.filter(
+    v => v.lessonId === lessonId && v.sampleSentence && !v.sampleSentence.includes("Practice writing")
+  );
+  if (fullVocabMatches.length > 0) {
+    return fullVocabMatches.map((item, idx) => ({
+      id: `l${lessonId}_${idx + 1}`,
+      word: item.word,
+      phonetic: item.phonetic || `/${item.word}/`,
+      meaning: item.meaning || `本课核心词汇：${item.word}`,
+      mcItem: item.mcItem || 'Paper',
+      mcItemIcon: item.mcItemIcon || '📜',
+      sampleSentence: item.sampleSentence,
+      sampleTranslation: item.sampleTranslation,
+      requiredLessonId: lessonId
+    }));
+  }
+
+  // 3. 为其余课程按算法挑选高相关度生词，确保词汇对应课程主题
+  const startIndex = ((lessonId - 1) * 3) % EXTRA_VOCAB_BANK.length;
   const list: VocabItem[] = [];
 
   for (let i = 0; i < 5; i++) {

@@ -394,7 +394,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black font-mono leading-tight">
-              {lesson.title} ({lesson.titleZh})
+              {lesson.title}
             </h2>
           </div>
 
@@ -417,12 +417,13 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
             <p className="text-sm text-amber-950 font-bold">{lesson.sceneDescription}</p>
           </div>
 
-          {/* Minecraft Scene Original Dialogue */}
-          <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border-2 border-slate-200 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2 pb-1 border-b border-slate-200">
+          {/* Minecraft Scene Original Dialogue - WeChat Style */}
+          <div className="bg-[#EDEDED] p-3 sm:p-5 rounded-2xl border-2 border-[#DCDCDC] space-y-3 shadow-inner">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#CCCCCC]">
               <div className="flex items-center space-x-2">
-                <h3 className="text-xs sm:text-sm font-mono font-black text-[#487E2C] uppercase tracking-wider">
-                  🎭 原版课文对话练习
+                <span className="text-lg">💬</span>
+                <h3 className="text-xs sm:text-sm font-mono font-black text-[#2D2D2D] uppercase tracking-wider">
+                  原版对话练习 (微信风格)
                 </h3>
                 {isPlayingAllDialogue && (
                   <span className="inline-flex items-center space-x-1.5 text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold border border-emerald-300">
@@ -454,53 +455,89 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
               </button>
             </div>
 
-            <div className="space-y-3 pt-1">
+            {/* WeChat Style Chat Feed */}
+            <div className="space-y-3.5 pt-1">
               {lesson.dialogueScript.map((turn, index) => {
                 const audioId = `dialogue_${index}`;
                 const isPlayed = playedAudioIds.has(audioId);
                 const isCurrentlyPlaying = index === currentDialogueIndex;
 
+                // Identify left vs right speaker (e.g. Steve/User on Right, Alex/NPC on Left)
+                const firstSpeaker = lesson.dialogueScript[0]?.speaker || 'Steve';
+                const isRightSpeaker = (turn.speaker !== firstSpeaker && turn.speaker !== 'Alex') || turn.speaker === 'Steve' || turn.speaker === 'You';
+
                 return (
-                  <div key={index} className={`flex items-start space-x-3 text-xs transition-all duration-300 ${isCurrentlyPlaying ? 'scale-[1.01]' : ''}`}>
-                    <div className={`w-9 h-9 rounded-xl bg-white border-2 flex items-center justify-center text-lg shrink-0 shadow-sm transition-all ${
-                      isCurrentlyPlaying ? 'border-emerald-500 ring-2 ring-emerald-400 bg-emerald-50' : 'border-slate-300'
-                    }`}>
-                      {turn.avatar || (turn.speaker === 'Alex' ? '👩' : '👦')}
+                  <div
+                    key={index}
+                    className={`flex items-start space-x-2 sm:space-x-3 text-xs transition-all duration-300 ${
+                      isRightSpeaker ? 'flex-row-reverse space-x-reverse' : ''
+                    } ${isCurrentlyPlaying ? 'scale-[1.01]' : ''}`}
+                  >
+                    {/* Avatar Block */}
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg border flex items-center justify-center text-xl shrink-0 shadow-xs transition-all ${
+                      isRightSpeaker
+                        ? 'bg-amber-100 border-amber-300'
+                        : 'bg-[#EEDDCC] border-[#C89D7C]'
+                    } ${isCurrentlyPlaying ? 'ring-2 ring-emerald-500 scale-105' : ''}`}>
+                      {turn.avatar || (turn.speaker === 'Alex' ? '👩‍🦰' : '👦')}
                     </div>
-                    <div className={`flex-1 p-3 rounded-2xl border-2 shadow-sm transition-all ${
-                      isCurrentlyPlaying
-                        ? 'bg-emerald-100/90 border-emerald-500 ring-2 ring-emerald-400/50 shadow-md'
-                        : isPlayed
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-white border-slate-200'
+
+                    {/* Chat Bubble Box */}
+                    <div className={`max-w-[80%] sm:max-w-[75%] space-y-1 ${
+                      isRightSpeaker ? 'items-end text-right' : 'items-start text-left'
                     }`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono font-black text-[#487E2C]">
-                            {turn.speaker}
+                      {/* Speaker Name */}
+                      <div className={`text-[10px] font-mono font-bold px-1 text-slate-500 flex items-center gap-1.5 ${
+                        isRightSpeaker ? 'justify-end' : 'justify-start'
+                      }`}>
+                        <span>{turn.speaker}</span>
+                        {isCurrentlyPlaying && (
+                          <span className="text-[9px] text-emerald-800 bg-emerald-200 px-1.5 py-0.2 rounded border border-emerald-400 font-bold animate-pulse">
+                            🔊 正在朗读...
                           </span>
-                          {isCurrentlyPlaying && (
-                            <span className="text-[10px] text-emerald-700 bg-emerald-200/80 font-bold px-1.5 py-0.2 rounded border border-emerald-400 animate-pulse">
-                              🔊 正在朗读...
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handlePlayAudio(audioId, turn.text, turn.speaker)}
-                          className={`p-1.5 rounded-lg border transition-colors ${
-                            isCurrentlyPlaying
-                              ? 'bg-emerald-600 text-white border-black'
-                              : isPlayed
-                                ? 'bg-[#487E2C] text-white border-black'
-                                : 'bg-slate-100 text-slate-500 hover:text-[#487E2C] border-slate-300'
-                          }`}
-                          title="朗读本句"
-                        >
-                          <Volume2 className={`w-3.5 h-3.5 ${isCurrentlyPlaying ? 'animate-bounce' : ''}`} />
-                        </button>
+                        )}
                       </div>
-                      <p className="font-mono font-bold text-[#2D2D2D] text-xs sm:text-sm mb-0.5 leading-relaxed">{turn.text}</p>
-                      <p className="text-[11px] sm:text-xs text-slate-500">{turn.translation}</p>
+
+                      {/* WeChat Message Bubble */}
+                      <div className={`p-3 sm:p-3.5 rounded-2xl text-xs sm:text-sm border shadow-xs transition-all relative ${
+                        isRightSpeaker
+                          ? 'bg-[#95ec69] text-slate-950 border-[#82e054] rounded-tr-none'
+                          : 'bg-white text-slate-900 border-[#E0E0E0] rounded-tl-none'
+                      } ${
+                        isCurrentlyPlaying
+                          ? 'ring-2 ring-emerald-500 shadow-md'
+                          : isPlayed
+                            ? 'opacity-95'
+                            : ''
+                      }`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-mono font-bold leading-relaxed text-[#111111] text-xs sm:text-sm flex-1">
+                            {turn.text}
+                          </p>
+                          <button
+                            onClick={() => handlePlayAudio(audioId, turn.text, turn.speaker)}
+                            className={`p-1.5 rounded-lg border transition-all shrink-0 active:scale-95 ${
+                              isCurrentlyPlaying
+                                ? 'bg-emerald-600 text-white border-black'
+                                : isRightSpeaker
+                                  ? 'bg-[#82e054] text-slate-900 border-[#6fc843] hover:bg-[#72d444]'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                            }`}
+                            title="点击朗读此句"
+                          >
+                            <Volume2 className={`w-3.5 h-3.5 ${isCurrentlyPlaying ? 'animate-bounce' : ''}`} />
+                          </button>
+                        </div>
+
+                        {/* Translation */}
+                        <div className={`text-[11px] sm:text-xs pt-1 mt-1 border-t ${
+                          isRightSpeaker
+                            ? 'text-slate-800 border-[#82e054]/60'
+                            : 'text-slate-500 border-slate-100'
+                        }`}>
+                          {turn.translation}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );

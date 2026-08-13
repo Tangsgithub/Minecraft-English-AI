@@ -26,10 +26,10 @@ export interface CourseVolumeConfig {
 }
 
 export const APP_VERSION_INFO = {
-  version: 'v1.6.0',
-  buildCode: '2026.08.05-BUILD-PROD',
-  editionName: 'Minecraft English World (新概念三册系统矩阵版)',
-  releaseNotes: '新增新概念英语2册(红石工业篇)与3册(末地美文篇)系统化课程矩阵架构；升级全局版本控制与分册体系。',
+  version: 'v1.7.0',
+  buildCode: '2026.08.13-BUILD-PROD',
+  editionName: 'Minecraft English World (新概念四册全矩阵版)',
+  releaseNotes: '支持新概念英语第1~4册全体系课程矩阵；升级全四册分册切换与全景地图展示。',
   volumes: [
     {
       id: 'vol1',
@@ -69,6 +69,19 @@ export const APP_VERSION_INFO = {
       description: '赏析长篇美文、培养高级写作词汇与辩论口语，在末地神殿中探寻文明典籍。',
       targetAge: '10-16 岁 / 雅思/小托福进阶',
       features: ['60篇长篇美文架构分析', 'Alex AI 辩论与原声配音', '自由创世作文与演讲词编写']
+    },
+    {
+      id: 'vol4',
+      title: '新概念英语 第4册',
+      subtitle: 'Minecraft 末地龙巢与流利英语篇',
+      mcWorldTheme: '🐉 末地龙巢与终界风暴',
+      badge: '4册 专家篇 (1-48关)',
+      totalLessons: 48,
+      unlockedLevelReq: 40,
+      status: 'preview',
+      description: '挑战 48 篇顶级原版名篇与哲学美文，同 Alex 探讨深层科技、自然与文化思辨。',
+      targetAge: '12-18 岁 / 托福/SAT/高级流利',
+      features: ['48篇世界名篇思想碰撞', 'Alex AI 辩论与深度思辨', '流利口语与同声传译练习']
     }
   ] as CourseVolumeConfig[]
 };

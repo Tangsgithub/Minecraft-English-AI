@@ -400,17 +400,17 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               </div>
 
               {/* Message Content Bubble */}
-              <div className={`max-w-[85%] rounded-2xl p-3.5 sm:p-4.5 border-2 text-sm sm:text-base leading-snug space-y-2 shadow-md ${
+              <div className={`max-w-[85%] rounded-2xl p-3.5 sm:p-4.5 border-2 text-sm sm:text-base leading-snug space-y-2 shadow-sm ${
                 isAlex
-                  ? 'bg-white border-[#487E2C] text-[#2D2D2D] rounded-tl-none'
-                  : 'bg-[#487E2C] border-black text-white rounded-tr-none'
+                  ? 'bg-white border-slate-300 text-[#2D2D2D] rounded-tl-none'
+                  : 'bg-[#95ec69] border-[#82e054] text-slate-950 rounded-tr-none'
               }`}>
                 
                 {/* Sender Title */}
                 <div className={`flex items-center justify-between text-xs sm:text-sm font-mono border-b pb-1.5 mb-1.5 ${
-                  isAlex ? 'border-slate-200' : 'border-white/20'
+                  isAlex ? 'border-slate-200' : 'border-[#82e054]/80'
                 }`}>
-                  <span className={isAlex ? 'text-[#487E2C] font-black' : 'text-[#FFD700] font-black'}>
+                  <span className={isAlex ? 'text-[#487E2C] font-black' : 'text-slate-950 font-black'}>
                     {isAlex ? 'Alex 老师' : profile.nickname || 'You'}
                   </span>
                   

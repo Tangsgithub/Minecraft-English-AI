@@ -109,7 +109,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
               <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <h2 className="text-base sm:text-lg font-black font-mono text-[#2D2D2D]">
-              《新概念英语第一册》144 课 Minecraft 冒险地图
+              {selectedVolumeId === 'vol1' ? '新概念1册' : selectedVolumeId === 'vol2' ? '新概念2册' : selectedVolumeId === 'vol3' ? '新概念3册' : '新概念4册'}
             </h2>
           </div>
 

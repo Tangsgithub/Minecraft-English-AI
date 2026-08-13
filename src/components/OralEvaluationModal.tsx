@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, Mic, MicOff, Star, Sparkles, CheckCircle2, RotateCcw, Award, Play } from 'lucide-react';
 import { speakText, playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
@@ -25,7 +25,7 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [hasRealRecording, setHasRealRecording] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState<{
     score: number;
     stars: number;
@@ -34,11 +34,22 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
     completeness: number;
     feedbackMsg: string;
     tips: string;
+    wordScores?: { word: string; score: number; status: 'perfect' | 'good' | 'needs_work' }[];
   } | null>(null);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto play standard sound on modal open
   useEffect(() => {
     handlePlayStandard();
+    return () => {
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+    };
   }, []);
 
   // Timer for recording duration
@@ -55,6 +66,11 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   }, [isRecording]);
 
   const handlePlayStandard = () => {
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+      setIsPlayingMyRecording(false);
+    }
     unlockMobileAudio();
     setIsPlayingStandard(true);
     speakText(targetText, () => {
@@ -65,9 +81,21 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   const startRecording = async () => {
     unlockMobileAudio();
     playClickSound();
+
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+    }
+
     setEvaluationResult(null);
     setRecordedAudioUrl(null);
+    setHasRealRecording(false);
     setIsPlayingMyRecording(false);
+    chunksRef.current = [];
 
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -78,42 +106,49 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
           if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
           else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
           else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+          else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
           else if (MediaRecorder.isTypeSupported('audio/ogg')) mimeType = 'audio/ogg';
         }
 
         const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-        const chunks: Blob[] = [];
 
         recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) chunks.push(e.data);
+          if (e.data && e.data.size > 0) {
+            chunksRef.current.push(e.data);
+          }
         };
 
         recorder.onstop = () => {
-          if (chunks.length > 0) {
-            const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-            setRecordedAudioUrl(url);
+          if (chunksRef.current.length > 0) {
+            const blob = new Blob(chunksRef.current, { type: mimeType || recorder.mimeType || 'audio/webm' });
+            if (blob.size > 0) {
+              const url = URL.createObjectURL(blob);
+              setRecordedAudioUrl(url);
+              setHasRealRecording(true);
+            }
           }
           // Stop track stream
           stream.getTracks().forEach(track => track.stop());
           generateEvaluation();
         };
 
-        recorder.start();
-        setMediaRecorder(recorder);
+        // Pass 100ms timeslice to ensure continuous data chunks
+        recorder.start(100);
+        mediaRecorderRef.current = recorder;
         setIsRecording(true);
       } else {
-        // Fallback if mediaDevices not allowed in container
+        // Fallback if mediaDevices not allowed in container/browser
         simulateRecording();
       }
     } catch (err) {
-      console.warn("Microphone access fallback:", err);
+      console.warn("Microphone access permission or device missing:", err);
       simulateRecording();
     }
   };
 
   const simulateRecording = () => {
     setIsRecording(true);
+    setHasRealRecording(false);
     setTimeout(() => {
       setIsRecording(false);
       generateEvaluation();
@@ -122,8 +157,13 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
 
   const stopRecording = () => {
     playClickSound();
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        setIsRecording(false);
+        generateEvaluation();
+      }
       setIsRecording(false);
     } else {
       setIsRecording(false);
@@ -132,7 +172,6 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   };
 
   const generateEvaluation = () => {
-    // Generate realistic multi-dimension score for child encouragement
     const baseScore = Math.floor(Math.random() * 12) + 88; // 88 - 99
     const stars = baseScore >= 95 ? 5 : baseScore >= 90 ? 4 : 3;
     const fluency = Math.floor(Math.random() * 8) + 92;
@@ -150,7 +189,6 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
       "提示：重音放在核心动词上，听起来更地道哦！"
     ];
 
-    // Generate individual word analysis breakdown for diagnostic feedback
     const cleanWords = targetText.replace(/[^a-zA-Z0-9\s']/g, '').split(/\s+/).filter(Boolean);
     const wordScores = cleanWords.map((word) => {
       const randScore = Math.floor(Math.random() * 25) + 75; // 75 - 99
@@ -174,54 +212,47 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
 
     setEvaluationResult(result);
     playLevelUpSound();
-    onAwardEmeralds(5, 15); // Award emeralds & XP
-  };
-
-  const playChildVoiceTTS = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      setIsPlayingMyRecording(false);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const cleanText = targetText.replace(/[*#_`~]/g, '').trim();
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.95;
-    utterance.pitch = 1.35; // Cute child pitch for simulated playback
-
-    utterance.onend = () => setIsPlayingMyRecording(false);
-    utterance.onerror = () => setIsPlayingMyRecording(false);
-
-    window.speechSynthesis.speak(utterance);
+    onAwardEmeralds(5, 15);
   };
 
   const handlePlayMyRecording = () => {
     playClickSound();
+
     if (isPlayingMyRecording) {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
       }
       setIsPlayingMyRecording(false);
       return;
     }
 
-    setIsPlayingMyRecording(true);
+    if (hasRealRecording && recordedAudioUrl) {
+      unlockMobileAudio();
+      setIsPlayingMyRecording(true);
 
-    if (recordedAudioUrl) {
-      try {
-        const audio = new Audio(recordedAudioUrl);
-        audio.onended = () => setIsPlayingMyRecording(false);
-        audio.onerror = () => {
-          playChildVoiceTTS();
-        };
-        audio.play().catch(() => {
-          playChildVoiceTTS();
-        });
-      } catch {
-        playChildVoiceTTS();
-      }
+      const audio = new Audio(recordedAudioUrl);
+      activeAudioRef.current = audio;
+
+      audio.onended = () => {
+        setIsPlayingMyRecording(false);
+        activeAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setIsPlayingMyRecording(false);
+        activeAudioRef.current = null;
+        alert("原声录音播放失败，请确保开启麦克风权限后点击【重新跟读】！");
+      };
+
+      audio.play().catch((err) => {
+        console.warn("Failed to play user recording:", err);
+        setIsPlayingMyRecording(false);
+        activeAudioRef.current = null;
+      });
     } else {
-      playChildVoiceTTS();
+      setIsPlayingMyRecording(false);
+      alert("⚠️ 未检测到您的麦克风真实原声！\n\n提示：可能是由于未允许网页使用麦克风，或设备未连接话筒。\n请在浏览器地址栏允许使用【麦克风】权限后，点击【重新跟读】录下您的声音！");
     }
   };
 
@@ -480,6 +511,12 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
                     {evaluationResult.tips}
                   </p>
                 </div>
+
+                {!hasRealRecording && (
+                  <div className="bg-amber-100/90 border-2 border-amber-300 text-amber-950 p-2.5 rounded-xl text-[11px] font-mono font-bold flex items-center space-x-2">
+                    <span>🎙️ 提示：未获取到真实麦克风录音（设备未连接或权限未允许）。请在地址栏允许麦克风权限后点击【重新跟读】，即可录下并播放您的发音原声！</span>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex items-center space-x-2 pt-1">
