@@ -53,8 +53,22 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const [callDuration, setCallDuration] = useState<number>(0);
   const [callStatus, setCallStatus] = useState<'connecting' | 'connected' | 'ended'>('connected');
   const [phoneSubtitle, setPhoneSubtitle] = useState<string>('Hello! Press mic to talk to Alex!');
+  const [autoListenMode, setAutoListenMode] = useState<boolean>(true);
+
+  const isPhoneCallActiveRef = useRef<boolean>(false);
+  const isSpeakingRef = useRef<boolean>(false);
+  const recognitionRef = useRef<any>(null);
+  const autoListenModeRef = useRef<boolean>(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    isPhoneCallActiveRef.current = isPhoneCallActive;
+  }, [isPhoneCallActive]);
+
+  useEffect(() => {
+    autoListenModeRef.current = autoListenMode;
+  }, [autoListenMode]);
 
   // Call timer interval
   useEffect(() => {
@@ -69,24 +83,104 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     return () => clearInterval(timer);
   }, [isPhoneCallActive, callStatus]);
 
+  const startAutoListening = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) return;
+    if (!isPhoneCallActiveRef.current || isSpeakingRef.current) return;
+
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'en-US';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      let capturedText = '';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            capturedText += event.results[i][0].transcript;
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        const current = (capturedText || interim).trim();
+        if (current) {
+          setInputText(current);
+        }
+      };
+
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        const finalToSubmit = capturedText.trim() || inputText.trim();
+        if (finalToSubmit && isPhoneCallActiveRef.current) {
+          handleSendMessage(finalToSubmit);
+        } else if (isPhoneCallActiveRef.current && !isSpeakingRef.current && autoListenModeRef.current) {
+          setTimeout(() => {
+            if (isPhoneCallActiveRef.current && !isSpeakingRef.current && autoListenModeRef.current) {
+              startAutoListening();
+            }
+          }, 300);
+        }
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.warn('SpeechRecognition error:', err);
+      setIsListening(false);
+    }
+  };
+
   const handleStartPhoneCall = () => {
     setIsPhoneCallActive(true);
+    isPhoneCallActiveRef.current = true;
     setCallStatus('connected');
     playClickSound();
     unlockMobileAudio();
-    const greeting = `Hello ${profile.nickname || 'there'}! I'm Alex! [你好呀！我是 Alex！]` + '\n\n' + `What are you building in Minecraft today?`;
+    const greeting = `Hello ${profile.nickname || 'there'}! I'm Alex! What are you building in Minecraft today?`;
     setPhoneSubtitle(greeting);
-    speakText(greeting, { speaker: 'Alex', rate: speechRate });
+
+    isSpeakingRef.current = true;
+    speakText(greeting, () => {
+      isSpeakingRef.current = false;
+      if (isPhoneCallActiveRef.current && autoListenModeRef.current) {
+        startAutoListening();
+      }
+    }, { speaker: 'Alex', rate: speechRate });
   };
 
   const handleEndPhoneCall = () => {
+    isPhoneCallActiveRef.current = false;
+    isSpeakingRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
     stopSpeech();
+    setIsListening(false);
     setCallStatus('ended');
     onAwardEmeralds(5, 10);
     playEmeraldSound();
     setTimeout(() => {
       setIsPhoneCallActive(false);
-    }, 1200);
+    }, 1000);
   };
 
   const scrollToBottom = () => {
@@ -105,6 +199,18 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   // Web Speech API Voice Input
   const handleToggleVoiceInput = () => {
     if (typeof window === 'undefined') return;
+
+    if (isPhoneCallActiveRef.current) {
+      if (isListening) {
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch {}
+        }
+        setIsListening(false);
+      } else {
+        startAutoListening();
+      }
+      return;
+    }
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -154,6 +260,10 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     const textToSend = (customText || inputText).trim();
     if (!textToSend || isLoading) return;
 
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+    }
+
     // Trigger mobile audio unlock directly within user gesture
     unlockMobileAudio();
     playClickSound();
@@ -196,7 +306,13 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setPhoneSubtitle(formattedAlexText);
 
     // Speak Alex's response automatically using chosen speech rate
-    speakText(formattedAlexText, { speaker: 'Alex', rate: speechRate });
+    isSpeakingRef.current = true;
+    speakText(formattedAlexText, () => {
+      isSpeakingRef.current = false;
+      if (isPhoneCallActiveRef.current && autoListenModeRef.current) {
+        startAutoListening();
+      }
+    }, { speaker: 'Alex', rate: speechRate });
 
     // Update Alex mood based on response content
     const lowerText = (textToSend + alexRes.text).toLowerCase();
@@ -571,9 +687,20 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             <div className="flex items-center space-x-2">
               <span className="w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
               <span className="text-xs sm:text-sm font-bold text-emerald-300 uppercase tracking-widest">
-                {callStatus === 'connected' ? '📞 通话连线中' : '通话结束'}
+                {callStatus === 'connected' ? '📞 实时免提双工通话中' : '通话结束'}
               </span>
             </div>
+
+            <button
+              onClick={() => setAutoListenMode(!autoListenMode)}
+              className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
+                autoListenMode
+                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                  : 'bg-slate-800 border-slate-600 text-slate-300'
+              }`}
+            >
+              {autoListenMode ? '⚡ 免提全自动' : '👆 手动按键说'}
+            </button>
             
             <div className="text-base sm:text-lg font-black font-mono text-amber-300 bg-black/40 px-3 py-1 rounded-xl border border-amber-400/30">
               ⏱️ {Math.floor(callDuration / 60).toString().padStart(2, '0')}:{(callDuration % 60).toString().padStart(2, '0')}
@@ -586,16 +713,26 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             {/* Alex Animated Portrait Frame */}
             <div className="relative">
               {/* Outer Soundwaves Pulse */}
-              <div className="absolute -inset-4 bg-emerald-500/20 rounded-full animate-ping blur-sm" />
+              <div className={`absolute -inset-4 rounded-full blur-sm transition-all ${
+                isListening ? 'bg-emerald-400/40 animate-ping' : 'bg-emerald-500/20 animate-pulse'
+              }`} />
               <div className="absolute -inset-8 bg-amber-500/10 rounded-full animate-pulse blur-md" />
 
               <div className="relative w-28 h-28 sm:w-36 sm:h-36 bg-[#EEDDCC] border-4 sm:border-6 border-[#C89D7C] rounded-3xl flex items-center justify-center text-6xl sm:text-7xl shadow-2xl">
                 👩‍🦰
               </div>
 
-              {isLoading && (
+              {isLoading ? (
                 <div className="absolute -bottom-2 bg-amber-400 text-amber-950 text-xs font-black px-3 py-1 rounded-full border-2 border-black animate-bounce shadow-md">
-                  Thinking... 💭
+                  Alex 思考中... 💭
+                </div>
+              ) : isListening ? (
+                <div className="absolute -bottom-2 bg-emerald-400 text-emerald-950 text-xs font-black px-3 py-1 rounded-full border-2 border-black animate-pulse shadow-md">
+                  🎙️ 听你说话中...
+                </div>
+              ) : (
+                <div className="absolute -bottom-2 bg-blue-500 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-black shadow-md">
+                  🔊 Alex 发音中...
                 </div>
               )}
             </div>
@@ -604,8 +741,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow-md">
                 Alex 老师
               </h2>
-              <p className="text-xs sm:text-sm text-emerald-300 font-bold">
-                Minecraft 语音即时通话角
+              <p className="text-xs sm:text-sm text-emerald-300 font-bold flex items-center justify-center gap-1">
+                <span>💬 全自动无感实时口语对练</span>
               </p>
             </div>
 
@@ -625,6 +762,20 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
                 {formatAlexDialogueWithLineBreaks(phoneSubtitle)}
               </div>
             </div>
+
+            {/* Current Real-Time Live Speech Recognition Hint */}
+            <div className="w-full bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 text-center text-xs text-emerald-200">
+              {isListening ? (
+                <div className="flex items-center justify-center space-x-2 animate-pulse text-emerald-300 font-bold">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                  <span>🎙️ 正在倾听... 请直接说英文 (说完自动发送给 Alex)</span>
+                </div>
+              ) : isLoading ? (
+                <span className="text-amber-300 font-bold">💭 Alex 正在思考回复...</span>
+              ) : (
+                <span className="text-slate-300">🔊 Alex 正在回答... 说完后麦克风将自动开启</span>
+              )}
+            </div>
           </div>
 
           {/* Bottom Voice Call Action Controls */}
@@ -634,12 +785,12 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               onClick={handleToggleVoiceInput}
               className={`flex-1 py-4 sm:py-5 rounded-2xl font-black text-base sm:text-lg border-2 sm:border-4 border-black shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
                 isListening
-                  ? 'bg-rose-500 text-white animate-pulse'
+                  ? 'bg-emerald-500 text-slate-950 animate-pulse'
                   : 'bg-[#7CFC00] hover:bg-[#68d600] text-emerald-950'
               }`}
             >
               {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              <span>{isListening ? '正在听你说话...' : '按住用英文说话'}</span>
+              <span>{isListening ? '倾听中 (点击可结束)' : '🎙️ 开启麦克风对讲'}</span>
             </button>
 
             {/* Hang Up Button */}
