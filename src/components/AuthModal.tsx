@@ -80,7 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     playClickSound();
 
     const finalNickname = nickname.trim() || account.trim();
-    const res = await serverProxyRegister(account.trim(), password, finalNickname);
+    const res = await serverProxyRegister(account.trim(), password, finalNickname, currentProfile);
     setLoading(false);
 
     if (res.success && res.user && res.profile) {

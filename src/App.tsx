@@ -121,23 +121,56 @@ export default function App() {
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
 
-  // Fetch latest cloud profile on login or mount
+  // Fetch latest cloud profile on login or user switch
   useEffect(() => {
-    if (currentUser?.uid) {
-      fetchUserProfileFromCloud(currentUser.uid).then(cloudProfile => {
+    const target = currentUser?.uid || currentUser?.account || profile?.account;
+    if (target) {
+      fetchUserProfileFromCloud(target).then(cloudProfile => {
         if (cloudProfile) {
-          setProfile(prev => sanitizeProfile({ ...prev, ...cloudProfile }));
+          setProfile(prev => {
+            const mergedUnlocked = Array.from(new Set([...(prev.unlockedLessonIds || [1, 2]), ...(cloudProfile.unlockedLessonIds || [1, 2])])).sort((a, b) => a - b);
+            const mergedCompleted = Array.from(new Set([...(prev.completedLessonIds || []), ...(cloudProfile.completedLessonIds || [])])).sort((a, b) => a - b);
+            const mergedMissions = Array.from(new Set([...(prev.completedMissionIds || []), ...(cloudProfile.completedMissionIds || [])]));
+            const mergedWords = Array.from(new Set([...(prev.masteredWords || []), ...(cloudProfile.masteredWords || [])]));
+            const maxLevel = Math.max(prev.level || 1, cloudProfile.level || 1);
+            const maxEmeralds = Math.max(prev.emeralds ?? 100, cloudProfile.emeralds ?? 100);
+            const maxXp = Math.max(prev.xp || 0, cloudProfile.xp || 0);
+            const maxCurrentLesson = Math.max(prev.currentLessonId || 1, cloudProfile.currentLessonId || 1);
+            const isVip = Boolean(prev.isVip || cloudProfile.isVip);
+
+            const merged = sanitizeProfile({
+              ...prev,
+              ...cloudProfile,
+              account: currentUser?.account || cloudProfile.account || prev.account,
+              nickname: currentUser?.nickname || cloudProfile.nickname || prev.nickname,
+              isVip,
+              level: maxLevel,
+              emeralds: maxEmeralds,
+              xp: maxXp,
+              currentLessonId: maxCurrentLesson,
+              unlockedLessonIds: mergedUnlocked,
+              completedLessonIds: mergedCompleted,
+              completedMissionIds: mergedMissions,
+              masteredWords: mergedWords
+            });
+
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('mc_english_user_profile', JSON.stringify(merged));
+            }
+            return merged;
+          });
         }
       });
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, currentUser?.account]);
 
   // Sync profile to localStorage and Cloud
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('mc_english_user_profile', JSON.stringify(profile));
-      if (currentUser?.uid) {
-        saveUserProfileToCloud(profile, currentUser.uid);
+      const syncTarget = currentUser?.uid || profile?.account || profile?.id;
+      if (syncTarget) {
+        saveUserProfileToCloud(profile, syncTarget);
       }
     }
   }, [profile, currentUser]);

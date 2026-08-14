@@ -81,7 +81,8 @@ export const auth: { currentUser: User | null } = {
 export const serverProxyRegister = async (
   account: string,
   password: string,
-  nickname?: string
+  nickname?: string,
+  existingProfile?: UserProfile
 ): Promise<{ success: boolean; message: string; user?: User; profile?: UserProfile }> => {
   const cleanAccount = account.trim().toLowerCase();
   const userNickname = nickname?.trim() || account.trim();
@@ -91,7 +92,12 @@ export const serverProxyRegister = async (
     const resp = await fetch(`${getApiBase()}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account: cleanAccount, password, nickname: userNickname })
+      body: JSON.stringify({
+        account: cleanAccount,
+        password,
+        nickname: userNickname,
+        initialProfile: existingProfile
+      })
     });
     const text = await resp.text();
     let data: any = {};
@@ -102,7 +108,7 @@ export const serverProxyRegister = async (
       if (data.profile) {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
       }
-      return { success: true, message: data.message || '注册成功！账号已成功关联 Neon 数据库', user: data.user, profile: data.profile };
+      return { success: true, message: data.message || '注册成功！账号已成功关联云端数据库', user: data.user, profile: data.profile };
     } else if (data.error || data.message) {
       return { success: false, message: data.error || data.message };
     }
@@ -113,32 +119,34 @@ export const serverProxyRegister = async (
   // Local fallback registration
   const localUser: User = { uid, account: cleanAccount, nickname: userNickname };
   const initialProfile: UserProfile = {
+    ...(existingProfile || {}),
     id: uid,
     nickname: userNickname,
     account: cleanAccount,
-    age: 8,
-    selectedVolumeId: 'vol1',
-    currentLessonId: 1,
-    unlockedLessonIds: [1, 2],
-    completedMissionIds: [],
-    unlockedBadgeIds: ['badge_first_words'],
-    masteredWords: [],
-    emeralds: 100,
-    xp: 0,
-    level: 1,
-    selectedAvatar: '👦',
-    customAvatarUrl: '',
-    learningGoal: 15,
-    todayMinutes: 0,
-    streakDays: 1,
+    age: existingProfile?.age || 8,
+    selectedVolumeId: existingProfile?.selectedVolumeId || 'vol1',
+    currentLessonId: existingProfile?.currentLessonId || 1,
+    unlockedLessonIds: existingProfile?.unlockedLessonIds?.length ? existingProfile.unlockedLessonIds : [1, 2],
+    completedLessonIds: existingProfile?.completedLessonIds || [],
+    completedMissionIds: existingProfile?.completedMissionIds || [],
+    unlockedBadgeIds: existingProfile?.unlockedBadgeIds || ['badge_first_words'],
+    masteredWords: existingProfile?.masteredWords || [],
+    emeralds: typeof existingProfile?.emeralds === 'number' ? existingProfile.emeralds : 100,
+    xp: typeof existingProfile?.xp === 'number' ? existingProfile.xp : 0,
+    level: existingProfile?.level || 1,
+    selectedAvatar: existingProfile?.selectedAvatar || '👦',
+    customAvatarUrl: existingProfile?.customAvatarUrl || '',
+    learningGoal: existingProfile?.learningGoal || 15,
+    todayMinutes: existingProfile?.todayMinutes || 0,
+    streakDays: existingProfile?.streakDays || 1,
     lastActiveDate: new Date().toISOString().split('T')[0],
-    vocabulary: [],
-    completedMissions: [],
-    unlockedCraftingIds: [],
-    enderChestCount: 0,
-    eyeCareEnabled: false,
-    eyeCareMinutes: 20,
-    apiKeyConfig: { provider: 'deepseek', apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+    vocabulary: existingProfile?.vocabulary || [],
+    completedMissions: existingProfile?.completedMissions || [],
+    unlockedCraftingIds: existingProfile?.unlockedCraftingIds || [],
+    enderChestCount: existingProfile?.enderChestCount || 0,
+    eyeCareEnabled: existingProfile?.eyeCareEnabled ?? false,
+    eyeCareMinutes: existingProfile?.eyeCareMinutes || 20,
+    apiKeyConfig: existingProfile?.apiKeyConfig || { provider: 'deepseek', apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
     isInitialSetupDone: true
   };
 
@@ -198,15 +206,16 @@ export const saveUserProfileToCloud = async (
   userUid?: string
 ): Promise<boolean> => {
   const uid = userUid || auth.currentUser?.uid || profile.id;
+  const account = auth.currentUser?.account || profile.account;
 
-  if (!uid) return false;
+  if (!uid && !account) return false;
 
   let apiSuccess = false;
   try {
     const resp = await fetch(`${getApiBase()}/api/auth/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid, profile })
+      body: JSON.stringify({ uid: uid || profile.id, account, profile })
     });
     const text = await resp.text();
     try {
@@ -224,6 +233,7 @@ export const saveUserProfileToCloud = async (
     try {
       await setDoc(doc(firestoreDb, 'user_profiles', uid), {
         ...profile,
+        account: account || profile.account || '',
         updatedAt: Date.now()
       }, { merge: true });
     } catch (err) {
@@ -250,15 +260,18 @@ export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
   }
 };
 
-export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfile | null> => {
-  if (!uid) return null;
+export const fetchUserProfileFromCloud = async (uidOrAccount: string): Promise<UserProfile | null> => {
+  if (!uidOrAccount) return null;
 
   // 1. Try Express API
   try {
     const resp = await fetch(`${getApiBase()}/api/auth/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid })
+      body: JSON.stringify({
+        uid: uidOrAccount,
+        account: auth.currentUser?.account || uidOrAccount
+      })
     });
     const text = await resp.text();
     try {
@@ -272,9 +285,9 @@ export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfil
   }
 
   // 2. Fallback to direct Firestore read
-  if (firestoreDb && uid) {
+  if (firestoreDb && uidOrAccount) {
     try {
-      const docRef = doc(firestoreDb, 'user_profiles', uid);
+      const docRef = doc(firestoreDb, 'user_profiles', uidOrAccount);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         return snap.data() as UserProfile;

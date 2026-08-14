@@ -182,14 +182,36 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
   if (!accountOrUid) return null;
   const clean = accountOrUid.trim().toLowerCase();
 
+  // 1. Direct match in memory fallback
   const memUser = memoryUsersFallback.get(clean);
   if (memUser) return memUser;
+
+  // 2. Iterate memory fallback for cross-key lookup (account, uid, profile.id, profile.account)
+  for (const u of memoryUsersFallback.values()) {
+    if (
+      (u.account && u.account.toLowerCase() === clean) ||
+      (u.uid && u.uid.toLowerCase() === clean) ||
+      (u.profile?.id && String(u.profile.id).toLowerCase() === clean) ||
+      (u.profile?.account && String(u.profile.account).toLowerCase() === clean)
+    ) {
+      memoryUsersFallback.set(clean, u);
+      return u;
+    }
+  }
 
   const sql = getNeonSql();
   if (sql) {
     try {
       await ensureNeonTable();
-      const rows = await sql`SELECT * FROM users WHERE LOWER(account) = ${clean} OR uid = ${clean} LIMIT 1`;
+      const rows = await sql`
+        SELECT * FROM users 
+        WHERE LOWER(account) = ${clean} 
+           OR LOWER(uid) = ${clean} 
+           OR LOWER(profile->>'account') = ${clean}
+           OR profile->>'id' = ${clean}
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `;
       if (rows && rows.length > 0) {
         const r: any = rows[0];
         let parsedProfile = r.profile;
@@ -208,6 +230,8 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
           profile: parsedProfile || {}
         };
         memoryUsersFallback.set(clean, u);
+        if (u.account) memoryUsersFallback.set(u.account.toLowerCase(), u);
+        if (u.uid) memoryUsersFallback.set(u.uid.toLowerCase(), u);
         return u;
       }
       return null;
@@ -217,27 +241,31 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
     }
   }
 
-  // Fallback if DATABASE_URL is missing
-  return memoryUsersFallback.get(clean) || null;
+  return null;
 }
 
 async function saveCloudUser(account: string, userObj: any): Promise<boolean> {
   if (!account || !userObj) return false;
   const clean = account.trim().toLowerCase();
 
+  // Index by clean account, uid, and profile id in memory map
   memoryUsersFallback.set(clean, userObj);
+  if (userObj.account) memoryUsersFallback.set(userObj.account.trim().toLowerCase(), userObj);
+  if (userObj.uid) memoryUsersFallback.set(userObj.uid.trim().toLowerCase(), userObj);
+  if (userObj.profile?.id) memoryUsersFallback.set(String(userObj.profile.id).trim().toLowerCase(), userObj);
 
   const sql = getNeonSql();
   if (sql) {
     try {
       await ensureNeonTable();
       const profileJson = JSON.stringify(userObj.profile || {});
+      const primaryAccount = (userObj.account || clean).trim().toLowerCase();
       await sql`
         INSERT INTO users (account, uid, nickname, salt, hash, password, created_at, updated_at, profile)
         VALUES (
-          ${clean},
+          ${primaryAccount},
           ${userObj.uid || clean},
-          ${userObj.nickname || '玩家'},
+          ${userObj.nickname || userObj.profile?.nickname || '玩家'},
           ${userObj.salt || ''},
           ${userObj.hash || ''},
           ${userObj.password || ''},
@@ -559,7 +587,7 @@ app.use(express.json());
   // Register Endpoint
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { account, password, nickname } = req.body || {};
+      const { account, password, nickname, initialProfile: clientProfile } = req.body || {};
       if (!account || typeof account !== 'string' || account.trim().length < 3) {
         return res.status(200).json({ success: false, error: "账号至少需要3个字符" });
       }
@@ -580,44 +608,54 @@ app.use(express.json());
       const uid = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
       const userNickname = nickname?.trim() || account.trim();
 
+      // Merge client profile if available so user doesn't lose progress made before registering
       const initialProfile = {
         id: uid,
         nickname: userNickname,
-        account: account.trim(),
-        selectedVolumeId: 'vol1',
-        currentLessonId: 1,
-        unlockedLessonIds: [1, 2],
-        completedMissionIds: [],
-        unlockedBadgeIds: ['badge_first_words'],
-        masteredWords: [],
-        emeralds: 100,
-        xp: 0,
-        level: 1,
-        avatar: 'steve',
-        selectedAvatar: '👦',
-        customAvatarUrl: '',
-        learningGoal: 15,
-        todayMinutes: 0,
-        streakDays: 1,
+        account: cleanAccount,
+        selectedVolumeId: clientProfile?.selectedVolumeId || 'vol1',
+        currentLessonId: clientProfile?.currentLessonId || 1,
+        unlockedLessonIds: clientProfile?.unlockedLessonIds?.length ? clientProfile.unlockedLessonIds : [1, 2],
+        completedLessonIds: clientProfile?.completedLessonIds || [],
+        completedMissionIds: clientProfile?.completedMissionIds || [],
+        unlockedBadgeIds: clientProfile?.unlockedBadgeIds || ['badge_first_words'],
+        masteredWords: clientProfile?.masteredWords || [],
+        emeralds: typeof clientProfile?.emeralds === 'number' ? clientProfile.emeralds : 100,
+        xp: typeof clientProfile?.xp === 'number' ? clientProfile.xp : 0,
+        level: clientProfile?.level || 1,
+        avatar: clientProfile?.avatar || 'steve',
+        selectedAvatar: clientProfile?.selectedAvatar || '👦',
+        customAvatarUrl: clientProfile?.customAvatarUrl || '',
+        learningGoal: clientProfile?.learningGoal || 15,
+        todayMinutes: clientProfile?.todayMinutes || 0,
+        streakDays: clientProfile?.streakDays || 1,
         lastActiveDate: new Date().toISOString().split('T')[0],
-        vocabulary: [],
-        completedMissions: [],
-        unlockedCraftingIds: [],
-        enderChestCount: 0,
-        eyeCareEnabled: false,
-        eyeCareMinutes: 20,
-        apiKeyConfig: {
+        vocabulary: clientProfile?.vocabulary || [],
+        completedMissions: clientProfile?.completedMissions || [],
+        unlockedCraftingIds: clientProfile?.unlockedCraftingIds || [],
+        enderChestCount: clientProfile?.enderChestCount || 0,
+        eyeCareEnabled: clientProfile?.eyeCareEnabled ?? false,
+        eyeCareMinutes: clientProfile?.eyeCareMinutes || 20,
+        isVip: Boolean(clientProfile?.isVip),
+        apiKeyConfig: clientProfile?.apiKeyConfig || {
           provider: 'deepseek',
           apiKey: '',
           baseUrl: 'https://api.deepseek.com',
           model: 'deepseek-chat'
+        },
+        parentSettings: clientProfile?.parentSettings || {
+          dailyTimeLimitMinutes: 45,
+          continuousTimeLimitMinutes: 20,
+          eyeProtectionEnabled: true,
+          speechRate: 0.9,
+          correctionStrictness: 'standard'
         },
         isInitialSetupDone: true
       };
 
       const userObj = {
         uid,
-        account: account.trim(),
+        account: cleanAccount,
         nickname: userNickname,
         salt,
         hash,
@@ -631,7 +669,7 @@ app.use(express.json());
 
       return res.json({
         success: true,
-        message: "注册成功！账号已打通云端数据库",
+        message: "注册成功！学习进度与账户已打通云端数据库",
         user: { uid, account: userObj.account, nickname: userObj.nickname },
         profile: userObj.profile,
         token: `mc_token_${uid}_${Date.now()}`
@@ -669,7 +707,7 @@ app.use(express.json());
 
       return res.json({
         success: true,
-        message: "登录成功！已从 Firebase 云端同步您的学习进度",
+        message: "登录成功！已从云端实时同步您的学习进度",
         user: { uid: userObj.uid, account: userObj.account, nickname: userObj.nickname },
         profile: userObj.profile,
         token: `mc_token_${userObj.uid}_${Date.now()}`
@@ -683,20 +721,52 @@ app.use(express.json());
   // Sync Progress Endpoint
   app.post("/api/auth/sync", async (req, res) => {
     try {
-      const { uid, profile } = req.body || {};
+      const { uid, account: reqAccount, profile } = req.body || {};
       if (!profile) {
         return res.status(200).json({ success: false, error: "缺少同步参数" });
       }
 
-      const account = profile.account || profile.id || uid;
-      const userObj = await getCloudUser(account) || { uid: uid || profile.id, account, profile };
+      const targetAccount = (reqAccount || profile.account || uid || profile.id || '').trim().toLowerCase();
+      if (!targetAccount) {
+        return res.status(200).json({ success: false, error: "无法识别用户账号" });
+      }
 
-      userObj.profile = { ...userObj.profile, ...profile };
-      userObj.updatedAt = Date.now();
-      await saveCloudUser(account, userObj);
+      let userObj = await getCloudUser(targetAccount);
+      if (!userObj && uid) {
+        userObj = await getCloudUser(uid);
+      }
 
-      return res.json({ success: true, message: "学习进度已实时同步至云端" });
+      if (!userObj) {
+        userObj = {
+          uid: uid || profile.id || 'user_' + Date.now(),
+          account: targetAccount,
+          nickname: profile.nickname || '玩家',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          profile: profile
+        };
+      } else {
+        userObj.profile = {
+          ...userObj.profile,
+          ...profile,
+          // Ensure arrays are merged or updated
+          unlockedLessonIds: profile.unlockedLessonIds || userObj.profile?.unlockedLessonIds || [1, 2],
+          completedLessonIds: profile.completedLessonIds || userObj.profile?.completedLessonIds || [],
+          masteredWords: profile.masteredWords || userObj.profile?.masteredWords || [],
+          completedMissionIds: profile.completedMissionIds || userObj.profile?.completedMissionIds || []
+        };
+        userObj.updatedAt = Date.now();
+      }
+
+      await saveCloudUser(userObj.account || targetAccount, userObj);
+
+      return res.json({
+        success: true,
+        message: "学习进度已实时同步至云端数据库",
+        profile: userObj.profile
+      });
     } catch (err: any) {
+      console.error("Auth Sync Error:", err);
       return res.status(200).json({ success: false, error: "同步进度失败" });
     }
   });

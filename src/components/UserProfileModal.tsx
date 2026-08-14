@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, ParentSettings } from '../types';
-import { User } from '../lib/firebase';
+import { User, saveUserProfileToCloud, fetchUserProfileFromCloud } from '../lib/firebase';
 import {
   User as UserIcon, Shield, Medal, Sword, Flame, Star, X, LogOut,
   RefreshCw, CheckCircle2, Lock, Key, Clock, Eye, Sparkles, ChevronRight,
-  Award, Headphones
+  Award, Headphones, Cloud, CloudCheck, Loader2
 } from 'lucide-react';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
-import { playClickSound, playEmeraldSound } from '../utils/audio';
+import { playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
 
 interface UserProfileModalProps {
   profile: UserProfile;
@@ -33,12 +33,46 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   const [nickname, setNickname] = useState(profile.nickname || 'Tom');
   const [age, setAge] = useState(profile.age || 8);
   const [selectedAvatar, setSelectedAvatar] = useState<'steve' | 'alex'>(profile.avatar as 'steve' | 'alex' || 'steve');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [syncMessage, setSyncMessage] = useState<string>('');
 
   useEffect(() => {
     setNickname(profile.nickname || 'Tom');
     setAge(profile.age || 8);
     setSelectedAvatar(profile.avatar as 'steve' | 'alex' || 'steve');
   }, [profile]);
+
+  const handleManualSync = async () => {
+    if (!currentUser) {
+      onSwitchAccount?.();
+      return;
+    }
+    setSyncStatus('syncing');
+    playClickSound();
+
+    try {
+      const ok = await saveUserProfileToCloud(profile, currentUser.uid);
+      // Fetch latest to make sure merge is complete
+      const latestCloud = await fetchUserProfileFromCloud(currentUser.uid || currentUser.account);
+      if (latestCloud) {
+        onSaveProfile(latestCloud);
+      }
+      playLevelUpSound();
+      setSyncStatus('success');
+      setSyncMessage('学习进度已与云端数据库完全同步！');
+      setTimeout(() => {
+        setSyncStatus('idle');
+        setSyncMessage('');
+      }, 3000);
+    } catch {
+      setSyncStatus('error');
+      setSyncMessage('同步遇到网络波动，已保存在本地');
+      setTimeout(() => {
+        setSyncStatus('idle');
+        setSyncMessage('');
+      }, 3000);
+    }
+  };
 
   const handleSave = () => {
     playEmeraldSound();
@@ -270,7 +304,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               {currentUser ? (
                 <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>已登录在线</span>
+                  <span>已登录在线 (实时双向同步)</span>
                 </span>
               ) : (
                 <span className="text-[10px] font-black bg-slate-200 text-slate-600 border border-slate-300 px-2 py-0.5 rounded-md">
@@ -304,35 +338,70 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   </button>
                 </div>
 
-                {onSwitchAccount && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playClickSound();
-                      onSwitchAccount();
-                    }}
-                    className="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center space-x-1 cursor-pointer pt-1 border-t border-slate-200"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>切换其他云端账号登录</span>
-                  </button>
-                )}
+                {/* Manual Sync Trigger Button & Status */}
+                <div className="pt-2 border-t border-slate-200 flex flex-col space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      disabled={syncStatus === 'syncing'}
+                      onClick={handleManualSync}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-black text-xs rounded-xl flex items-center space-x-1.5 transition-all shadow-xs active:translate-y-0.5 cursor-pointer"
+                    >
+                      {syncStatus === 'syncing' ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>正在同步进度...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Cloud className="w-3.5 h-3.5" />
+                          <span>立即同步学习进度到云端</span>
+                        </>
+                      )}
+                    </button>
+
+                    {onSwitchAccount && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClickSound();
+                          onSwitchAccount();
+                        }}
+                        className="text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center space-x-1 cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>切换账号</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {syncMessage && (
+                    <div className={`text-xs px-2.5 py-1 rounded-lg font-bold flex items-center space-x-1.5 ${
+                      syncStatus === 'error' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    }`}>
+                      <span>{syncStatus === 'error' ? '⚠️' : '✅'}</span>
+                      <span>{syncMessage}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-slate-500">登录后可实现多端学习进度实时同步</span>
-                {onSwitchAccount && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playClickSound();
-                      onSwitchAccount();
-                    }}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    登录账号
-                  </button>
-                )}
+              <div className="flex flex-col space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">登录后可实现多端学习进度与道具实时同步</span>
+                  {onSwitchAccount && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClickSound();
+                        onSwitchAccount();
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    >
+                      立即登录 / 注册
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
