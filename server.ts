@@ -1050,19 +1050,6 @@ app.use(express.json());
     try {
       let codes = await getAllCloudCodes();
 
-      // Ensure standard default test/admin master codes exist if list is empty
-      if (codes.length === 0) {
-        const defaultMasterCodes = [
-          { code: 'MC144-8888-8888', isUsed: false, usedByAccount: '', usedAt: 0, devices: [], maxDevices: 3, createdAt: Date.now() - 86400000 },
-          { code: 'MC2026888', isUsed: false, usedByAccount: '', usedAt: 0, devices: [], maxDevices: 3, createdAt: Date.now() - 86400000 },
-          { code: 'VIP8888', isUsed: false, usedByAccount: '', usedAt: 0, devices: [], maxDevices: 3, createdAt: Date.now() - 86400000 }
-        ];
-        for (const d of defaultMasterCodes) {
-          await saveCloudCode(d);
-        }
-        codes = await getAllCloudCodes();
-      }
-
       return res.json({
         success: true,
         count: codes.length,
