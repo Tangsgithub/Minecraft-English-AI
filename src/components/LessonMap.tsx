@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Lesson, UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
-import { BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play, MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid, Globe, Flame, AlertTriangle, Layers, Zap, Compass, Star } from 'lucide-react';
+import { getBiomeChapterByUnit } from '../data/storyData';
+import {
+  BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play,
+  MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid,
+  Globe, Flame, Zap, Compass, Star, ArrowRight, CheckCircle2, Headphones
+} from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
 import { MinecraftAdventureMap } from './MinecraftAdventureMap';
 import { GiantWorldMap } from './GiantWorldMap';
 import { LessonStudyModal } from './LessonStudyModal';
-import { RandomAdventureModal, RANDOM_ADVENTURE_EVENTS, RandomEvent } from './RandomAdventureModal';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface LessonMapProps {
   selectedVolumeId: CourseVolumeId;
-
   profile: UserProfile;
   onSelectLessonForChat: (lesson: Lesson) => void;
   onCompleteLesson: (lessonId: number) => void;
@@ -25,39 +29,18 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   onCompleteLesson,
   onAwardEmeralds
 }) => {
-    const [selectedUnit, setSelectedUnit] = useState<number>(1);
-  const [viewMode, setViewMode] = useState<'world' | 'map' | 'grid'>('world');
+  // Default to current player's unit, or Unit 1
+  const initialUnit = Math.min(12, Math.max(1, Math.ceil((profile.currentLessonId || 1) / 12)));
+  const [selectedUnit, setSelectedUnit] = useState<number>(initialUnit);
+  const [viewMode, setViewMode] = useState<'grid' | 'world' | 'map'>('grid'); // Default to clean, efficient grid
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string } | null>(null);
-  const [activeRandomEvent, setActiveRandomEvent] = useState<RandomEvent | null>(null);
-  const [pendingEventAlert, setPendingEventAlert] = useState<RandomEvent | null>(null);
 
-  // Timed trigger for random events
-  useEffect(() => {
-    const triggerRandomEvent = () => {
-      const randomIndex = Math.floor(Math.random() * RANDOM_ADVENTURE_EVENTS.length);
-      const evt = RANDOM_ADVENTURE_EVENTS[randomIndex];
-      setPendingEventAlert(evt);
-    };
-
-    // Trigger initial event after 12s, then every 45s
-    const firstTimer = setTimeout(triggerRandomEvent, 12000);
-    const interval = setInterval(triggerRandomEvent, 45000);
-
-    return () => {
-      clearTimeout(firstTimer);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const handleManualTriggerEvent = () => {
-    playClickSound();
-    const randomIndex = Math.floor(Math.random() * RANDOM_ADVENTURE_EVENTS.length);
-    const evt = RANDOM_ADVENTURE_EVENTS[randomIndex];
-    setActiveRandomEvent(evt);
-    setPendingEventAlert(null);
-  };
+  const currentLessonId = profile.currentLessonId || 1;
+  const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
+  const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
+  const currentBiome = getBiomeChapterByUnit(currentUnitNum);
 
   const unitNavRef = useRef<HTMLDivElement>(null);
   const unitTabRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({});
@@ -82,6 +65,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   const filteredCatalog = catalog.filter(item => {
     const matchesUnit = selectedUnit === 0 || item.unit === selectedUnit;
     const matchesSearch =
+      !searchQuery.trim() ||
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.titleZh.includes(searchQuery) ||
       item.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,45 +75,121 @@ export const LessonMap: React.FC<LessonMapProps> = ({
 
   const handleOpenLessonDetail = (lessonId: number) => {
     playClickSound();
-    // Retrieve authentic New Concept lesson definition for current volume
     const lessonData = getLessonById(lessonId, selectedVolumeId);
     setActiveLesson(lessonData);
   };
 
+  const handlePlayVoice = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation();
+    playClickSound();
+    speakText(text, { lang: 'en-US' });
+  };
+
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
 
+  // Unit completion stats
+  const unlockedList = profile.unlockedLessonIds || [1];
+  const completedList = profile.completedLessonIds || [];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       
-      {/* Search & Unit Navigation */}
-      <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] space-y-3 sm:space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2.5 sm:space-x-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#487E2C] text-white border-2 border-black rounded-xl flex items-center justify-center font-bold shadow-sm shrink-0">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* 1. Concise, High-Efficiency "Continue Learning" Quick-Action Hero Bar */}
+      <div className="bg-gradient-to-r from-[#244318] via-[#355E20] to-[#1E3314] border-2 sm:border-3 border-black rounded-2xl p-3.5 sm:p-4 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center space-x-3 w-full sm:w-auto">
+          <div className="relative shrink-0">
+            <MinecraftAvatar speaker="Alex" size={44} className="shadow-md" />
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border border-black flex items-center justify-center text-[9px] font-black text-black">
+              ✓
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center space-x-2">
+              <span className="bg-amber-400 text-black text-[10px] font-mono font-black px-1.5 py-0.2 rounded uppercase">
+                当前主线
+              </span>
+              <span className="text-xs font-mono text-emerald-300 font-bold truncate">
+                Unit {currentUnitNum} · {currentBiome.biomeNameZh}
+              </span>
             </div>
-            <h2 className="text-base sm:text-lg font-black font-mono text-[#2D2D2D]">
-              {selectedVolumeId === 'vol1' ? '新概念1册' : selectedVolumeId === 'vol2' ? '新概念2册' : selectedVolumeId === 'vol3' ? '新概念3册' : '新概念4册'}
+            <h2 className="text-sm sm:text-base font-black font-mono text-amber-200 truncate mt-0.5">
+              Lesson {currentLesson.id}: {currentLesson.title}
+              <span className="text-slate-300 text-xs font-normal ml-1.5 hidden md:inline font-sans">
+                ({currentLesson.titleZh})
+              </span>
             </h2>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            {/* View Switcher Controls */}
-            <div className="bg-slate-100 p-1 rounded-xl border-2 border-slate-300 flex items-center space-x-1 shrink-0">
+        <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => handleOpenLessonDetail(currentLesson.id)}
+            className="flex-1 sm:flex-none bg-[#FF6321] hover:bg-[#ff7a42] text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-mono font-black border border-black flex items-center justify-center space-x-1.5 shadow-sm active:translate-y-0.5 cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>进入学习 (第 {currentLesson.id} 课)</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onSelectLessonForChat(currentLesson)}
+            className="bg-black/40 hover:bg-black/60 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center space-x-1 shrink-0 cursor-pointer"
+            title="与 Alex 老师练习本课口语"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">AI 对练</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Streamlined Controls & Unit Selector Ribbon */}
+      <div className="bg-white border-2 border-slate-300 rounded-2xl p-3 sm:p-4 shadow-xs space-y-3">
+        
+        {/* Top Control Bar: Volume Title, View Modes & Fast Search */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-black font-mono text-slate-800 flex items-center space-x-1.5">
+              <BookOpen className="w-4 h-4 text-[#487E2C]" />
+              <span>{currentVolume.title}</span>
+            </span>
+            <span className="text-xs text-slate-400 font-mono">共 144 课</span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* View Mode Switcher */}
+            <div className="bg-slate-100 p-0.5 rounded-xl border border-slate-200 flex items-center space-x-0.5 text-xs font-mono font-bold">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setViewMode('grid');
+                }}
+                className={`px-2.5 py-1 rounded-lg flex items-center space-x-1 transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-[#487E2C] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>课程列表</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
                   playClickSound();
                   setViewMode('world');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black flex items-center space-x-1.5 transition-all ${
+                className={`px-2.5 py-1 rounded-lg flex items-center space-x-1 transition-all ${
                   viewMode === 'world'
-                    ? 'bg-[#487E2C] text-white shadow-sm border border-black/20'
+                    ? 'bg-[#487E2C] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>全景大地图</span>
+                <span>全景地图</span>
               </button>
 
               <button
@@ -138,260 +198,257 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                   playClickSound();
                   setViewMode('map');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black flex items-center space-x-1.5 transition-all ${
+                className={`px-2.5 py-1 rounded-lg flex items-center space-x-1 transition-all ${
                   viewMode === 'map'
-                    ? 'bg-[#487E2C] text-white shadow-sm border border-black/20'
+                    ? 'bg-[#487E2C] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Map className="w-3.5 h-3.5" />
-                <span>卷轴线路图</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  playClickSound();
-                  setViewMode('grid');
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black flex items-center space-x-1.5 transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-[#487E2C] text-white shadow-sm border border-black/20'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>列表网格</span>
+                <span>卷轴路标</span>
               </button>
             </div>
 
-            {/* Search Box */}
-            <div className="relative flex-1 sm:w-56 min-w-[160px]">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            {/* Quick Search */}
+            <div className="relative flex-1 sm:w-48 min-w-[140px]">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="搜索课程/主题/关键词..."
-                className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl pl-9 pr-3 py-1.5 sm:py-2 text-xs text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
+                placeholder="搜索课程/单词..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-2.5 py-1 text-xs text-slate-800 font-mono font-medium focus:border-[#487E2C] focus:bg-white focus:outline-none"
               />
             </div>
-
-            {/* Random Event Trigger Button */}
-            <button
-              type="button"
-              onClick={handleManualTriggerEvent}
-              className="px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-amber-950 border-2 border-black rounded-xl text-xs font-mono font-black flex items-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 shrink-0"
-              title="立即触发随机探险突发事件"
-            >
-              <Flame className="w-3.5 h-3.5 text-red-700 animate-bounce" />
-              <span>🎲 探险突发事件</span>
-            </button>
           </div>
         </div>
 
-        {/* Pending Random Event Alert Banner */}
-        {pendingEventAlert && (
-          <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 border-3 border-black text-amber-950 p-3 sm:p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row items-center justify-between gap-3 animate-pulse">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-black/20 border-2 border-black/30 rounded-xl flex items-center justify-center text-2xl shrink-0">
-                {pendingEventAlert.avatar}
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5 text-xs font-mono font-black uppercase text-amber-950">
-                  <AlertTriangle className="w-4 h-4 text-red-800" />
-                  <span>地图突发探险危机告警！</span>
-                </div>
-                <p className="text-xs font-mono font-black text-amber-950 mt-0.5">
-                  {pendingEventAlert.titleZh} — {pendingEventAlert.locationName}
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveRandomEvent(pendingEventAlert);
-                setPendingEventAlert(null);
-              }}
-              className="bg-black text-amber-300 hover:bg-slate-900 border-2 border-black px-4 py-2 rounded-xl text-xs font-mono font-black flex items-center space-x-1 shadow-md shrink-0 active:translate-y-0.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>前往处理危机 (+{pendingEventAlert.rewardEmeralds} ❇️)</span>
-            </button>
-          </div>
-        )}
-
-        {/* Units Filter Buttons with Left/Right Scroll Arrow Controls & Auto Scroll */}
-        <div className="relative flex items-center space-x-1.5">
+        {/* Unit Selection Strip */}
+        <div className="flex items-center space-x-1 pt-1 border-t border-slate-100">
           <button
             type="button"
             onClick={() => handleScrollUnits('left')}
-            className="p-1.5 sm:p-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl text-slate-700 shrink-0 transition-colors shadow-sm active:translate-y-0.5"
-            title="向左滑动 Unit 标签"
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 shrink-0"
+            title="向左"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
           <div
             ref={unitNavRef}
-            className="flex items-center space-x-2 overflow-x-auto pb-1.5 pt-0.5 scrollbar-none snap-x snap-mandatory scroll-smooth flex-1 min-w-0"
+            className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none snap-x flex-1 min-w-0"
           >
             <button
               ref={(el) => { unitTabRefs.current[0] = el; }}
-              onClick={(e) => {
+              type="button"
+              onClick={() => {
                 playClickSound();
                 setSelectedUnit(0);
-                e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
               }}
-              className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-mono font-black whitespace-nowrap border-2 transition-all shrink-0 snap-start active:translate-y-0.5 ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-black whitespace-nowrap transition-all shrink-0 cursor-pointer ${
                 selectedUnit === 0
-                  ? 'bg-[#487E2C] border-black text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_3px_0_0_#2A4718]'
-                  : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  ? 'bg-[#487E2C] text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              全部 144 课
+              全部 (1-144)
             </button>
 
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(uNum => (
-              <button
-                key={uNum}
-                ref={(el) => { unitTabRefs.current[uNum] = el; }}
-                onClick={(e) => {
-                  playClickSound();
-                  setSelectedUnit(uNum);
-                  e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                }}
-                className={`px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-mono font-black whitespace-nowrap border-2 transition-all shrink-0 snap-start active:translate-y-0.5 ${
-                  selectedUnit === uNum
-                    ? 'bg-[#487E2C] border-black text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_3px_0_0_#2A4718]'
-                    : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                Unit {uNum} (第 {(uNum - 1) * 12 + 1}-{uNum * 12} 课)
-              </button>
-            ))}
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(uNum => {
+              const ch = getBiomeChapterByUnit(uNum);
+              const isSelected = selectedUnit === uNum;
+              const isCurrentUnit = currentUnitNum === uNum;
+              const uStart = (uNum - 1) * 12 + 1;
+              const uEnd = uNum * 12;
+              const uDone = completedList.filter(id => id >= uStart && id <= uEnd).length;
+
+              return (
+                <button
+                  key={uNum}
+                  ref={(el) => { unitTabRefs.current[uNum] = el; }}
+                  type="button"
+                  onClick={() => {
+                    playClickSound();
+                    setSelectedUnit(uNum);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-all shrink-0 flex items-center space-x-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#487E2C] text-white shadow-xs font-black'
+                      : isCurrentUnit
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{ch.icon}</span>
+                  <span>Unit {uNum}</span>
+                  {uDone > 0 && (
+                    <span className={`text-[10px] ${isSelected ? 'text-emerald-200' : 'text-slate-500'}`}>
+                      ({uDone}/12)
+                    </span>
+                  )}
+                  {isCurrentUnit && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FF6321] animate-pulse" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <button
             type="button"
             onClick={() => handleScrollUnits('right')}
-            className="p-1.5 sm:p-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl text-slate-700 shrink-0 transition-colors shadow-sm active:translate-y-0.5"
-            title="向右滑动 Unit 标签"
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 shrink-0"
+            title="向右"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* View Mode Content: World Map vs Adventure Path vs Grid */}
-      {viewMode === 'world' ? (
+      {/* 3. Main Display Area: Clean Grid (Default) or Map View */}
+      {viewMode === 'grid' ? (
+        <div className="space-y-3">
+          {/* Header info if filtering by unit */}
+          {selectedUnit > 0 && (
+            <div className="flex items-center justify-between px-1 text-xs font-mono text-slate-600">
+              <div className="flex items-center space-x-2">
+                <span className="text-base">{getBiomeChapterByUnit(selectedUnit).icon}</span>
+                <span className="font-bold text-slate-900">
+                  Unit {selectedUnit}: {getBiomeChapterByUnit(selectedUnit).titleZh}
+                </span>
+                <span className="text-slate-500 font-medium">
+                  ({getBiomeChapterByUnit(selectedUnit).biomeNameZh})
+                </span>
+              </div>
+              <span className="text-slate-500">第 {(selectedUnit - 1) * 12 + 1} - {selectedUnit * 12} 课</span>
+            </div>
+          )}
+
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
+            {filteredCatalog.map(item => {
+              const isCompleted = item.id < profile.currentLessonId || completedList.includes(item.id) || (unlockedList.includes(item.id) && unlockedList.includes(item.id + 1));
+              const isUnlocked = unlockedList.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
+              const isCurrent = profile.currentLessonId === item.id;
+
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (isUnlocked) {
+                      handleOpenLessonDetail(item.id);
+                    }
+                  }}
+                  className={`rounded-xl border-2 p-3 sm:p-3.5 transition-all flex flex-col justify-between cursor-pointer relative ${
+                    isCurrent
+                      ? 'bg-amber-50/60 border-[#FF6321] shadow-sm hover:shadow-md scale-[1.01]'
+                      : isUnlocked
+                      ? 'bg-white border-slate-300 hover:border-[#487E2C] hover:shadow-sm'
+                      : 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+                  }`}
+                >
+                  {/* Top Bar: Lesson ID & Fast Audio Icon */}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center space-x-1.5">
+                      <span className={`text-xs font-mono font-black ${isCurrent ? 'text-[#FF6321]' : 'text-[#487E2C]'}`}>
+                        Lesson {item.id}
+                      </span>
+                      {isCurrent && (
+                        <span className="bg-[#FF6321] text-white text-[9px] font-mono font-black px-1.5 py-0.2 rounded">
+                          当前
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      {isUnlocked && (
+                        <button
+                          type="button"
+                          onClick={(e) => handlePlayVoice(e, item.title)}
+                          className="p-1 rounded-md text-slate-400 hover:text-[#487E2C] hover:bg-slate-100"
+                          title="听标题发音"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                        {item.difficulty}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lesson Titles */}
+                  <div className="my-1">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-mono line-clamp-1">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
+                      {item.titleZh}
+                    </p>
+                  </div>
+
+                  {/* Bottom: Topic & Action */}
+                  <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-400 truncate max-w-[120px] text-[11px]">
+                      {item.topic}
+                    </span>
+
+                    <div>
+                      {isCompleted ? (
+                        <span className="text-emerald-600 font-bold flex items-center space-x-0.5 text-[11px]">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>已学完</span>
+                        </span>
+                      ) : isUnlocked ? (
+                        <span className="text-[#FF6321] font-black flex items-center space-x-0.5 text-[11px]">
+                          <Play className="w-3 h-3 fill-current" />
+                          <span>开始</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 flex items-center space-x-0.5 text-[11px]">
+                          <Lock className="w-3 h-3" />
+                          <span>未解锁</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : viewMode === 'world' ? (
         <GiantWorldMap
           profile={profile}
           onSelectLessonForChat={onSelectLessonForChat}
           onCompleteLesson={onCompleteLesson}
           onAwardEmeralds={onAwardEmeralds}
         />
-      ) : viewMode === 'map' ? (
+      ) : (
         <MinecraftAdventureMap
           profile={profile}
-          selectedUnit={selectedUnit}
+          selectedUnit={selectedUnit === 0 ? 1 : selectedUnit}
           onSelectLesson={handleOpenLessonDetail}
           onStartChat={onSelectLessonForChat}
           onOralTest={(target) => setOralTarget(target)}
         />
-      ) : (
-        /* 144 Lessons Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
-          {filteredCatalog.map(item => {
-            const unlockedList = profile.unlockedLessonIds || [1];
-            const isCompleted = item.id < profile.currentLessonId || (unlockedList.includes(item.id) && unlockedList.includes(item.id + 1));
-            const isUnlocked = unlockedList.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
-            const isCurrent = profile.currentLessonId === item.id;
-
-            return (
-              <div
-                key={item.id}
-                onClick={() => {
-                  if (isUnlocked) {
-                    handleOpenLessonDetail(item.id);
-                  }
-                }}
-                className={`rounded-3xl border-4 p-4 transition-all duration-200 cursor-pointer relative overflow-hidden flex flex-col justify-between ${
-                  isCurrent
-                    ? 'bg-white border-[#FF6321] shadow-[8px_8px_0px_0px_rgba(255,99,33,0.25)] ring-2 ring-[#FF6321]/50 transform hover:-translate-y-1'
-                    : isUnlocked
-                    ? 'bg-white border-[#487E2C] hover:border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,0.08)] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.12)] transform hover:-translate-y-1'
-                    : 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed shadow-none'
-                }`}
-              >
-                {/* Badge Overlay */}
-                {isCurrent && (
-                  <div className="absolute top-0 right-0 bg-[#FF6321] text-white font-mono font-black text-[10px] px-2.5 py-0.5 rounded-bl-xl shadow-sm uppercase tracking-wider">
-                    当前关卡
-                  </div>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-mono font-black text-[#487E2C]">
-                      Lesson {item.id}
-                    </span>
-                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase border ${
-                      item.difficulty === 'easy'
-                        ? 'bg-green-100 text-green-800 border-green-300'
-                        : item.difficulty === 'medium'
-                        ? 'bg-amber-100 text-amber-800 border-amber-300'
-                        : 'bg-rose-100 text-rose-800 border-rose-300'
-                    }`}>
-                      {item.difficulty}
-                    </span>
-                  </div>
-
-                  <h3 className="text-sm font-black text-[#2D2D2D] mb-0.5 line-clamp-1 font-mono">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-500 mb-3 line-clamp-1">
-                    {item.titleZh}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t-2 border-slate-100 flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-500 font-bold text-[11px] truncate max-w-[130px]">
-                    {item.topic}
-                  </span>
-
-                  <div className="flex items-center space-x-1">
-                    {isCompleted ? (
-                      <span className="text-green-600 font-black flex items-center space-x-1">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span className="text-[10px]">已完成</span>
-                      </span>
-                    ) : isUnlocked ? (
-                      <span className="text-[#FF6321] font-black flex items-center space-x-1">
-                        <Play className="w-3.5 h-3.5 fill-[#FF6321]" />
-                        <span className="text-[10px]">学习</span>
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 flex items-center space-x-1">
-                        <Lock className="w-3.5 h-3.5" />
-                        <span className="text-[10px]">解锁中</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       )}
 
-      {/* Lesson Detailed Study Modal */}
+      {/* Modals */}
       {activeLesson && (
         <LessonStudyModal
           lesson={activeLesson}
+          profile={profile}
           onClose={() => setActiveLesson(null)}
+          onCompleteLesson={(lessonId) => {
+            if (onCompleteLesson) {
+              onCompleteLesson(lessonId);
+            }
+          }}
           onStartPractice={(lesson) => {
+            if (onCompleteLesson) {
+              onCompleteLesson(lesson.id);
+            }
             setActiveLesson(null);
             onSelectLessonForChat(lesson);
           }}
@@ -405,16 +462,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           translation={oralTarget.translation}
           phonetic={oralTarget.phonetic}
           onClose={() => setOralTarget(null)}
-          onAwardEmeralds={(emeralds, xp) => {
-            if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
-          }}
-        />
-      )}
-
-      {activeRandomEvent && (
-        <RandomAdventureModal
-          event={activeRandomEvent}
-          onClose={() => setActiveRandomEvent(null)}
           onAwardEmeralds={(emeralds, xp) => {
             if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
           }}

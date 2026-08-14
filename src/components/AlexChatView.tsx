@@ -5,6 +5,7 @@ import { buildAlexSystemPrompt } from '../utils/aiTeacherPrompt';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
 import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award, Phone, PhoneOff, PhoneCall } from 'lucide-react';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface AlexChatViewProps {
   profile: UserProfile;
@@ -37,6 +38,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   onAwardEmeralds,
   onOpenSettings,
   onCompleteLesson,
+  onCheckMission,
   onBackToMap
 }) => {
   const [inputText, setInputText] = useState<string>('');
@@ -188,8 +190,9 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   };
 
   useEffect(() => {
+    // Only scroll to bottom when a new message is added, not continuously on loading
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [messages.length]);
 
   // Handle Alex speech with speed setting
   const playAlexVoice = (text: string) => {
@@ -259,6 +262,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const handleSendMessage = async (customText?: string) => {
     const textToSend = (customText || inputText).trim();
     if (!textToSend || isLoading) return;
+    if (onCheckMission) onCheckMission(textToSend);
 
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch {}
@@ -380,12 +384,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
           {/* Animated Alex Character Frame with Moods */}
           <div className="relative shrink-0">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#EEDDCC] border-2 sm:border-4 border-[#C89D7C] rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-2xl shadow-md transition-all duration-300">
-              {alexMood === 'happy' && '👩‍🦰'}
-              {alexMood === 'craft' && '🛠️'}
-              {alexMood === 'battle' && '⚔️'}
-              {alexMood === 'star' && '🌟'}
-            </div>
+            <MinecraftAvatar speaker="Alex" size={44} />
             <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[#7CFC00] border-2 border-black rounded-full animate-pulse" title="Alex 在线伴学" />
           </div>
 
@@ -448,25 +447,17 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
 
           {activeLesson && (
             <div className="flex items-center gap-2">
-              {messages.length < 4 ? (
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/50 rounded-xl border border-white/20 text-white text-[10px] font-mono">
-                  <span className="animate-pulse">🔒</span>
-                  <span>对话 2 轮解锁打卡</span>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    playEmeraldSound();
-                    onCompleteLesson(activeLesson.id);
-                    onBackToMap();
-                  }}
-                  className="px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black font-mono text-[10px] sm:text-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-none flex items-center gap-1 shrink-0 animate-in fade-in zoom-in"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-900" />
-                  <span className="hidden sm:inline">打卡通关</span>
-                  <span className="sm:hidden">通关</span>
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  playEmeraldSound();
+                  onCompleteLesson(activeLesson.id);
+                  onBackToMap();
+                }}
+                className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black font-mono text-[10px] sm:text-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-none flex items-center gap-1 shrink-0 animate-in fade-in zoom-in"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-900" />
+                <span>通关解锁 L{activeLesson.id + 1}</span>
+              </button>
             </div>
           )}
 
@@ -507,12 +498,12 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               className={`flex items-start space-x-3 ${isAlex ? '' : 'flex-row-reverse space-x-reverse'}`}
             >
               {/* Avatar */}
-              <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl sm:text-2xl border-2 sm:border-3 shadow-sm shrink-0 ${
-                isAlex
-                  ? 'bg-[#EEDDCC] border-[#C89D7C]'
-                  : 'bg-amber-100 border-amber-300'
-              }`}>
-                {isAlex ? '👩‍🦰' : profile.selectedAvatar || '👦'}
+              <div className="shrink-0">
+                <MinecraftAvatar
+                  speaker={isAlex ? 'Alex' : (profile.nickname || 'Steve')}
+                  avatar={isAlex ? '👩‍🦰' : profile.selectedAvatar}
+                  size={44}
+                />
               </div>
 
               {/* Message Content Bubble */}
@@ -575,8 +566,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
         {/* Loading Indicator */}
         {isLoading && (
           <div className="flex items-start space-x-3">
-            <div className="w-10 h-10 bg-[#EEDDCC] border-2 border-[#C89D7C] rounded-2xl flex items-center justify-center text-lg animate-pulse">
-              👩‍🦰
+            <div className="shrink-0 animate-pulse">
+              <MinecraftAvatar speaker="Alex" size={40} />
             </div>
             <div className="bg-white border-2 border-[#487E2C] p-3.5 rounded-2xl rounded-tl-none text-xs font-mono font-bold text-[#487E2C] flex items-center space-x-2 shadow-sm">
               <RefreshCw className="w-4 h-4 animate-spin" />

@@ -44,10 +44,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [edgeVoiceState, setEdgeVoiceState] = useState<string>(getSelectedEdgeVoice());
   const [isTestingSpeech, setIsTestingSpeech] = useState(false);
 
-  const [nickname, setNickname] = useState<string>(profile.nickname || 'Tom');
-  const [age, setAge] = useState<number>(profile.age || 8);
-  const [selectedAvatar, setSelectedAvatar] = useState<string>(profile.selectedAvatar || '👦');
-
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);
 
@@ -89,9 +85,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setSelectedEdgeVoice(edgeVoiceState);
 
     onSaveProfile({
-      nickname: nickname.trim() || 'Tom',
-      age,
-      selectedAvatar,
       apiKeyConfig: {
         provider,
         apiKey: apiKey.trim(),
@@ -379,83 +372,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
                 <span>{isTestingSpeech ? '播放中...' : '🔊 试听发音'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Child Profile Setting */}
-          <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
-            <h3 className="font-black text-[#487E2C] text-sm">
-              👤 学习档案修改
-            </h3>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-600 font-bold mb-1">英文昵称:</label>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="w-full bg-white border-2 border-slate-300 rounded-xl px-3 py-1.5 text-slate-800 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-600 font-bold mb-1">年龄:</label>
-                <select
-                  value={age}
-                  onChange={(e) => setAge(Number(e.target.value))}
-                  className="w-full bg-white border-2 border-slate-300 rounded-xl px-3 py-1.5 text-slate-800 font-bold"
-                >
-                  {[6, 7, 8, 9, 10, 11, 12].map(n => (
-                    <option key={n} value={n}>{n} 岁</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Data Backup & Reset */}
-          <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
-            <h3 className="font-black text-slate-700 text-sm">
-              💾 本地数据备份与开发者控制台 (Data & Developer)
-            </h3>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleExportData}
-                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-300 rounded-xl font-bold flex items-center space-x-1 shadow-sm"
-              >
-                <Download className="w-3.5 h-3.5 text-[#487E2C]" />
-                <span>导出 progress.json 备份</span>
-              </button>
-
-              {onOpenAdminConsole && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenAdminConsole();
-                  }}
-                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border-2 border-amber-400 rounded-xl font-bold flex items-center space-x-1 shadow-sm"
-                >
-                  <span>👑 开发者后台控制台</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('确定重置学习记录并回到初始化页面吗？')) {
-                    onResetProgress();
-                    onClose();
-                  }
-                }}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-300 rounded-xl font-bold flex items-center space-x-1 shadow-sm"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>重置进度数据</span>
               </button>
             </div>
           </div>

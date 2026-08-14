@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { LESSONS_DATA } from '../data/lessonsData';
-import { ShieldCheck, Unlock, Zap, Database, Terminal, RefreshCw, Key, Award, Check, AlertTriangle, Eye, Volume2, X } from 'lucide-react';
+import { ShieldCheck, Unlock, Zap, Database, Terminal, RefreshCw, Key, Award, Check, AlertTriangle, Eye, Volume2, X, Download } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playLevelUpSound, speakText } from '../utils/audio';
 import { fetchAllUsersFromFirestore } from '../lib/firebase';
 
@@ -24,7 +24,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [selectedLessonInspect, setSelectedLessonInspect] = useState<Lesson>(LESSONS_DATA[0]);
-  const [activeTab, setActiveTab] = useState<'users' | 'quick' | 'raw' | 'lessons'>('users');
+  const [activeTab, setActiveTab] = useState<'codes' | 'users' | 'quick' | 'raw' | 'lessons'>('codes');
 
   // Registered users state
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
@@ -33,6 +33,100 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
   const [fetchStatusMsg, setFetchStatusMsg] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<{ neonConnected: boolean; databaseUrlConfigured: boolean }>({ neonConnected: false, databaseUrlConfigured: false });
+
+  // Activation Codes Management State
+  const [activationCodes, setActivationCodes] = useState<any[]>([]);
+  const [isLoadingCodes, setIsLoadingCodes] = useState<boolean>(false);
+  const [batchCount, setBatchCount] = useState<number>(10);
+  const [batchPrefix, setBatchPrefix] = useState<string>('MC144');
+  const [codeSearch, setCodeSearch] = useState<string>('');
+  const [codeFilter, setCodeFilter] = useState<'all' | 'unused' | 'used'>('all');
+  const [codeMsg, setCodeMsg] = useState<string | null>(null);
+
+  const fetchActivationCodes = async () => {
+    setIsLoadingCodes(true);
+    try {
+      const resp = await fetch('/api/admin/codes');
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success && Array.isArray(data.codes)) {
+          setActivationCodes(data.codes);
+        }
+      }
+    } catch (e) {
+      console.warn("Fetch codes warning:", e);
+    } finally {
+      setIsLoadingCodes(false);
+    }
+  };
+
+  const handleGenerateBatchCodes = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoadingCodes(true);
+    setCodeMsg(null);
+    try {
+      const resp = await fetch('/api/admin/generate-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          count: batchCount,
+          prefix: batchPrefix.trim().toUpperCase() || 'MC144',
+          maxDevices: 3
+        })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        playLevelUpSound();
+        setCodeMsg(data.message || `成功生成 ${data.codes?.length} 个激活码！`);
+        await fetchActivationCodes();
+      } else {
+        alert(data.error || '生成卡密失败');
+      }
+    } catch (err) {
+      alert('连接服务端异常，请稍后重试');
+    } finally {
+      setIsLoadingCodes(false);
+    }
+  };
+
+  const handleCopyUnusedCodes = () => {
+    const unusedList = activationCodes.filter(c => !c.isUsed).map(c => c.code);
+    if (unusedList.length === 0) {
+      alert('当前没有【未使用】的卡密可供复制！请先批量生成。');
+      return;
+    }
+    const textToCopy = unusedList.join('\n');
+    navigator.clipboard.writeText(textToCopy);
+    playEmeraldSound();
+    setCodeMsg(`📋 已复制 ${unusedList.length} 张未使用卡密到剪贴板！可直接粘贴到小红书发货工具`);
+    setTimeout(() => setCodeMsg(null), 4000);
+  };
+
+  const handleRevokeCode = async (code: string, action: 'unbind' | 'reset') => {
+    const confirmMsg = action === 'unbind' 
+      ? `确定要清空激活码 (${code}) 绑定的所有设备列表吗？` 
+      : `确定重置激活码 (${code}) 为全新未使用状态吗？`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const resp = await fetch('/api/admin/revoke-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, action })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        playEmeraldSound();
+        setCodeMsg(data.message);
+        await fetchActivationCodes();
+        setTimeout(() => setCodeMsg(null), 3000);
+      } else {
+        alert(data.error || '操作失败');
+      }
+    } catch {
+      alert('处理异常，请稍后重试');
+    }
+  };
 
   const fetchRegisteredUsers = async () => {
     setIsLoadingUsers(true);
@@ -105,6 +199,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       fetchRegisteredUsers();
     }
   }, [isAuthenticated, activeTab]);
+
+  const handleExportData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profile, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `minecraft_english_ai_progress_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
 
   const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,6 +353,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             {/* Top Sub-Nav */}
             <div className="bg-stone-900 p-2 border-b border-stone-800 flex gap-2 shrink-0 overflow-x-auto">
               <button
+                onClick={() => setActiveTab('codes')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+                  activeTab === 'codes'
+                    ? 'bg-amber-500 text-black shadow-md'
+                    : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                }`}
+              >
+                <Key className="w-4 h-4" />
+                <span>🔑 小红书卡密管理 ({activationCodes.length})</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('users')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
                   activeTab === 'users'
@@ -300,6 +416,207 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             {/* Content Area */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
               
+              {/* TAB: ACTIVATION CODES MANAGEMENT */}
+              {activeTab === 'codes' && (
+                <div className="space-y-4">
+                  {/* Top Stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">卡密总数</div>
+                      <div className="text-xl font-black text-amber-400 mt-1">{activationCodes.length} 张</div>
+                    </div>
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">未使用 (待发货)</div>
+                      <div className="text-xl font-black text-emerald-400 mt-1">
+                        {activationCodes.filter(c => !c.isUsed).length} 张
+                      </div>
+                    </div>
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">已激活使用</div>
+                      <div className="text-xl font-black text-orange-400 mt-1">
+                        {activationCodes.filter(c => c.isUsed).length} 张
+                      </div>
+                    </div>
+                    <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                      <div className="text-[11px] text-stone-400">单账号设备限制</div>
+                      <div className="text-xs font-bold text-amber-300 mt-1">
+                        📱 最多 3 台设备绑定
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Batch Code Generator Box */}
+                  <div className="bg-stone-900 border-2 border-amber-500/60 p-4 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+                      <h3 className="text-sm font-black text-amber-400 flex items-center space-x-2">
+                        <Key className="w-4 h-4 text-amber-400" />
+                        <span>一键批量生成小红书专属 VIP 激活码</span>
+                      </h3>
+                      <button
+                        onClick={handleCopyUnusedCodes}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1"
+                      >
+                        <span>📋 一键复制全部未使用卡密</span>
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleGenerateBatchCodes} className="flex flex-wrap items-center gap-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] text-stone-400 font-bold mb-1">生成数量</label>
+                        <select
+                          value={batchCount}
+                          onChange={e => setBatchCount(Number(e.target.value))}
+                          className="bg-stone-950 border border-stone-700 text-xs text-amber-300 px-3 py-1.5 rounded-xl outline-none"
+                        >
+                          <option value={10}>生成 10 张</option>
+                          <option value={20}>生成 20 张</option>
+                          <option value={50}>生成 50 张</option>
+                          <option value={100}>生成 100 张</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-stone-400 font-bold mb-1">前缀标识</label>
+                        <input
+                          type="text"
+                          value={batchPrefix}
+                          onChange={e => setBatchPrefix(e.target.value)}
+                          placeholder="例如: MC144"
+                          className="bg-stone-950 border border-stone-700 text-xs text-amber-300 px-3 py-1.5 rounded-xl outline-none w-28 uppercase font-bold"
+                        />
+                      </div>
+
+                      <div className="pt-5">
+                        <button
+                          type="submit"
+                          disabled={isLoadingCodes}
+                          className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-1.5 rounded-xl text-xs font-black shadow-md transition-all active:scale-95"
+                        >
+                          {isLoadingCodes ? '正在生成中...' : '⚡ 立即生成卡密'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {codeMsg && (
+                      <div className="text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-600 p-2.5 rounded-xl animate-fade-in">
+                        {codeMsg}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Filter and Search Bar */}
+                  <div className="flex flex-col sm:flex-row gap-2 items-center justify-between bg-stone-900 border border-stone-800 p-3 rounded-xl">
+                    <div className="flex items-center space-x-2 w-full sm:w-auto">
+                      <button
+                        onClick={() => setCodeFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold ${codeFilter === 'all' ? 'bg-amber-500 text-black' : 'bg-stone-800 text-stone-300'}`}
+                      >
+                        全部 ({activationCodes.length})
+                      </button>
+                      <button
+                        onClick={() => setCodeFilter('unused')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold ${codeFilter === 'unused' ? 'bg-emerald-500 text-black' : 'bg-stone-800 text-stone-300'}`}
+                      >
+                        未使用 ({activationCodes.filter(c => !c.isUsed).length})
+                      </button>
+                      <button
+                        onClick={() => setCodeFilter('used')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold ${codeFilter === 'used' ? 'bg-orange-500 text-black' : 'bg-stone-800 text-stone-300'}`}
+                      >
+                        已激活 ({activationCodes.filter(c => c.isUsed).length})
+                      </button>
+                    </div>
+
+                    <div className="w-full sm:w-64">
+                      <input
+                        type="text"
+                        value={codeSearch}
+                        onChange={e => setCodeSearch(e.target.value)}
+                        placeholder="🔍 搜索卡密或绑定账号..."
+                        className="w-full bg-stone-950 border border-stone-700 text-xs text-amber-200 px-3 py-1.5 rounded-lg outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Codes Table */}
+                  <div className="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-stone-950 text-amber-400 border-b border-stone-800 font-bold">
+                          <tr>
+                            <th className="p-3">激活码 (Code)</th>
+                            <th className="p-3">状态</th>
+                            <th className="p-3">已激活绑定账号</th>
+                            <th className="p-3">绑定设备</th>
+                            <th className="p-3">生成时间</th>
+                            <th className="p-3 text-right">管理操作</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-800 text-stone-300 font-mono">
+                          {activationCodes
+                            .filter(c => {
+                              if (codeFilter === 'unused') return !c.isUsed;
+                              if (codeFilter === 'used') return c.isUsed;
+                              return true;
+                            })
+                            .filter(c => 
+                              !codeSearch || 
+                              c.code?.toLowerCase().includes(codeSearch.toLowerCase()) || 
+                              c.usedByAccount?.toLowerCase().includes(codeSearch.toLowerCase())
+                            )
+                            .map((c, idx) => (
+                              <tr key={c.code || idx} className="hover:bg-stone-800/50 transition-colors">
+                                <td className="p-3 font-bold text-amber-300 select-all">{c.code}</td>
+                                <td className="p-3">
+                                  {c.isUsed ? (
+                                    <span className="bg-orange-950 text-orange-400 border border-orange-800 px-2 py-0.5 rounded font-bold">
+                                      已激活
+                                    </span>
+                                  ) : (
+                                    <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-bold">
+                                      未使用
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 font-bold text-stone-200">{c.usedByAccount || '—'}</td>
+                                <td className="p-3 text-blue-400 font-bold">
+                                  {c.devices?.length || 0} / {c.maxDevices || 3} 台
+                                </td>
+                                <td className="p-3 text-stone-400 text-[11px]">
+                                  {c.createdAt ? new Date(c.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '刚刚'}
+                                </td>
+                                <td className="p-3 text-right space-x-1">
+                                  {c.isUsed && (
+                                    <button
+                                      onClick={() => handleRevokeCode(c.code, 'unbind')}
+                                      className="bg-blue-900/60 hover:bg-blue-800 text-blue-200 px-2 py-1 rounded text-[11px] font-bold"
+                                    >
+                                      解绑设备
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleRevokeCode(c.code, 'reset')}
+                                    className="bg-rose-900/60 hover:bg-rose-800 text-rose-200 px-2 py-1 rounded text-[11px] font-bold"
+                                  >
+                                    重置
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          {activationCodes.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="p-6 text-center text-stone-500">
+                                暂无卡密，请在上方点击【批量生成卡密】！
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* TAB: REGISTERED USERS DATA */}
               {activeTab === 'users' && (
                 <div className="space-y-4">
@@ -527,6 +844,26 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Data Backup */}
+                  <div className="bg-stone-900 border border-stone-800 p-4 rounded-2xl flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-emerald-400 font-bold text-xs flex items-center space-x-1">
+                        <Download className="w-4 h-4" />
+                        <span>本地数据备份</span>
+                      </div>
+                      <div className="text-[11px] text-stone-400 mt-0.5">
+                        导出当前学习进度 (progress.json) 用于备份
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleExportData}
+                      className="bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-600 font-bold px-3 py-1.5 rounded-xl text-xs shrink-0"
+                    >
+                      下载 JSON 备份
+                    </button>
                   </div>
 
                   {/* Progress Reset Warning */}

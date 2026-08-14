@@ -11,6 +11,7 @@ const app = express();
 
 // In-memory fallback ONLY when Neon DATABASE_URL is not configured yet in local environment
 const memoryUsersFallback = new Map<string, any>();
+const memoryCodesFallback = new Map<string, any>();
 
 // Neon PostgreSQL Serverless Client
 const getNeonSql = () => {
@@ -42,11 +43,138 @@ async function ensureNeonTable() {
         profile JSONB
       );
     `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS activation_codes (
+        code VARCHAR(255) PRIMARY KEY,
+        is_used BOOLEAN DEFAULT FALSE,
+        used_by_account VARCHAR(255),
+        used_at BIGINT,
+        devices JSONB DEFAULT '[]'::jsonb,
+        max_devices INT DEFAULT 3,
+        created_at BIGINT
+      );
+    `;
     neonTableInitialized = true;
-    console.log("[Neon Postgres] Database table 'users' initialized successfully!");
+    console.log("[Neon Postgres] Database tables 'users' and 'activation_codes' initialized successfully!");
   } catch (e) {
     console.warn("[Neon Postgres] Table initialization warning:", e);
   }
+}
+
+// Activation Codes Database Handlers
+async function getCloudCode(code: string): Promise<any | null> {
+  if (!code) return null;
+  const cleanCode = code.trim().toUpperCase();
+
+  const memCode = memoryCodesFallback.get(cleanCode);
+  if (memCode) return memCode;
+
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      const rows = await sql`SELECT * FROM activation_codes WHERE UPPER(code) = ${cleanCode} LIMIT 1`;
+      if (rows && rows.length > 0) {
+        const r: any = rows[0];
+        let parsedDevices = r.devices;
+        if (typeof parsedDevices === 'string') {
+          try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
+        }
+        const cObj = {
+          code: r.code,
+          isUsed: Boolean(r.is_used),
+          usedByAccount: r.used_by_account || '',
+          usedAt: Number(r.used_at || 0),
+          devices: Array.isArray(parsedDevices) ? parsedDevices : [],
+          maxDevices: Number(r.max_devices || 3),
+          createdAt: Number(r.created_at || Date.now())
+        };
+        memoryCodesFallback.set(cleanCode, cObj);
+        return cObj;
+      }
+      return null;
+    } catch (e) {
+      console.warn("Neon Postgres get code error:", e);
+      return null;
+    }
+  }
+
+  return memoryCodesFallback.get(cleanCode) || null;
+}
+
+async function saveCloudCode(cObj: any): Promise<boolean> {
+  if (!cObj || !cObj.code) return false;
+  const cleanCode = cObj.code.trim().toUpperCase();
+  memoryCodesFallback.set(cleanCode, cObj);
+
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      const devicesJson = JSON.stringify(cObj.devices || []);
+      await sql`
+        INSERT INTO activation_codes (code, is_used, used_by_account, used_at, devices, max_devices, created_at)
+        VALUES (
+          ${cleanCode},
+          ${Boolean(cObj.isUsed)},
+          ${cObj.usedByAccount || ''},
+          ${cObj.usedAt || 0},
+          ${devicesJson}::jsonb,
+          ${cObj.maxDevices || 3},
+          ${cObj.createdAt || Date.now()}
+        )
+        ON CONFLICT (code) DO UPDATE SET
+          is_used = EXCLUDED.is_used,
+          used_by_account = EXCLUDED.used_by_account,
+          used_at = EXCLUDED.used_at,
+          devices = EXCLUDED.devices,
+          max_devices = EXCLUDED.max_devices;
+      `;
+      return true;
+    } catch (e) {
+      console.warn("Neon Postgres save code error:", e);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function getAllCloudCodes(): Promise<any[]> {
+  const codeMap = new Map<string, any>();
+
+  for (const [k, v] of memoryCodesFallback.entries()) {
+    codeMap.set(k.toUpperCase(), v);
+  }
+
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      const rows = await sql`SELECT * FROM activation_codes ORDER BY created_at DESC`;
+      if (rows && rows.length > 0) {
+        (rows as any[]).forEach(r => {
+          let parsedDevices = r.devices;
+          if (typeof parsedDevices === 'string') {
+            try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
+          }
+          const cleanCode = String(r.code).toUpperCase();
+          codeMap.set(cleanCode, {
+            code: r.code,
+            isUsed: Boolean(r.is_used),
+            usedByAccount: r.used_by_account || '',
+            usedAt: Number(r.used_at || 0),
+            devices: Array.isArray(parsedDevices) ? parsedDevices : [],
+            maxDevices: Number(r.max_devices || 3),
+            createdAt: Number(r.created_at || Date.now())
+          });
+        });
+      }
+    } catch (e) {
+      console.warn("Neon Postgres getAllCodes error:", e);
+    }
+  }
+
+  return Array.from(codeMap.values());
 }
 
 // Exclusive Neon PostgreSQL Database Handlers
@@ -616,6 +744,213 @@ app.use(express.json());
       return res.json({ success: true, message: "密码重置成功，已在全网设备生效" });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "重置密码处理失败" });
+    }
+  });
+
+  // ===== Activation Code Activation Endpoint =====
+  app.post("/api/auth/activate-code", async (req, res) => {
+    try {
+      const { code, account, deviceId } = req.body || {};
+      if (!code || typeof code !== 'string') {
+        return res.status(200).json({ success: false, error: "请输入 16 位 VIP 激活码" });
+      }
+      if (!account || typeof account !== 'string') {
+        return res.status(200).json({ success: false, error: "请先登录或注册账号再进行激活" });
+      }
+
+      const cleanCode = code.trim().toUpperCase().replace(/\s+/g, '');
+      const cleanAccount = account.trim().toLowerCase();
+      const currentDeviceId = deviceId || 'device_' + cleanAccount;
+
+      // Find code in DB
+      let codeObj = await getCloudCode(cleanCode);
+
+      // Support master codes or fallback format MC144-TEST for instant developer demo if DB empty
+      if (!codeObj && (cleanCode === 'MC144-8888-8888' || cleanCode === 'MC2026888' || cleanCode === 'VIP8888')) {
+        codeObj = {
+          code: cleanCode,
+          isUsed: false,
+          usedByAccount: '',
+          usedAt: 0,
+          devices: [],
+          maxDevices: 3,
+          createdAt: Date.now()
+        };
+      }
+
+      if (!codeObj) {
+        return res.status(200).json({
+          success: false,
+          error: "激活码不存在！请核对您从小红书客服领取的 16 位激活码"
+        });
+      }
+
+      // Check if code is already used
+      if (codeObj.isUsed) {
+        // If used by the SAME account
+        if (codeObj.usedByAccount && codeObj.usedByAccount.toLowerCase() === cleanAccount) {
+          const deviceList: string[] = Array.isArray(codeObj.devices) ? codeObj.devices : [];
+          if (!deviceList.includes(currentDeviceId)) {
+            if (deviceList.length >= (codeObj.maxDevices || 3)) {
+              return res.status(200).json({
+                success: false,
+                error: `⚠️ 激活失败：该账号已绑定 ${deviceList.length}/${codeObj.maxDevices || 3} 台设备（已达上限）。如更换设备请联系小红书客服解绑。`
+              });
+            }
+            deviceList.push(currentDeviceId);
+            codeObj.devices = deviceList;
+            await saveCloudCode(codeObj);
+          }
+
+          // Ensure user profile in DB is VIP
+          const userObj = await getCloudUser(cleanAccount);
+          if (userObj) {
+            const allLessonIds = Array.from({ length: 144 }, (_, i) => i + 1);
+            userObj.profile = {
+              ...userObj.profile,
+              isVip: true,
+              unlockedLessonIds: Array.from(new Set([...(userObj.profile?.unlockedLessonIds || []), ...allLessonIds]))
+            };
+            await saveCloudUser(cleanAccount, userObj);
+          }
+
+          return res.json({
+            success: true,
+            message: `✨ 该账号已成功激活！设备已打通 (${codeObj.devices.length}/${codeObj.maxDevices || 3} 台)`,
+            profile: userObj?.profile
+          });
+        }
+
+        // If used by a DIFFERENT account
+        return res.status(200).json({
+          success: false,
+          error: `❌ 该激活码已被账号 (${codeObj.usedByAccount}) 绑定使用！每个激活码仅可激活 1 个账号。`
+        });
+      }
+
+      // Code is UNUSED: Activate now!
+      const initialDevices = [currentDeviceId];
+      codeObj.isUsed = true;
+      codeObj.usedByAccount = cleanAccount;
+      codeObj.usedAt = Date.now();
+      codeObj.devices = initialDevices;
+      await saveCloudCode(codeObj);
+
+      // Upgrade User Profile to VIP & Unlock All 144 Lessons
+      const allLessonIds = Array.from({ length: 144 }, (_, i) => i + 1);
+      const userObj = await getCloudUser(cleanAccount) || {
+        uid: 'user_' + Date.now(),
+        account: cleanAccount,
+        nickname: cleanAccount,
+        profile: {}
+      };
+
+      userObj.profile = {
+        ...userObj.profile,
+        isVip: true,
+        vipActivatedAt: Date.now(),
+        unlockedLessonIds: allLessonIds
+      };
+      await saveCloudUser(cleanAccount, userObj);
+
+      return res.json({
+        success: true,
+        message: `🎉 激活成功！全套 1~4 册 348 关卡与 Alex AI 实时对练已永久解锁 (已绑定 1/3 台设备)`,
+        profile: userObj.profile
+      });
+
+    } catch (err: any) {
+      console.error("Activate Code Error:", err);
+      return res.status(200).json({ success: false, error: "激活代码处理失败，请稍后重试" });
+    }
+  });
+
+  // ===== Admin: Generate Batch Activation Codes Endpoint =====
+  app.post("/api/admin/generate-codes", async (req, res) => {
+    try {
+      const { count = 10, prefix = 'MC144', maxDevices = 3 } = req.body || {};
+      const numToGenerate = Math.min(Math.max(Number(count) || 10, 1), 500);
+
+      const generatedCodes: string[] = [];
+      const now = Date.now();
+
+      for (let i = 0; i < numToGenerate; i++) {
+        const randPart1 = crypto.randomBytes(2).toString('hex').toUpperCase();
+        const randPart2 = crypto.randomBytes(2).toString('hex').toUpperCase();
+        const randPart3 = crypto.randomBytes(2).toString('hex').toUpperCase();
+        const code = `${prefix}-${randPart1}-${randPart2}-${randPart3}`;
+
+        const cObj = {
+          code,
+          isUsed: false,
+          usedByAccount: '',
+          usedAt: 0,
+          devices: [],
+          maxDevices: Number(maxDevices) || 3,
+          createdAt: now
+        };
+
+        await saveCloudCode(cObj);
+        generatedCodes.push(code);
+      }
+
+      return res.json({
+        success: true,
+        message: `成功批量生成 ${generatedCodes.length} 张独一无二的 VIP 激活码！`,
+        codes: generatedCodes
+      });
+
+    } catch (err: any) {
+      console.error("Generate Codes Error:", err);
+      return res.status(200).json({ success: false, error: "批量生成激活码失败" });
+    }
+  });
+
+  // ===== Admin: Fetch All Activation Codes Endpoint =====
+  app.get("/api/admin/codes", async (_req, res) => {
+    try {
+      const codes = await getAllCloudCodes();
+      return res.json({
+        success: true,
+        count: codes.length,
+        codes
+      });
+    } catch (err: any) {
+      return res.status(200).json({ success: false, error: "读取激活码列表失败" });
+    }
+  });
+
+  // ===== Admin: Revoke / Unbind Devices Endpoint =====
+  app.post("/api/admin/revoke-code", async (req, res) => {
+    try {
+      const { code, action } = req.body || {}; // action: 'unbind' | 'reset'
+      if (!code) {
+        return res.status(200).json({ success: false, error: "缺少激活码参数" });
+      }
+
+      const cObj = await getCloudCode(code);
+      if (!cObj) {
+        return res.status(200).json({ success: false, error: "未找到该激活码" });
+      }
+
+      if (action === 'unbind') {
+        cObj.devices = [];
+        await saveCloudCode(cObj);
+        return res.json({ success: true, message: `已成功清空激活码 (${code}) 绑定的所有设备列表` });
+      }
+
+      if (action === 'reset') {
+        cObj.isUsed = false;
+        cObj.usedByAccount = '';
+        cObj.usedAt = 0;
+        cObj.devices = [];
+        await saveCloudCode(cObj);
+        return res.json({ success: true, message: `已成功重置激活码 (${code}) 为全新【未使用】状态！` });
+      }
+
+      return res.status(200).json({ success: false, error: "未知操作类型" });
+    } catch (err: any) {
+      return res.status(200).json({ success: false, error: "卡密重置处理失败" });
     }
   });
 

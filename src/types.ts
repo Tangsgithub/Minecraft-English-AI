@@ -119,7 +119,9 @@ export interface UserProfile {
   eyeCareMinutes?: number;
   currentLessonId: number;
   unlockedLessonIds: number[];
+  completedLessonIds?: number[];
   completedMissionIds: string[];
+  readyToClaimMissionIds?: string[];
   unlockedBadgeIds: string[];
   masteredWords: string[];
   apiKeyConfig: ApiKeyConfig;
@@ -127,6 +129,8 @@ export interface UserProfile {
   todayStudyMinutes?: number;
   totalStudyMinutes?: number;
   parentSettings?: ParentSettings;
+  isVip?: boolean;
+  vipActivatedAt?: number;
   lastEnderChestClaimDate?: string;
   selectedVolumeId?: CourseVolumeId;
   createdAt?: number;

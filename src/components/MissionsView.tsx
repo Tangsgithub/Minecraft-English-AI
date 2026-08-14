@@ -146,6 +146,7 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
       <div className="space-y-4">
         {INITIAL_MISSIONS.map(mission => {
           const isCompleted = (profile.completedMissionIds || []).includes(mission.id);
+          const isReadyToClaim = (profile.readyToClaimMissionIds || []).includes(mission.id);
           const maxUnlocked = Math.max(...(profile.unlockedLessonIds || [1]), 1);
           const isUnlockedByLesson = !mission.requiredLessonId || mission.requiredLessonId <= maxUnlocked;
 
@@ -214,15 +215,24 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
                         onClick={onNavigateToChat}
                         className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-slate-300 rounded-xl text-xs font-mono font-bold shadow-sm"
                       >
-                        与 Alex 对话完成
+                        去与 Alex 对话
                       </button>
 
-                      <button
-                        onClick={() => handleClaimReward(mission)}
-                        className="px-4 py-2 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl text-xs font-mono font-black shadow-[0_3px_0_0_#2A4718] transform hover:translate-y-0.5 active:translate-y-[3px] active:shadow-none transition-all"
-                      >
-                        领取奖励
-                      </button>
+                      {(profile.readyToClaimMissionIds || []).includes(mission.id) ? (
+                        <button
+                          onClick={() => handleClaimReward(mission)}
+                          className="px-4 py-2 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl text-xs font-mono font-black shadow-[0_3px_0_0_#2A4718] transform hover:translate-y-0.5 active:translate-y-[3px] active:shadow-none transition-all"
+                        >
+                          领取奖励
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="px-4 py-2 bg-slate-300 border-2 border-slate-400 text-slate-500 rounded-xl text-xs font-mono font-black shadow-sm cursor-not-allowed"
+                        >
+                          任务未完成
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

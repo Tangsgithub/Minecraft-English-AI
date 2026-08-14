@@ -199,8 +199,10 @@ export const saveUserProfileToCloud = async (
 ): Promise<boolean> => {
   const uid = userUid || auth.currentUser?.uid || profile.id;
 
+  if (!uid) return false;
+
+  let apiSuccess = false;
   try {
-    if (!uid) return false;
     const resp = await fetch(`${getApiBase()}/api/auth/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -209,13 +211,27 @@ export const saveUserProfileToCloud = async (
     const text = await resp.text();
     try {
       const data = JSON.parse(text);
-      return data.success === true;
+      apiSuccess = data.success === true;
     } catch {
-      return false;
+      apiSuccess = false;
     }
-  } catch {
-    return false;
+  } catch (err) {
+    console.warn("Server API sync warning:", err);
   }
+
+  // Direct Firestore Document Backup
+  if (firestoreDb && uid) {
+    try {
+      await setDoc(doc(firestoreDb, 'user_profiles', uid), {
+        ...profile,
+        updatedAt: Date.now()
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Firestore setDoc sync warning:", err);
+    }
+  }
+
+  return apiSuccess;
 };
 
 export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
@@ -235,6 +251,9 @@ export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
 };
 
 export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfile | null> => {
+  if (!uid) return null;
+
+  // 1. Try Express API
   try {
     const resp = await fetch(`${getApiBase()}/api/auth/profile`, {
       method: 'POST',
@@ -248,7 +267,22 @@ export const fetchUserProfileFromCloud = async (uid: string): Promise<UserProfil
         return data.profile;
       }
     } catch {}
-  } catch {}
+  } catch (err) {
+    console.warn("Server API fetch profile warning:", err);
+  }
+
+  // 2. Fallback to direct Firestore read
+  if (firestoreDb && uid) {
+    try {
+      const docRef = doc(firestoreDb, 'user_profiles', uid);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return snap.data() as UserProfile;
+      }
+    } catch (err) {
+      console.warn("Firestore getDoc fetch warning:", err);
+    }
+  }
 
   return null;
 };

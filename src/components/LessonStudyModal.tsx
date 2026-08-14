@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Volume2, Play, Square, X } from 'lucide-react';
-import { Lesson } from '../types';
+import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2 } from 'lucide-react';
+import { Lesson, UserProfile } from '../types';
 import { getBiomeChapterByUnit } from '../data/storyData';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
+import { MinecraftAvatar } from './MinecraftAvatar';
+import { SceneOralCheckInModal, RealWorldSceneItem } from './SceneOralCheckInModal';
 
 interface LessonStudyModalProps {
   lesson: Lesson;
+  profile?: UserProfile;
+  isAlreadyCompleted?: boolean;
   onClose: () => void;
   onStartPractice: (lesson: Lesson) => void;
+  onCompleteLesson?: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
 }
 
@@ -255,11 +260,25 @@ export function getRealWorldBridgesForLesson(lesson: Lesson) {
   ];
 }
 
-export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onClose, onStartPractice, onAwardEmeralds }) => {
+export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
+  lesson,
+  profile,
+  isAlreadyCompleted: isAlreadyCompletedProp,
+  onClose,
+  onStartPractice,
+  onCompleteLesson,
+  onAwardEmeralds
+}) => {
   const [playedAudioIds, setPlayedAudioIds] = useState<Set<string>>(new Set());
   const [isPlayingAllDialogue, setIsPlayingAllDialogue] = useState<boolean>(false);
   const [currentDialogueIndex, setCurrentDialogueIndex] = useState<number | null>(null);
   const stopPlayRef = useRef<boolean>(false);
+
+  const isAlreadyCompleted = isAlreadyCompletedProp || (profile ? (
+    (profile.completedLessonIds || []).includes(lesson.id) ||
+    lesson.id < profile.currentLessonId ||
+    (profile.unlockedLessonIds.includes(lesson.id) && profile.unlockedLessonIds.includes(lesson.id + 1))
+  ) : false);
 
   // Focus only on the top 1-2 core target sentence patterns per lesson
   const coreSentences = (lesson.targetSentences && lesson.targetSentences.length > 0)
@@ -279,6 +298,8 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [isScaffoldSuccess, setIsScaffoldSuccess] = useState<boolean>(false);
   const [completedQuests, setCompletedQuests] = useState<Set<number>>(new Set());
+  const [completedSceneTypes, setCompletedSceneTypes] = useState<Record<number, boolean>>({}); // sceneId -> isSpoken
+  const [activeSceneForCheckIn, setActiveSceneForCheckIn] = useState<RealWorldSceneItem | null>(null);
 
   useEffect(() => {
     // Shuffle words for sentence crafting
@@ -374,8 +395,8 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
     setCurrentDialogueIndex(null);
   };
 
-  const totalAudioItems = lesson.targetSentences.length + lesson.vocabulary.length + lesson.dialogueScript.length;
-  const isAllPlayed = playedAudioIds.size >= totalAudioItems;
+  const totalAudioItems = coreSentences.length + lesson.vocabulary.length + lesson.dialogueScript.length;
+  const isAllPlayed = isAlreadyCompleted || playedAudioIds.size >= totalAudioItems;
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto pt-safe pb-safe animate-in fade-in duration-200">
@@ -474,12 +495,8 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
                     } ${isCurrentlyPlaying ? 'scale-[1.01]' : ''}`}
                   >
                     {/* Avatar Block */}
-                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg border flex items-center justify-center text-xl shrink-0 shadow-xs transition-all ${
-                      isRightSpeaker
-                        ? 'bg-amber-100 border-amber-300'
-                        : 'bg-[#EEDDCC] border-[#C89D7C]'
-                    } ${isCurrentlyPlaying ? 'ring-2 ring-emerald-500 scale-105' : ''}`}>
-                      {turn.avatar || (turn.speaker === 'Alex' ? '👩‍🦰' : '👦')}
+                    <div className={`shrink-0 transition-transform ${isCurrentlyPlaying ? 'scale-110 ring-2 ring-emerald-500 rounded-md' : ''}`}>
+                      <MinecraftAvatar speaker={turn.speaker} avatar={turn.avatar} size={42} />
                     </div>
 
                     {/* Chat Bubble Box */}
@@ -726,6 +743,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {getRealWorldBridgesForLesson(lesson).map((item) => {
                 const isCompleted = completedQuests.has(item.id);
+                const wasSpoken = completedSceneTypes[item.id];
                 return (
                   <div key={item.id} className="bg-white p-3.5 rounded-xl border-2 border-amber-200 space-y-2 flex flex-col justify-between shadow-sm">
                     <div className="space-y-1">
@@ -761,18 +779,28 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
 
                     <button
                       onClick={() => {
-                        playEmeraldSound();
-                        setCompletedQuests(prev => new Set(prev).add(item.id));
-                        if (onAwardEmeralds) onAwardEmeralds(2, 5);
+                        playClickSound();
+                        setActiveSceneForCheckIn(item);
                       }}
-                      disabled={isCompleted}
-                      className={`w-full py-1.5 rounded-lg text-[11px] font-mono font-black border transition-all ${
+                      className={`w-full py-2 rounded-lg text-[11px] font-mono font-black border transition-all flex items-center justify-center space-x-1 cursor-pointer ${
                         isCompleted
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 cursor-default'
+                          ? wasSpoken
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-400 hover:bg-emerald-200'
+                            : 'bg-amber-100 text-amber-800 border-amber-400 hover:bg-amber-200'
                           : 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-black shadow-[2px_2px_0_0_#000] active:translate-y-0.5 active:shadow-none'
                       }`}
                     >
-                      {isCompleted ? '✓ 今日现实打卡完成 (+2 ❇️)' : '🎯 尝试口头朗读并打卡 (+2 ❇️)'}
+                      {isCompleted ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>{wasSpoken ? '✓ 口语打卡已达成 (+4 ❇️)' : '✓ 听读自测已打卡 (+2 ❇️)'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-3.5 h-3.5 text-amber-950" />
+                          <span>🎯 尝试口头朗读并打卡 (+4 ❇️)</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 );
@@ -829,7 +857,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
           {!isAllPlayed ? (
             <div className="flex flex-col items-center justify-center text-center space-y-2">
               <div className="w-full bg-slate-300 rounded-full h-2.5 mb-1 overflow-hidden border border-slate-400">
-                <div className="bg-amber-400 h-2.5 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.round((playedAudioIds.size / totalAudioItems) * 100))}%` }}></div>
+                <div className="bg-amber-400 h-2.5 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.round((playedAudioIds.size / (totalAudioItems || 1)) * 100))}%` }}></div>
               </div>
               <p className="text-xs sm:text-sm font-bold text-slate-500 font-mono">
                 📝 任务要求: 请先收听并学习所有课文对话、句型与词汇 ({playedAudioIds.size}/{totalAudioItems})
@@ -839,24 +867,59 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({ lesson, onCl
               </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center text-center space-y-2 animate-in slide-in-from-bottom-2">
+            <div className="flex flex-col items-center text-center space-y-3 animate-in slide-in-from-bottom-2">
               <p className="text-xs sm:text-sm font-black text-[#487E2C] font-mono animate-pulse">
-                ✨ 基础学习完成！Alex 老师正在实战区等你 ✨
+                {isAlreadyCompleted
+                  ? '🌟 本课已打卡通关！你可以随时重复收听与复习 🌟'
+                  : '✨ 恭喜完成全课预习！点击下方按钮通关并同步进度到数据库 ✨'}
               </p>
-              <button
-                onClick={() => {
-                  playEmeraldSound();
-                  onStartPractice(lesson);
-                }}
-                className="w-full py-3 sm:py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl border-4 border-slate-950 shadow-[4px_4px_0_0_#0F172A] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-sm sm:text-base"
-              >
-                进入 1V1 沉浸式实战练习 ⚔️
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+                <button
+                  onClick={() => {
+                    playEmeraldSound();
+                    if (onCompleteLesson) {
+                      onCompleteLesson(lesson.id);
+                    }
+                    onClose();
+                  }}
+                  className="w-full py-3 sm:py-3.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono"
+                >
+                  <span>🏅 打卡通关并解锁第 {lesson.id + 1} 课</span>
+                </button>
+                <button
+                  onClick={() => {
+                    playEmeraldSound();
+                    if (onCompleteLesson) {
+                      onCompleteLesson(lesson.id);
+                    }
+                    onStartPractice(lesson);
+                  }}
+                  className="w-full py-3 sm:py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl border-3 border-slate-950 shadow-[3px_3px_0_0_#0F172A] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono"
+                >
+                  <span>⚔️ 开启 1V1 AI 口语实战对练</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
 
       </div>
+
+      {/* Real-World 3-Scene Oral & Anti-Cheat Check-in Modal */}
+      {activeSceneForCheckIn && (
+        <SceneOralCheckInModal
+          scene={activeSceneForCheckIn}
+          isOpen={!!activeSceneForCheckIn}
+          onClose={() => setActiveSceneForCheckIn(null)}
+          onCompleteSceneCheckIn={(sceneId, earnedEmeralds, earnedXp, isSpoken) => {
+            setCompletedQuests(prev => new Set(prev).add(sceneId));
+            setCompletedSceneTypes(prev => ({ ...prev, [sceneId]: isSpoken }));
+            if (onAwardEmeralds) {
+              onAwardEmeralds(earnedEmeralds, earnedXp);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

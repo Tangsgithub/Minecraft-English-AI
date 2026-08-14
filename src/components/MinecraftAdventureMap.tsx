@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, getBiomeChapterByUnit, getBiomeChapterByLesson, BiomeChapter } from '../data/storyData';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
+import { MinecraftAvatar } from './MinecraftAvatar';
 import {
   CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
   Award, Star, ChevronRight, BookOpen, Trophy, Flame, Shield, Flag, MapPin, Mic
@@ -393,7 +394,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const chapter = getBiomeChapterByUnit(unitNum);
             const storySnippet = chapter.lessonsStory[item.id] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 展开第 ${item.id} 课对话。`;
 
-            const isCompleted = item.id < profile.currentLessonId || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(item.id + 1));
+            const isCompleted = item.id < profile.currentLessonId || (profile.completedLessonIds || []).includes(item.id) || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(item.id + 1));
             const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
             const isCurrent = profile.currentLessonId === item.id;
             const isBossNode = item.id % 12 === 0;
@@ -522,9 +523,9 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                     {/* Steve Player Character Avatar above Current Node */}
                     {isCurrent && (
                       <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center animate-bounce">
-                        <div className="bg-[#FF6321] text-white px-3.5 py-1.5 rounded-2xl font-mono font-black text-xs shadow-[0_5px_0_0_#992E00] border-2 border-black flex items-center space-x-2 whitespace-nowrap">
-                          <span className="text-lg">{profile.selectedAvatar || '👦'}</span>
-                          <span>探险者 {profile.nickname || 'Olaf'} 在此关</span>
+                        <div className="bg-[#FF6321] text-white px-3 py-1.5 rounded-2xl font-mono font-black text-xs shadow-[0_5px_0_0_#992E00] border-2 border-black flex items-center space-x-2 whitespace-nowrap">
+                          <MinecraftAvatar speaker={profile.nickname || 'Steve'} size={22} />
+                          <span>探险者 {profile.nickname || 'Steve'} 在此关</span>
                         </div>
                         <div className="w-3.5 h-3.5 bg-[#FF6321] rotate-45 -mt-2 border-r-2 border-b-2 border-black" />
                       </div>

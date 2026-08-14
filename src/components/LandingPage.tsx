@@ -24,6 +24,7 @@ interface LandingPageProps {
   onOpenAuth: () => void;
   onOpenParentDashboard: () => void;
   onOpenCustomerService?: () => void;
+  onOpenAdminConsole?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -31,7 +32,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onEnterApp,
   onOpenAuth,
   onOpenParentDashboard,
-  onOpenCustomerService
+  onOpenCustomerService,
+  onOpenAdminConsole
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
@@ -71,6 +73,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className="flex items-center space-x-2.5">
+            {onOpenAdminConsole && (
+              <button
+                onClick={() => {
+                  playClickSound();
+                  onOpenAdminConsole();
+                }}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-red-950/90 hover:bg-red-900 text-red-200 border border-red-500/80 text-xs font-black transition-all shadow-md active:scale-95"
+                title="超级管理员控制台"
+              >
+                <span>🛠️ 管理员后台</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 playClickSound();
@@ -253,6 +268,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button onClick={onOpenAuth} className="hover:text-emerald-400 transition-colors">
               登录账号
             </button>
+            {onOpenAdminConsole && (
+              <button onClick={onOpenAdminConsole} className="text-amber-400 hover:text-amber-300 font-bold transition-colors">
+                🛠️ 管理员后台
+              </button>
+            )}
           </div>
           <p className="text-[11px] text-slate-600 font-mono">© 2026 Minecraft English World • {APP_VERSION_INFO.version}</p>
         </footer>

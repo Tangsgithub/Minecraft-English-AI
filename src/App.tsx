@@ -11,14 +11,16 @@ import { VocabProgressChart } from './components/VocabProgressChart';
 import { MissionsView } from './components/MissionsView';
 import { AchievementsView } from './components/AchievementsView';
 import { SettingsModal } from './components/SettingsModal';
+import { UserProfileModal } from './components/UserProfileModal';
 import { StudyGuideManualModal } from './components/StudyGuideManualModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
+import { VipActivationModal } from './components/VipActivationModal';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
-import { auth, User, saveUserProfileToCloud } from './lib/firebase';
+import { auth, User, saveUserProfileToCloud, fetchUserProfileFromCloud } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
@@ -36,6 +38,7 @@ const DEFAULT_PROFILE: UserProfile = {
   selectedAvatar: '👦',
   currentLessonId: 1,
   unlockedLessonIds: [1, 2],
+  completedLessonIds: [],
   completedMissionIds: [],
   unlockedBadgeIds: ['badge_first_words'],
   masteredWords: ['block', 'craft', 'house'],
@@ -54,6 +57,7 @@ const sanitizeProfile = (raw: any): UserProfile => {
     ...DEFAULT_PROFILE,
     ...raw,
     unlockedLessonIds: Array.isArray(raw.unlockedLessonIds) ? raw.unlockedLessonIds : [1, 2],
+    completedLessonIds: Array.isArray(raw.completedLessonIds) ? raw.completedLessonIds : [],
     completedMissionIds: Array.isArray(raw.completedMissionIds)
       ? raw.completedMissionIds
       : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []),
@@ -67,6 +71,12 @@ const sanitizeProfile = (raw: any): UserProfile => {
     for (let i = 1; i <= merged.currentLessonId; i++) {
       unlockedSet.add(i);
     }
+  }
+  if (merged.completedLessonIds && merged.completedLessonIds.length > 0) {
+    merged.completedLessonIds.forEach(id => {
+      unlockedSet.add(id);
+      unlockedSet.add(id + 1);
+    });
   }
   merged.unlockedLessonIds = Array.from(unlockedSet).sort((a, b) => a - b);
   merged.level = getLevelFromXp(merged.xp || 40);
@@ -103,11 +113,24 @@ export default function App() {
   // Modals
   const [isFirstLaunchOpen, setIsFirstLaunchOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isParentDashboardOpen, setIsParentDashboardOpen] = useState<boolean>(false);
   const [isEyeCareOpen, setIsEyeCareOpen] = useState<boolean>(false);
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
+  const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
+
+  // Fetch latest cloud profile on login or mount
+  useEffect(() => {
+    if (currentUser?.uid) {
+      fetchUserProfileFromCloud(currentUser.uid).then(cloudProfile => {
+        if (cloudProfile) {
+          setProfile(prev => sanitizeProfile({ ...prev, ...cloudProfile }));
+        }
+      });
+    }
+  }, [currentUser?.uid]);
 
   // Sync profile to localStorage and Cloud
   useEffect(() => {
@@ -218,13 +241,31 @@ export default function App() {
 
   const handleCompleteLesson = (lessonId: number) => {
     handleAwardEmeralds(10, 30);
+    playEmeraldSound();
+    confetti({
+      particleCount: 70,
+      spread: 60,
+      origin: { y: 0.6 }
+    });
+
     setProfile(prev => {
-      const nextUnlocked = Array.from(new Set([...prev.unlockedLessonIds, lessonId, lessonId + 1]));
-      return {
+      const nextUnlocked = Array.from(new Set([...prev.unlockedLessonIds, lessonId, lessonId + 1])).sort((a, b) => a - b);
+      const nextCompleted = Array.from(new Set([...(prev.completedLessonIds || []), lessonId])).sort((a, b) => a - b);
+      const nextCurrentLessonId = Math.max(prev.currentLessonId, lessonId + 1);
+
+      const nextProfile: UserProfile = {
         ...prev,
-        currentLessonId: Math.max(prev.currentLessonId, lessonId + 1),
-        unlockedLessonIds: nextUnlocked
+        currentLessonId: nextCurrentLessonId,
+        unlockedLessonIds: nextUnlocked,
+        completedLessonIds: nextCompleted
       };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(nextProfile));
+      }
+      saveUserProfileToCloud(nextProfile, currentUser?.uid);
+
+      return nextProfile;
     });
   };
 
@@ -276,6 +317,14 @@ export default function App() {
     setIsFirstLaunchOpen(true);
   };
 
+  const handleSignOut = () => {
+    playClickSound();
+    auth.currentUser = null;
+    setCurrentUser(null);
+    setIsUserProfileOpen(false);
+    setIsLandingView(true);
+  };
+
   const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
     if (!currentUser) {
       setIsAuthOpen(true);
@@ -296,8 +345,16 @@ export default function App() {
           onOpenAuth={() => setIsAuthOpen(true)}
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
           onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
+          onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         />
         <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
+        {isAdminConsoleOpen && (
+          <AdminDashboardModal
+            profile={profile}
+            onUpdateProfile={(updater) => setProfile(updater)}
+            onClose={() => setIsAdminConsoleOpen(false)}
+          />
+        )}
         {isParentDashboardOpen && (
           <ParentDashboardModal
             profile={profile}
@@ -341,11 +398,15 @@ export default function App() {
         profile={profile}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onSignOut={handleSignOut}
+        onOpenVipModal={() => setIsVipModalOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenUserProfile={() => setIsUserProfileOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
+        onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
       />
@@ -353,17 +414,17 @@ export default function App() {
       {/* Main App Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 py-3 sm:py-6 flex flex-col space-y-4 sm:space-y-5 pb-safe">
         
-        {/* Navigation Tabs Bar (Vibrant Palette Tactile Style) */}
-        <nav className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
+        {/* Navigation Tabs Bar (Responsive Mobile Optimized) */}
+        <nav className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1 sm:p-2 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
           
           <button
             onClick={() => {
               playClickSound();
               setActiveTab('map');
             }}
-            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
               activeTab === 'map'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
@@ -376,16 +437,16 @@ export default function App() {
               playClickSound();
               setActiveTab('chat');
             }}
-            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all relative transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all relative active:translate-y-0.5 ${
               activeTab === 'chat'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span className="whitespace-nowrap">👩‍🦰 Alex 对话</span>
             {selectedLessonForChat && (
-              <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#FF6321] animate-ping absolute top-1.5 right-1.5 border border-white" />
+              <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
             )}
           </button>
 
@@ -394,14 +455,14 @@ export default function App() {
               playClickSound();
               setActiveTab('vocab');
             }}
-            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
               activeTab === 'vocab'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">📦 MC 词库</span>
+            <span className="whitespace-nowrap">📦 词汇宝典</span>
           </button>
 
           <button
@@ -409,14 +470,14 @@ export default function App() {
               playClickSound();
               setActiveTab('crafting');
             }}
-            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
               activeTab === 'crafting'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Hammer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🔨 合成实验室</span>
+            <span className="whitespace-nowrap">🔨 合成实验</span>
           </button>
 
           <button
@@ -424,9 +485,9 @@ export default function App() {
               playClickSound();
               setActiveTab('missions');
             }}
-            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
               activeTab === 'missions'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
@@ -439,9 +500,9 @@ export default function App() {
               playClickSound();
               setActiveTab('achievements');
             }}
-            className={`flex-1 min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2.5 sm:py-3 px-2.5 sm:px-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all transform hover:translate-y-[-2px] active:translate-y-[2px] ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
               activeTab === 'achievements'
-                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_3px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
@@ -474,6 +535,32 @@ export default function App() {
               onAwardEmeralds={handleAwardEmeralds}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onCompleteLesson={handleCompleteLesson}
+              onCheckMission={(text) => {
+                const lowerText = text.toLowerCase();
+                const newReady = [];
+                import('./data/gamificationData').then(({ INITIAL_MISSIONS }) => {
+                  INITIAL_MISSIONS.forEach(mission => {
+                    if ((profile.completedMissionIds || []).includes(mission.id)) return;
+                    if ((profile.readyToClaimMissionIds || []).includes(mission.id)) return;
+                    
+                    let matched = false;
+                    if (mission.id === 'mission_001' && lowerText.includes('wooden door')) matched = true;
+                    if (mission.id === 'mission_002' && (lowerText.includes('excuse me') || lowerText.includes('teacher'))) matched = true;
+                    if (mission.id === 'mission_003' && lowerText.includes('diamonds')) matched = true;
+                    if (mission.id === 'mission_004' && (lowerText.includes('how much') || lowerText.includes('emerald'))) matched = true;
+                    
+                    if (matched) {
+                      newReady.push(mission.id);
+                      alert(`🎉 恭喜！你通过对话完成了隐藏任务: [${mission.titleZh}]！请去"任务"页面领取奖励吧！`);
+                    }
+                  });
+                  if (newReady.length > 0) {
+                    handleUpdateProfile({
+                      readyToClaimMissionIds: [...(profile.readyToClaimMissionIds || []), ...newReady]
+                    });
+                  }
+                });
+              }}
               onBackToMap={() => {
                 setActiveTab('map');
                 setSelectedLessonForChat(null);
@@ -541,6 +628,28 @@ export default function App() {
         />
       )}
 
+      {isUserProfileOpen && (
+        <UserProfileModal
+          profile={profile}
+          currentUser={currentUser}
+          onSaveProfile={handleUpdateProfile}
+          onClose={() => setIsUserProfileOpen(false)}
+          onSignOut={handleSignOut}
+          onSwitchAccount={() => {
+            setIsUserProfileOpen(false);
+            setIsAuthOpen(true);
+          }}
+          onOpenVipModal={() => {
+            setIsUserProfileOpen(false);
+            setIsVipModalOpen(true);
+          }}
+          onOpenParentDashboard={() => {
+            setIsUserProfileOpen(false);
+            setIsParentDashboardOpen(true);
+          }}
+        />
+      )}
+
       {isGuideOpen && (
         <StudyGuideManualModal onClose={() => setIsGuideOpen(false)} />
       )}
@@ -597,6 +706,22 @@ export default function App() {
         }}
         currentProfile={profile}
       />
+
+      <VipActivationModal
+        isOpen={isVipModalOpen}
+        onClose={() => setIsVipModalOpen(false)}
+        profile={profile}
+        onUpdateProfile={handleUpdateProfile}
+        onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
+      />
+
+      {isAdminConsoleOpen && (
+        <AdminDashboardModal
+          profile={profile}
+          onUpdateProfile={(updater) => setProfile(updater)}
+          onClose={() => setIsAdminConsoleOpen(false)}
+        />
+      )}
 
     </div>
   );

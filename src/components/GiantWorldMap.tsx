@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, BiomeChapter, getBiomeChapterByUnit } from '../data/storyData';
 import { LessonStudyModal } from './LessonStudyModal';
+import { MinecraftAvatar } from './MinecraftAvatar';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
-  Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X
+  Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X,
+  LayoutGrid, ChevronLeft, ChevronRight, Zap, Layers
 } from 'lucide-react';
 import { playClickSound, speakText, playEmeraldSound, playBlockBreakSound } from '../utils/audio';
 
@@ -211,6 +213,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   onAwardEmeralds
 }) => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
+  const [biomeNavMode, setBiomeNavMode] = useState<'grid' | 'scroll'>('grid'); // Default to grid for 100% full visibility of 1-12
+  const [highlightedUnit, setHighlightedUnit] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 0.85, 1, 1.2
   const [showBgImage, setShowBgImage] = useState<boolean>(true);
   const [isDaylight, setIsDaylight] = useState<boolean>(true); // Default bright daylight Minecraft world
@@ -225,13 +229,24 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
   // Scroll to selected biome section
   const biomeSectionRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+  const scrollNavRef = useRef<HTMLDivElement>(null);
 
   const handleJumpToUnit = (unitNum: number) => {
     playClickSound();
     setSelectedUnit(unitNum);
+    setHighlightedUnit(unitNum);
+    setTimeout(() => setHighlightedUnit(null), 3000);
     const el = biomeSectionRefs.current[unitNum];
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleScrollNav = (direction: 'left' | 'right') => {
+    playClickSound();
+    if (scrollNavRef.current) {
+      const scrollAmount = direction === 'left' ? -320 : 320;
+      scrollNavRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
 
@@ -264,49 +279,220 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
   return (
     <div className="space-y-6">
-      
       {/* Top Controls & Biome Quick Navigation Bar */}
-      <div className="bg-white/95 border-4 border-black rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] space-y-4">
+      <div className="bg-white/95 border-4 border-black rounded-2xl sm:rounded-[2rem] p-4 sm:p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] space-y-3.5">
         
+        {/* Header with Title, Active Location, and Mode Toggles */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b-2 border-slate-100 pb-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="w-8 h-8 bg-[#487E2C] text-white border-2 border-black rounded-xl flex items-center justify-center font-black shadow-xs text-sm">
+              <Compass className="w-4 h-4 text-amber-300 animate-spin-slow" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-black font-mono text-slate-900">
+                  生态领地快捷传送
+                </span>
+                <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-mono font-black">
+                  Unit 1 - 12 全景覆盖
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-mono font-semibold">
+                点击任意领地可立即定位至对应生态关卡（第 1 - 144 课）
+              </p>
+            </div>
+          </div>
 
+          <div className="flex items-center space-x-2 self-end sm:self-center">
+            {/* View Mode Toggle: Grid vs Scroll */}
+            <div className="bg-slate-100 p-1 rounded-xl border border-slate-300 flex items-center space-x-1">
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setBiomeNavMode('grid');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black flex items-center space-x-1 transition-all ${
+                  biomeNavMode === 'grid'
+                    ? 'bg-[#487E2C] text-white shadow-xs border border-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+                title="12大生态全景平铺展示（Unit 1 至 Unit 12 全部一眼可见）"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>12领地平铺全览</span>
+              </button>
 
-        {/* 12 Biome Tabs Quick Navigator */}
-        <div className="">
-          <p className="text-xs font-mono font-black text-slate-600 mb-2 flex items-center space-x-1">
-            <Compass className="w-4 h-4 text-[#487E2C]" />
-            <span>传送定位到生态领地:</span>
-          </p>
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  setBiomeNavMode('scroll');
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black flex items-center space-x-1 transition-all ${
+                  biomeNavMode === 'scroll'
+                    ? 'bg-[#487E2C] text-white shadow-xs border border-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+                title="单行横滑传送条"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>横滑条</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none snap-x">
+        {/* 1~12 Quick Jump Number Ribbon */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <span className="text-[11px] font-mono font-black text-slate-500 shrink-0 flex items-center space-x-1 mr-1">
+            <Zap className="w-3 h-3 text-amber-500" />
+            <span>直达:</span>
+          </span>
+          {BIOME_CHAPTERS.map(ch => {
+            const isSelected = selectedUnit === ch.unit;
+            const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
+            const isPlayerHere = currentUnitNum === ch.unit;
+            return (
+              <button
+                key={`pill-${ch.unit}`}
+                type="button"
+                onClick={() => handleJumpToUnit(ch.unit)}
+                className={`px-2 py-1 rounded-lg text-xs font-mono font-black border transition-all shrink-0 flex items-center space-x-1 cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#487E2C] text-white border-black shadow-[0_2px_0_0_#000] scale-105'
+                    : isPlayerHere
+                    ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                }`}
+                title={`Unit ${ch.unit}: ${ch.titleZh} (${ch.biomeNameZh})`}
+              >
+                <span>{ch.icon}</span>
+                <span>U{ch.unit}</span>
+                {isPlayerHere && <span className="w-1.5 h-1.5 rounded-full bg-[#FF6321] animate-pulse" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Display Container: Grid Mode or Scroll Mode */}
+        {biomeNavMode === 'grid' ? (
+          /* Responsive 12-card Grid: 6 cols x 2 rows on desktop, 4x3 on tablet, 2x6 on mobile */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-1">
             {BIOME_CHAPTERS.map(ch => {
               const isActive = selectedUnit === ch.unit;
               const unitLessons = catalog.filter(l => l.unit === ch.unit);
               const completedCount = unitLessons.filter(l => l.id < profile.currentLessonId || profile.unlockedLessonIds.includes(l.id + 1)).length;
-              const isUnitUnlocked = ch.unit === 1 || profile.currentLessonId >= (ch.unit - 1) * 12;
+              const isUnitFinished = completedCount === 12;
+              const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
+              const isPlayerHere = currentUnitNum === ch.unit;
 
               return (
                 <button
                   key={ch.unit}
                   type="button"
                   onClick={() => handleJumpToUnit(ch.unit)}
-                  className={`snap-start shrink-0 px-3 py-2 rounded-xl border-2 font-mono text-xs flex items-center space-x-2 transition-all ${
+                  className={`p-2.5 rounded-xl sm:rounded-2xl border-2 font-mono text-left transition-all relative flex flex-col justify-between cursor-pointer active:translate-y-0.5 ${
                     isActive
-                      ? 'bg-[#487E2C] border-black text-white shadow-[0_3px_0_0_#000] scale-105 font-black'
-                      : isUnitUnlocked
-                      ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
-                      : 'bg-slate-100 border-slate-200 text-slate-400 opacity-60'
+                      ? 'bg-[#487E2C] border-black text-white shadow-[0_3px_0_0_#000] ring-2 ring-amber-300 scale-[1.02] z-10'
+                      : isPlayerHere
+                      ? 'bg-amber-50/90 border-[#FF6321] text-amber-950 shadow-sm hover:bg-amber-100'
+                      : isUnitFinished
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950 hover:bg-emerald-100'
+                      : 'bg-slate-50 border-slate-300 text-slate-800 hover:bg-slate-100 hover:border-slate-400'
                   }`}
                 >
-                  <span className="text-base">{ch.icon}</span>
-                  <div className="text-left leading-tight">
-                    <p className="font-bold whitespace-nowrap">Unit {ch.unit}</p>
-                    <p className="text-[10px] opacity-80 whitespace-nowrap">{completedCount}/12 课</p>
+                  <div className="flex items-start justify-between">
+                    <span className="text-xl sm:text-2xl leading-none">{ch.icon}</span>
+                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                      isActive
+                        ? 'bg-black/30 text-white'
+                        : isPlayerHere
+                        ? 'bg-[#FF6321] text-white'
+                        : isUnitFinished
+                        ? 'bg-emerald-200 text-emerald-900'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {isPlayerHere ? '当前' : isUnitFinished ? '✓ 通关' : `${completedCount}/12`}
+                    </span>
+                  </div>
+
+                  <div className="mt-1.5 space-y-0.5">
+                    <p className={`font-black text-xs leading-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                      Unit {ch.unit}
+                    </p>
+                    <p className={`text-[10px] truncate ${isActive ? 'text-emerald-100 font-bold' : 'text-slate-500 font-medium'}`}>
+                      {ch.biomeNameZh.split('·')[0]}
+                    </p>
                   </div>
                 </button>
               );
             })}
           </div>
-        </div>
+        ) : (
+          /* Horizontal Scroll Mode with Left/Right Arrows */
+          <div className="relative group/scroll pt-1">
+            <button
+              type="button"
+              onClick={() => handleScrollNav('left')}
+              className="absolute -left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white border-2 border-black rounded-full flex items-center justify-center text-slate-800 shadow-md hover:bg-amber-300 transition-all active:scale-90"
+              title="向左滚动生态领地"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleScrollNav('right')}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white border-2 border-black rounded-full flex items-center justify-center text-slate-800 shadow-md hover:bg-amber-300 transition-all active:scale-90"
+              title="向右滚动生态领地 (直达 Unit 12)"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <div
+              ref={scrollNavRef}
+              className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 px-1 snap-x"
+            >
+              {BIOME_CHAPTERS.map(ch => {
+                const isActive = selectedUnit === ch.unit;
+                const unitLessons = catalog.filter(l => l.unit === ch.unit);
+                const completedCount = unitLessons.filter(l => l.id < profile.currentLessonId || profile.unlockedLessonIds.includes(l.id + 1)).length;
+                const isUnitFinished = completedCount === 12;
+                const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
+                const isPlayerHere = currentUnitNum === ch.unit;
+
+                return (
+                  <button
+                    key={ch.unit}
+                    type="button"
+                    onClick={() => handleJumpToUnit(ch.unit)}
+                    className={`snap-start shrink-0 px-3.5 py-2.5 rounded-xl border-2 font-mono text-xs flex items-center space-x-2.5 transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#487E2C] border-black text-white shadow-[0_3px_0_0_#000] scale-105 font-black z-10'
+                        : isPlayerHere
+                        ? 'bg-amber-50 border-[#FF6321] text-amber-950 font-bold hover:bg-amber-100'
+                        : isUnitFinished
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950 hover:bg-emerald-100'
+                        : 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span className="text-lg">{ch.icon}</span>
+                    <div className="text-left leading-tight">
+                      <div className="flex items-center space-x-1">
+                        <p className="font-bold whitespace-nowrap">Unit {ch.unit}</p>
+                        {isPlayerHere && <span className="text-[9px] bg-[#FF6321] text-white px-1 py-0.2 rounded font-black">在此关</span>}
+                      </div>
+                      <p className={`text-[10px] whitespace-nowrap ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
+                        {ch.biomeNameZh.split('·')[0]} ({completedCount}/12)
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -372,12 +558,31 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
             const isUnitCurrent = profile.currentLessonId >= (ch.unit - 1) * 12 + 1 && profile.currentLessonId <= ch.unit * 12;
             const cardTheme = BIOME_CARD_STYLES[ch.unit] || BIOME_CARD_STYLES[1];
 
+            const isHighlighted = highlightedUnit === ch.unit;
+
             return (
               <div
                 key={ch.unit}
                 ref={el => biomeSectionRefs.current[ch.unit] = el}
-                className={`relative border-4 ${cardTheme.border} ${cardTheme.bg} rounded-3xl p-5 sm:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-300`}
+                className={`relative border-4 ${
+                  isHighlighted
+                    ? 'border-amber-400 ring-8 ring-amber-400/60 shadow-[0_0_45px_rgba(251,191,36,0.9)] scale-[1.01]'
+                    : cardTheme.border
+                } ${cardTheme.bg} rounded-3xl p-5 sm:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] overflow-hidden transition-all duration-500`}
               >
+                {/* Floating Teleport Arrived Flash Notification Banner */}
+                {isHighlighted && (
+                  <div className="mb-6 p-3.5 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 border-4 border-black text-amber-950 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 font-mono font-black text-xs shadow-[4px_4px_0_0_#000] animate-bounce">
+                    <div className="flex items-center space-x-2">
+                      <Zap className="w-5 h-5 text-amber-950 fill-amber-950 animate-pulse" />
+                      <span className="text-sm">⚡ 快捷传送已抵达：Unit {ch.unit} • {ch.titleZh} ({ch.biomeNameZh})</span>
+                    </div>
+                    <span className="text-xs bg-black text-amber-300 px-3 py-1 rounded-full border border-amber-300 self-start sm:self-auto">
+                      包含第 {(ch.unit - 1) * 12 + 1} - {ch.unit * 12} 课
+                    </span>
+                  </div>
+                )}
+
                 {/* Biome Region Header Banner */}
                 <div className={`p-4 sm:p-5 rounded-2xl border-4 border-black bg-gradient-to-r ${cardTheme.headerGradient} text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8`}>
                   
@@ -420,7 +625,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 {/* 12 Lessons Grid Nodes inside this Biome */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 relative z-10">
                   {unitLessons.map((item) => {
-                    const isCompleted = item.id < profile.currentLessonId || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
+                    const isCompleted = item.id < profile.currentLessonId || (profile.completedLessonIds || []).includes(item.id) || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
                     const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
                     const isCurrent = profile.currentLessonId === item.id;
                     const isBossNode = item.id % 12 === 0;
@@ -442,10 +647,10 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
                         {/* Steve Avatar Floating above Current Node */}
                         {isCurrent && (
-                          <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center animate-bounce">
-                            <div className="bg-[#FF6321] text-white px-2.5 py-1 rounded-xl font-mono font-black text-[10px] shadow-md border-2 border-black flex items-center space-x-1 whitespace-nowrap">
-                              <span>{profile.selectedAvatar || '👦'}</span>
-                              <span>Steve 在此关</span>
+                          <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center animate-bounce">
+                            <div className="bg-[#FF6321] text-white px-2 py-1 rounded-xl font-mono font-black text-[10px] shadow-md border-2 border-black flex items-center space-x-1.5 whitespace-nowrap">
+                              <MinecraftAvatar speaker={profile.nickname || 'Steve'} size={18} />
+                              <span>{profile.nickname || 'Steve'} 在此关</span>
                             </div>
                             <div className="w-2.5 h-2.5 bg-[#FF6321] rotate-45 -mt-1 border-r border-b border-black" />
                           </div>
@@ -561,11 +766,21 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
       {activeLesson && (
         <LessonStudyModal
           lesson={activeLesson}
+          profile={profile}
           onClose={() => setActiveLesson(null)}
+          onCompleteLesson={(lessonId) => {
+            if (onCompleteLesson) {
+              onCompleteLesson(lessonId);
+            }
+          }}
           onStartPractice={(lesson) => {
+            if (onCompleteLesson) {
+              onCompleteLesson(lesson.id);
+            }
             setActiveLesson(null);
             onSelectLessonForChat(lesson);
           }}
+          onAwardEmeralds={onAwardEmeralds}
         />
       )}
 

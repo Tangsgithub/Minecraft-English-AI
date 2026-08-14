@@ -276,14 +276,14 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
     vocabulary: genVocab,
     targetSentences: genSentences.map(s => s.en),
     targetSentenceTranslations: genSentences.map(s => s.zh),
-    dialogueScript: (volumeId === 'vol1' && AUTHENTIC_LESSON_DIALOGUES[lessonId])
-      ? AUTHENTIC_LESSON_DIALOGUES[lessonId].dialogue
+    dialogueScript: (volumeId === 'vol1')
+      ? getCleanedLessonDialogue(lessonId, AUTHENTIC_LESSON_DIALOGUES[lessonId], cleanTitle, cleanTitleZh, genSentences, genVocab)
       : [
           {
             speaker: 'Alex',
             text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! ${genSentences[0]?.en || ''}`,
             translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！${genSentences[0]?.zh || ''}`,
-            avatar: '👩'
+            avatar: '👩‍🦰'
           },
           {
             speaker: 'Steve',
@@ -340,6 +340,137 @@ function generateVocabForLesson(lessonId: number, title: string, titleZh: string
       sampleSentence: 'Our English learning journey is a thrilling adventure.',
       sampleTranslation: '我们的英语学习之旅是一场激动人心的探险。',
       requiredLessonId: lessonId
+    }
+  ];
+}
+
+// ----------------------------------------------------------------------------
+// 辅助函数：根据真实文本清洗与优化对话格式，修正人物对应与偶数课练习
+// ----------------------------------------------------------------------------
+function getCleanedLessonDialogue(
+  lessonId: number,
+  rawData: any,
+  titleEn: string,
+  titleZh: string,
+  genSentences: any[],
+  vocab: any[]
+): Array<{ speaker: string; text: string; translation: string; avatar: string }> {
+  // 1. 偶数课 (Lesson 2, 4, 6, 8...): 《新概念英语》第一册偶数课为句型替换与词汇实操练习
+  if (lessonId % 2 === 0) {
+    const v1 = vocab[0]?.word || 'pen';
+    const v1Zh = vocab[0]?.meaning || '钢笔';
+    const v2 = vocab[1]?.word || 'book';
+    const v2Zh = vocab[1]?.meaning || '书本';
+
+    return [
+      {
+        speaker: 'Steve',
+        text: `Is this your ${v1}?`,
+        translation: `这是你的${v1Zh}吗？`,
+        avatar: '👦'
+      },
+      {
+        speaker: 'Alex',
+        text: `Yes, it is. Thank you very much!`,
+        translation: `是的，它是。非常感谢！`,
+        avatar: '👩‍🦰'
+      },
+      {
+        speaker: 'Steve',
+        text: `Is this your ${v2}?`,
+        translation: `这是你的${v2Zh}吗？`,
+        avatar: '👦'
+      },
+      {
+        speaker: 'Alex',
+        text: `No, it isn't. My ${v2} is in my Minecraft chest.`,
+        translation: `不，不是。我的${v2Zh}在我的箱子里。`,
+        avatar: '👩‍🦰'
+      }
+    ];
+  }
+
+  // 2. 奇数课 (Lesson 1, 3, 5, 7...): 原版正文故事对话
+  if (rawData && rawData.dialogue && rawData.dialogue.length > 0) {
+    const rawList: Array<{ speaker: string; text: string; translation: string; avatar: string }> = rawData.dialogue;
+
+    // 过滤课文前面的听力问题/篇章标题提问
+    const filtered = rawList.filter((turn) => {
+      const text = (turn.text || '').trim();
+      if (
+        text.startsWith("Whose ") ||
+        text.startsWith("Does the ") ||
+        text.startsWith("Which country ") ||
+        text.startsWith("Why is ") ||
+        text.startsWith("Who wanted ") ||
+        text.startsWith("How did ") ||
+        text.startsWith("What's Ron ") ||
+        text.startsWith("Has Ian ") ||
+        text.startsWith("Can Mr. ")
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    if (filtered.length > 0) {
+      // 严格规范与重构 Speakers 交替逻辑 (Steve vs Alex)
+      const result: Array<{ speaker: string; text: string; translation: string; avatar: string }> = [];
+
+      filtered.forEach((turn, idx) => {
+        let speakerName = turn.speaker || (idx % 2 === 0 ? 'Steve' : 'Alex');
+        if (speakerName === 'User' || speakerName === 'Boy' || speakerName === 'Student' || speakerName === 'Man' || speakerName === 'Steve') {
+          speakerName = 'Steve';
+        } else if (speakerName === 'Teacher' || speakerName === 'Girl' || speakerName === 'Woman' || speakerName === 'Alex') {
+          speakerName = 'Alex';
+        }
+
+        // 如果同一个人连续说了多句，合并以保证每词每句完整
+        if (result.length > 0 && result[result.length - 1].speaker === speakerName) {
+          result[result.length - 1].text += ` ${turn.text}`;
+          result[result.length - 1].translation += ` ${turn.translation}`;
+        } else {
+          result.push({
+            speaker: speakerName,
+            text: turn.text,
+            translation: turn.translation,
+            avatar: speakerName === 'Alex' ? '👩‍🦰' : '👦'
+          });
+        }
+      });
+
+      // 如果合并导致只剩1个人，恢复交替轮流发言模式
+      if (result.length === 1 && filtered.length > 1) {
+        const altResult: Array<{ speaker: string; text: string; translation: string; avatar: string }> = [];
+        filtered.forEach((turn, i) => {
+          const spk = i % 2 === 0 ? 'Steve' : 'Alex';
+          altResult.push({
+            speaker: spk,
+            text: turn.text,
+            translation: turn.translation,
+            avatar: spk === 'Alex' ? '👩‍🦰' : '👦'
+          });
+        });
+        return altResult;
+      }
+
+      return result;
+    }
+  }
+
+  // 默认兜底对话
+  return [
+    {
+      speaker: 'Steve',
+      text: genSentences[0]?.en || `Excuse me! Is this your ${titleEn}?`,
+      translation: genSentences[0]?.zh || `打扰一下！这是你的《${titleZh}》吗？`,
+      avatar: '👦'
+    },
+    {
+      speaker: 'Alex',
+      text: genSentences[1]?.en || `Yes, it is! Thank you very much.`,
+      translation: genSentences[1]?.zh || `是的，非常感谢！`,
+      avatar: '👩‍🦰'
     }
   ];
 }
