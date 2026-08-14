@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, VocabItem, Lesson } from '../types';
+import { UserProfile, VocabItem, Lesson, CourseVolumeId } from '../types';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA } from '../data/lessonsData';
 import { EXTRA_CRAFTING_RECIPES } from '../data/craftingRecipesData';
 import {
   Hammer, Sparkles, Volume2, Trophy, Shield, Flame, CheckCircle, RefreshCw,
-  Zap, ArrowRight, Sword, Lock, Star, ChevronRight, Play, Heart, Award, AlertCircle
+  Zap, ArrowRight, Sword, Lock, Unlock, Star, ChevronRight, Play, Heart, Award, AlertCircle, Crown, MapPin
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playBlockBreakSound, speakText, playLevelUpSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
+import { getVolumeProgress, hasLessonAccess, isLessonPaywallLocked } from '../utils/volumeProgress';
 import confetti from 'canvas-confetti';
 
 interface CraftingLabViewProps {
   profile: UserProfile;
   onAwardEmeralds: (emeralds: number, xp: number) => void;
   onMasterWord?: (word: string) => void;
+  onOpenVipModal?: () => void;
+  onNavigateToLesson?: (lessonId: number) => void;
 }
 
-interface CraftingRecipe {
+export interface CraftingRecipe {
   id: string;
   nameEn: string;
   nameZh: string;
@@ -28,7 +31,8 @@ interface CraftingRecipe {
   gridPattern: (string | null)[]; // 9 slots
   sampleSentence: string;
   sampleTranslation: string;
-  unlockedLevel: number;
+  unlockedLevel?: number;
+  requiredLessonId?: number;
 }
 
 const RECIPES: CraftingRecipe[] = EXTRA_CRAFTING_RECIPES;
@@ -43,16 +47,17 @@ interface SentencePattern {
   distractors: string[];
 }
 
-function getDynamicSentencePatterns(unlockedLessonIds: number[]): SentencePattern[] {
+function getDynamicSentencePatterns(unlockedLessonIds: number[], completedLessonIds: number[]): SentencePattern[] {
   const patterns: SentencePattern[] = [];
-  const maxLessonId = Math.max(...(unlockedLessonIds || [1]), 1);
+  const combinedIds = Array.from(new Set([...(unlockedLessonIds || [1]), ...(completedLessonIds || [])])).sort((a, b) => a - b);
+  const lessonsToUse = LESSONS_DATA.filter(l => combinedIds.includes(l.id));
 
-  const lessonsToUse = LESSONS_DATA.filter(l => l.id <= maxLessonId || l.id <= 5).slice(0, 10);
+  const fallbackLessons = lessonsToUse.length > 0 ? lessonsToUse : LESSONS_DATA.slice(0, 3);
 
-  lessonsToUse.forEach((lesson) => {
+  fallbackLessons.forEach((lesson) => {
     if (lesson.targetSentences && lesson.targetSentences.length > 0) {
       const sentence = lesson.targetSentences[0];
-      const translation = lesson.targetSentenceTranslations ? lesson.targetSentenceTranslations[0] : '课文例句';
+      const translation = lesson.targetSentenceTranslations ? lesson.targetSentenceTranslations[0] : '课文核心句型';
 
       const words = sentence.split(' ');
       let blocks: string[] = [];
@@ -71,7 +76,7 @@ function getDynamicSentencePatterns(unlockedLessonIds: number[]): SentencePatter
       patterns.push({
         id: `s_lesson_${lesson.id}`,
         lessonId: lesson.id,
-        title: `Lesson ${lesson.id} • ${lesson.title}`,
+        title: `第 ${lesson.id} 课 • ${lesson.title}`,
         targetSentence: sentence,
         translation: translation,
         blocks: blocks,
@@ -84,7 +89,7 @@ function getDynamicSentencePatterns(unlockedLessonIds: number[]): SentencePatter
     {
       id: 's_01',
       lessonId: 1,
-      title: 'Lesson 1 • Excuse me!',
+      title: '第 1 课 • Excuse me!',
       targetSentence: 'Excuse me, is this your handbag?',
       translation: '请问，这是你的手提包吗？',
       blocks: ['Excuse me,', 'is this', 'your', 'handbag?'],
@@ -110,18 +115,41 @@ interface Boss {
   rewardEmeralds: number;
   rewardXp: number;
   difficulty: string;
+  requiredLessonId: number;
   questions: BossQuestion[];
 }
 
 export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   profile,
   onAwardEmeralds,
-  onMasterWord
+  onMasterWord,
+  onOpenVipModal,
+  onNavigateToLesson
 }) => {
   const [activeTab, setActiveTab] = useState<'recipes' | 'sentence' | 'boss'>('recipes');
 
+  // Progress logic
+  const currentVolId: CourseVolumeId = profile.selectedVolumeId || 'vol1';
+  const volumeProgress = getVolumeProgress(profile, currentVolId);
+  const unlockedLessonSet = new Set(volumeProgress.unlockedLessonIds);
+  const completedLessonSet = new Set(volumeProgress.completedLessonIds);
+  const maxUnlockedLesson = Math.max(...volumeProgress.unlockedLessonIds, 1);
+
+  const isRecipeUnlocked = (recipe: CraftingRecipe): boolean => {
+    const reqLesson = recipe.requiredLessonId || 1;
+    const isAccessibleViaPaywall = hasLessonAccess(profile, currentVolId, reqLesson);
+    const isReachedOnMap = unlockedLessonSet.has(reqLesson) || completedLessonSet.has(reqLesson) || reqLesson <= maxUnlockedLesson;
+    return isAccessibleViaPaywall && isReachedOnMap;
+  };
+
+  const isRecipePaywallLocked = (recipe: CraftingRecipe): boolean => {
+    const reqLesson = recipe.requiredLessonId || 1;
+    return isLessonPaywallLocked(profile, currentVolId, reqLesson);
+  };
+
   // Recipe Crafting State
-  const [selectedRecipe, setSelectedRecipe] = useState<CraftingRecipe>(RECIPES[0]);
+  const unlockedRecipes = RECIPES.filter(isRecipeUnlocked);
+  const [selectedRecipe, setSelectedRecipe] = useState<CraftingRecipe>(() => unlockedRecipes[0] || RECIPES[0]);
   const [gridSlots, setGridSlots] = useState<(string | null)[]>(Array(9).fill(null));
   const [craftedHistory, setCraftedHistory] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
@@ -132,18 +160,11 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   });
   const [isCraftingAnimation, setIsCraftingAnimation] = useState<boolean>(false);
   const [lastCraftedRecipe, setLastCraftedRecipe] = useState<CraftingRecipe | null>(null);
+  const [recipeFilter, setRecipeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
 
   // Sentence Synthesizer State
-  const sentencePatterns = getDynamicSentencePatterns(profile.unlockedLessonIds || [1]);
-  const [selectedSentencePattern, setSelectedSentencePattern] = useState<SentencePattern>(sentencePatterns[0] || {
-    id: 's_default',
-    lessonId: 1,
-    title: 'Lesson 1',
-    targetSentence: 'I break the block with a wooden pickaxe.',
-    translation: '我用木镐破坏方块。',
-    blocks: ['I break', 'the block', 'with a wooden pickaxe.'],
-    distractors: ['not', 'iron']
-  });
+  const sentencePatterns = getDynamicSentencePatterns(volumeProgress.unlockedLessonIds, volumeProgress.completedLessonIds);
+  const [selectedSentencePattern, setSelectedSentencePattern] = useState<SentencePattern>(sentencePatterns[0]);
   const [placedSentenceBlocks, setPlacedSentenceBlocks] = useState<string[]>([]);
   const [availableSentencePool, setAvailableSentencePool] = useState<string[]>([]);
   const [sentenceSuccess, setSentenceSuccess] = useState<boolean>(false);
@@ -154,28 +175,29 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     {
       id: 'zombie',
       name: 'Zombie',
-      nameZh: '村庄夜袭 · 僵尸',
+      nameZh: '夜袭先锋 · 僵尸',
       avatar: '🧟',
       maxHp: 100,
       currentHp: 100,
       rewardEmeralds: 15,
       rewardXp: 30,
       difficulty: '初级探险',
+      requiredLessonId: 1,
       questions: [
         {
-          question: '僵尸（Zombie）最害怕清晨的什么？',
+          question: '僵尸（Zombie）在清晨最害怕什么？',
           options: ['Lava (岩浆)', 'Sunlight (阳光)', 'Water (水)', 'Shadow (阴影)'],
           answer: 'Sunlight (阳光)',
           explanation: 'Zombies burn in the morning sunlight!'
         },
         {
-          question: '“合成台”的英文短语是以下哪一个？',
+          question: '“合成台”对应的正确英文是？',
           options: ['Furnace Block', 'Chest Box', 'Crafting Table', 'Redstone Wire'],
           answer: 'Crafting Table',
           explanation: 'Crafting Table 是 Minecraft 里的核心合成工具！'
         },
         {
-          question: '请补全对话：“Excuse me, is this your coat?” - “Yes, ____.”',
+          question: '请补全对话：“Excuse me, is this your handbag?” - “Yes, ____.”',
           options: ['it isn\'t', 'he is', 'they are', 'it is'],
           answer: 'it is',
           explanation: '肯定的简短回答是：Yes, it is.'
@@ -192,9 +214,10 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       rewardEmeralds: 20,
       rewardXp: 40,
       difficulty: '中级警惕',
+      requiredLessonId: 6,
       questions: [
         {
-          question: '苦力怕靠近玩家时会发出什么特有的嘶嘶声？',
+          question: '苦力怕靠近玩家时会发出什么特有的声音？',
           options: ['Roar! (咆哮)', 'Meow! (喵喵)', 'Ssssss! (嘶嘶)', 'Bzzzz! (蜂鸣)'],
           answer: 'Ssssss! (嘶嘶)',
           explanation: 'Creeper is famous for its "Ssssss!" fuse sound!'
@@ -214,6 +237,38 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       ]
     },
     {
+      id: 'skeleton',
+      name: 'Skeleton',
+      nameZh: '精准狙击手 · 骷髅弓箭手',
+      avatar: '🏹',
+      maxHp: 150,
+      currentHp: 150,
+      rewardEmeralds: 30,
+      rewardXp: 60,
+      difficulty: '高级挑战',
+      requiredLessonId: 10,
+      questions: [
+        {
+          question: '请翻译句子：“Where is my bow and arrow?”',
+          options: ['我的弓箭在哪里？', '你的木剑掉了吗？', '这是弓箭吗？', '我要怎么制造弓箭？'],
+          answer: '我的弓箭在哪里？',
+          explanation: 'Where is... 询问地点；bow and arrow 表示弓箭。'
+        },
+        {
+          question: '击败骷髅弓箭手后，通常会掉落什么道具？',
+          options: ['Rotten Flesh (腐肉)', 'Bones (骨头) & Arrows (箭)', 'Gunpowder (火药)', 'Ender Pearl (末影珍珠)'],
+          answer: 'Bones (骨头) & Arrows (箭)',
+          explanation: 'Skeletons drop bones and arrows!'
+        },
+        {
+          question: '名词复数变换：“knife (小刀)”的正确复数形式是？',
+          options: ['knifes', 'knives', 'knifees', 'knifis'],
+          answer: 'knives',
+          explanation: '以 fe 结尾的名词变复数通常变 fe 为 ves，如 knife -> knives.'
+        }
+      ]
+    },
+    {
       id: 'dragon',
       name: 'Ender Dragon',
       nameZh: '末地维度 · 末影龙',
@@ -222,7 +277,8 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       currentHp: 200,
       rewardEmeralds: 50,
       rewardXp: 100,
-      difficulty: '终极 BOSS',
+      difficulty: '终极 VIP BOSS',
+      requiredLessonId: 20,
       questions: [
         {
           question: '末影龙守护在哪个维度（Dimension）中？',
@@ -231,26 +287,28 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
           explanation: 'The Ender Dragon resides in The End realm!'
         },
         {
-          question: '请翻译句子：“Where is my enchanted bow?”',
-          options: ['这是我的普通弓吗？', '我在哪里可以制造弓箭？', '你的弓丢了吗？', '我的附魔弓在哪里？'],
-          answer: '我的附魔弓在哪里？',
-          explanation: 'Where is... 询问地点；enchanted bow 表示附魔弓。'
-        },
-        {
           question: '词汇辨析：下面哪个单词表示“绿宝石”？',
           options: ['Diamond', 'Emerald', 'Obsidian', 'Gold Ingot'],
           answer: 'Emerald',
-          explanation: 'Emerald 即绿宝石，是村庄交易的黄金货币！'
+          explanation: 'Emerald 即绿宝石，是村庄交易的核心货币！'
+        },
+        {
+          question: '请选出正确的过去式：“Yesterday, Alex ____ a diamond sword.”',
+          options: ['crafts', 'crafted', 'crafting', 'craft'],
+          answer: 'crafted',
+          explanation: 'Yesterday 提示一般过去时，规则动词加 -ed 变为 crafted。'
         }
       ]
     }
   ]);
+
   const [currentBossQIndex, setCurrentBossQIndex] = useState<number>(0);
   const [bossQuizSelected, setBossQuizSelected] = useState<string | null>(null);
   const [bossQuizFeedback, setBossQuizFeedback] = useState<{ isCorrect: boolean; text: string } | null>(null);
 
   // Initialize Available Sentence Pool when pattern changes
   useEffect(() => {
+    if (!selectedSentencePattern) return;
     const combined = [...selectedSentencePattern.blocks, ...selectedSentencePattern.distractors];
     // Fisher-Yates Shuffle
     for (let i = combined.length - 1; i > 0; i--) {
@@ -269,7 +327,6 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     setGridSlots([...recipe.gridPattern]);
   };
 
-  
   const handleAddIngredientToGrid = (icon: string) => {
     playClickSound();
     const newGrid = [...gridSlots];
@@ -314,6 +371,17 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   // Execute Crafting Action
   const handleCraft = () => {
     if (!matchedRecipe) return;
+
+    // Check if the recipe is unlocked based on lesson progression
+    if (!isRecipeUnlocked(matchedRecipe)) {
+      const isPaywall = isRecipePaywallLocked(matchedRecipe);
+      if (isPaywall) {
+        if (onOpenVipModal) onOpenVipModal();
+      } else {
+        alert(`该配方需要先通关地图第 ${matchedRecipe.requiredLessonId || 1} 课才能解封！`);
+      }
+      return;
+    }
 
     playBlockBreakSound();
     setIsCraftingAnimation(true);
@@ -428,6 +496,13 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     }
   };
 
+  const filteredRecipes = RECIPES.filter(recipe => {
+    const isUnlocked = isRecipeUnlocked(recipe);
+    if (recipeFilter === 'unlocked' && !isUnlocked) return false;
+    if (recipeFilter === 'locked' && isUnlocked) return false;
+    return true;
+  });
+
   return (
     <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-3 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] flex flex-col space-y-4 sm:space-y-6">
       
@@ -441,18 +516,18 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
             <h2 className="text-base sm:text-xl font-black font-mono tracking-wide flex items-center space-x-2">
               <span>MC 3x3 英语合成实验室</span>
               <span className="text-[10px] bg-[#FFD700] text-black px-2 py-0.5 rounded-full uppercase font-bold">
-                Crafting Lab
+                按学习进度开放
               </span>
             </h2>
             <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-0.5">
-              摆放方块与词汇片段，合成本领词汇神器与魔法句型！
+              当前关卡进度：第 1 ~ {maxUnlockedLesson} 课 • 摆放方块与词汇碎片，合成本领词汇与语法神装！
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 text-xs font-mono font-black bg-black/30 px-3 py-1.5 rounded-xl border border-white/20">
-          <span>已解锁配方:</span>
-          <span className="text-[#FFD700]">{craftedHistory.length} / {RECIPES.length}</span>
+          <span>当前已解封配方:</span>
+          <span className="text-[#FFD700]">{unlockedRecipes.length} / {RECIPES.length}</span>
         </div>
       </div>
 
@@ -467,7 +542,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
           }`}
         >
           <Hammer className="w-4 h-4" />
-          <span>3x3 物品合成台</span>
+          <span>3x3 物品合成台 ({unlockedRecipes.length}/{RECIPES.length})</span>
         </button>
 
         <button
@@ -479,7 +554,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>3x3 语法句子工坊</span>
+          <span>3x3 语法句子工坊 ({sentencePatterns.length} 组课文)</span>
         </button>
 
         <button
@@ -491,7 +566,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
           }`}
         >
           <Sword className="w-4 h-4" />
-          <span>⚔️ 怪物英语擂台</span>
+          <span>⚔️ 怪物英语擂台 ({bosses.length} 阶首领)</span>
         </button>
       </div>
 
@@ -499,58 +574,105 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       {activeTab === 'recipes' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Left: Recipe Book List */}
+          {/* Left: Recipe Book List with Progress Filtering */}
           <div className="lg:col-span-5 bg-amber-950/5 border-2 border-amber-800/20 rounded-2xl p-3 sm:p-4 flex flex-col space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-mono font-black text-sm text-amber-900 flex items-center space-x-1.5">
                 <span>📖 合成秘籍 (Recipes)</span>
               </h3>
-              <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">
-                点击快速摆放
-              </span>
+              
+              {/* Recipe Progress Filter */}
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => setRecipeFilter('all')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                    recipeFilter === 'all' ? 'bg-amber-600 text-white border-black' : 'bg-white text-slate-600 border-slate-300'
+                  }`}
+                >
+                  全部
+                </button>
+                <button
+                  onClick={() => setRecipeFilter('unlocked')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                    recipeFilter === 'unlocked' ? 'bg-emerald-600 text-white border-black' : 'bg-white text-slate-600 border-slate-300'
+                  }`}
+                >
+                  已解锁 ({unlockedRecipes.length})
+                </button>
+                <button
+                  onClick={() => setRecipeFilter('locked')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                    recipeFilter === 'locked' ? 'bg-rose-600 text-white border-black' : 'bg-white text-slate-600 border-slate-300'
+                  }`}
+                >
+                  未解锁
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-              {RECIPES.map(recipe => {
+            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+              {filteredRecipes.map(recipe => {
                 const isCrafted = craftedHistory.includes(recipe.id);
                 const isSelected = selectedRecipe.id === recipe.id;
-                const isUnlocked = profile.level >= recipe.unlockedLevel;
+                const isUnlocked = isRecipeUnlocked(recipe);
+                const isPaywallLocked = isRecipePaywallLocked(recipe);
+                const reqLesson = recipe.requiredLessonId || 1;
 
                 return (
                   <button
                     key={recipe.id}
-                    disabled={!isUnlocked}
                     onClick={() => {
                       if (isUnlocked) {
                         handleQuickFillRecipe(recipe);
+                      } else if (isPaywallLocked) {
+                        if (onOpenVipModal) onOpenVipModal();
+                      } else {
+                        if (onNavigateToLesson) onNavigateToLesson(reqLesson);
                       }
                     }}
                     className={`w-full text-left p-2.5 rounded-xl border-2 transition-all flex items-center justify-between ${
                       !isUnlocked
-                        ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
+                        ? isPaywallLocked
+                          ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
+                          : 'bg-slate-100 border-slate-200 hover:border-slate-300 opacity-75'
                         : isSelected
                         ? 'bg-amber-100 border-amber-600 shadow-sm'
                         : 'bg-white border-slate-200 hover:border-amber-400'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className={`w-9 h-9 border rounded-lg flex items-center justify-center text-xl shrink-0 ${!isUnlocked ? 'bg-slate-200 border-slate-300 grayscale' : 'bg-amber-900/10 border-amber-800/30'}`}>
+                      <div className={`w-9 h-9 border rounded-lg flex items-center justify-center text-xl shrink-0 ${
+                        !isUnlocked
+                          ? 'bg-slate-200 border-slate-300 grayscale'
+                          : 'bg-amber-900/10 border-amber-800/30'
+                      }`}>
                         {recipe.mcIcon}
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className={`font-mono font-black text-xs sm:text-sm ${!isUnlocked ? 'text-slate-500' : 'text-slate-800'}`}>
+                          <span className={`font-mono font-black text-xs sm:text-sm ${!isUnlocked ? 'text-slate-600' : 'text-slate-800'}`}>
                             {recipe.nameEn}
                           </span>
-                          {!isUnlocked && (
-                            <span className="text-[9px] bg-slate-200 text-slate-500 font-bold px-1.5 py-0.2 rounded border border-slate-300 flex items-center space-x-0.5">
-                              <span>🔒 Lv.{recipe.unlockedLevel}</span>
-                            </span>
-                          )}
-                          {isUnlocked && isCrafted && (
-                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-300">
-                              已拥有
-                            </span>
+                          
+                          {/* Unlock Condition Badges */}
+                          {!isUnlocked ? (
+                            isPaywallLocked ? (
+                              <span className="text-[9px] bg-purple-100 text-purple-900 font-bold px-1.5 py-0.2 rounded border border-purple-300 flex items-center space-x-0.5">
+                                <Crown className="w-2.5 h-2.5 text-amber-500" />
+                                <span>VIP第{reqLesson}课</span>
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-slate-200 text-slate-600 font-bold px-1.5 py-0.2 rounded border border-slate-300 flex items-center space-x-0.5">
+                                <Lock className="w-2.5 h-2.5 text-rose-500" />
+                                <span>第{reqLesson}关解锁</span>
+                              </span>
+                            )
+                          ) : (
+                            isCrafted && (
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-300">
+                                已拥有
+                              </span>
+                            )
                           )}
                         </div>
                         <div className={`text-[11px] font-medium ${!isUnlocked ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -559,7 +681,17 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                       </div>
                     </div>
 
-                    {isUnlocked && <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
+                    {isUnlocked ? (
+                      <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                    ) : isPaywallLocked ? (
+                      <span className="text-[10px] text-amber-700 font-black bg-amber-100 px-2 py-1 rounded-md border border-amber-300 shrink-0">
+                        激活 VIP
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-emerald-700 font-black bg-emerald-100 px-2 py-1 rounded-md border border-emerald-300 shrink-0">
+                        去闯关
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -725,14 +857,14 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
           <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-mono font-black text-sm text-emerald-900 flex items-center space-x-2">
-                <span>选择要合成的语法句型:</span>
+                <span>选择要合成的课文句型（已按通关进度开放）:</span>
               </h3>
               <p className="text-xs text-emerald-700 mt-0.5">
                 将下方的句子方块按正确的标准语法顺序放置到合成槽中，组合成完整的魔方英语文卷！
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {sentencePatterns.map(pat => (
                 <button
                   key={pat.id}
@@ -837,34 +969,56 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
         <div className="flex flex-col space-y-5">
           
           {/* Boss Selector */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {bosses.map((boss, idx) => {
               const isSelected = activeBossIndex === idx;
+              const isBossAccessible = hasLessonAccess(profile, currentVolId, boss.requiredLessonId);
+              const isBossReached = unlockedLessonSet.has(boss.requiredLessonId) || completedLessonSet.has(boss.requiredLessonId) || boss.requiredLessonId <= maxUnlockedLesson;
+              const isBossUnlocked = isBossAccessible && isBossReached;
+              const isPaywallLocked = isLessonPaywallLocked(profile, currentVolId, boss.requiredLessonId);
+
               return (
                 <button
                   key={boss.id}
                   onClick={() => {
                     playClickSound();
+                    if (!isBossUnlocked) {
+                      if (isPaywallLocked && onOpenVipModal) {
+                        onOpenVipModal();
+                      } else if (onNavigateToLesson) {
+                        onNavigateToLesson(boss.requiredLessonId);
+                      }
+                      return;
+                    }
                     setActiveBossIndex(idx);
                     setCurrentBossQIndex(0);
                     setBossQuizSelected(null);
                     setBossQuizFeedback(null);
                   }}
                   className={`p-3 rounded-2xl border-2 transition-all text-left flex items-center space-x-3 ${
-                    isSelected
+                    !isBossUnlocked
+                      ? 'bg-slate-100 border-slate-200 opacity-75'
+                      : isSelected
                       ? 'bg-rose-950/10 border-rose-600 shadow-md ring-2 ring-rose-400'
                       : 'bg-white border-slate-200 hover:border-rose-300'
                   }`}
                 >
-                  <div className="w-12 h-12 bg-rose-900/10 border border-rose-800/30 rounded-xl flex items-center justify-center text-2xl shrink-0">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 border ${
+                    !isBossUnlocked ? 'bg-slate-200 border-slate-300 grayscale' : 'bg-rose-900/10 border-rose-800/30'
+                  }`}>
                     {boss.avatar}
                   </div>
                   <div>
-                    <div className="font-mono font-black text-xs sm:text-sm text-slate-800">
-                      {boss.nameZh}
+                    <div className="font-mono font-black text-xs sm:text-sm text-slate-800 flex items-center gap-1">
+                      <span>{boss.nameZh}</span>
+                      {!isBossUnlocked && (
+                        isPaywallLocked ? <Crown className="w-3 h-3 text-amber-500" /> : <Lock className="w-3 h-3 text-rose-500" />
+                      )}
                     </div>
                     <div className="text-[10px] text-rose-600 font-bold mt-0.5">
-                      难度: {boss.difficulty} • HP: {boss.currentHp}/{boss.maxHp}
+                      {!isBossUnlocked
+                        ? isPaywallLocked ? `👑 VIP 第 ${boss.requiredLessonId} 课` : `🔒 第 ${boss.requiredLessonId} 关解锁`
+                        : `难度: ${boss.difficulty} • HP: ${boss.currentHp}/${boss.maxHp}`}
                     </div>
                   </div>
                 </button>
@@ -875,6 +1029,42 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
           {/* Boss Battle Arena Screen */}
           {(() => {
             const currentBoss = bosses[activeBossIndex];
+            const isBossAccessible = hasLessonAccess(profile, currentVolId, currentBoss.requiredLessonId);
+            const isBossReached = unlockedLessonSet.has(currentBoss.requiredLessonId) || completedLessonSet.has(currentBoss.requiredLessonId) || currentBoss.requiredLessonId <= maxUnlockedLesson;
+            const isBossUnlocked = isBossAccessible && isBossReached;
+            const isPaywallLocked = isLessonPaywallLocked(profile, currentVolId, currentBoss.requiredLessonId);
+
+            if (!isBossUnlocked) {
+              return (
+                <div className="bg-[#1A1A1A] border-4 border-rose-900/50 rounded-2xl p-8 text-center text-white space-y-4 shadow-xl">
+                  <div className="text-5xl grayscale opacity-70">{currentBoss.avatar}</div>
+                  <h3 className="font-mono font-black text-lg text-rose-400">
+                    {currentBoss.nameZh} 尚未解锁
+                  </h3>
+                  <p className="text-xs text-stone-300 font-mono max-w-md mx-auto">
+                    {isPaywallLocked
+                      ? `此首领为 VIP 专属高阶挑战（需要完成第 ${currentBoss.requiredLessonId} 课）。激活完整144课即可挑战！`
+                      : `此首领需要在地图探险中通关第 ${currentBoss.requiredLessonId} 课后解锁！`}
+                  </p>
+                  {isPaywallLocked ? (
+                    <button
+                      onClick={() => onOpenVipModal && onOpenVipModal()}
+                      className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-purple-600 text-black font-black font-mono text-xs rounded-xl border border-black shadow-lg"
+                    >
+                      👑 立即激活完整144课 VIP
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onNavigateToLesson && onNavigateToLesson(currentBoss.requiredLessonId)}
+                      className="px-6 py-2.5 bg-emerald-600 text-white font-black font-mono text-xs rounded-xl border border-black shadow-lg"
+                    >
+                      ⚔️ 前往地图挑战第 {currentBoss.requiredLessonId} 关
+                    </button>
+                  )}
+                </div>
+              );
+            }
+
             const currentQ = currentBoss.questions[currentBossQIndex];
 
             return (

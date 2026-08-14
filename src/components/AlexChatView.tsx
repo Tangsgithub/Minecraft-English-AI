@@ -5,7 +5,7 @@ import { buildAlexSystemPrompt } from '../utils/aiTeacherPrompt';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
 import { hasLessonAccess } from '../utils/volumeProgress';
-import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award, Phone, PhoneOff, PhoneCall, Lock } from 'lucide-react';
+import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award, Phone, PhoneOff, PhoneCall, Lock, HelpCircle, ExternalLink, AlertTriangle, Check, ShieldAlert } from 'lucide-react';
 import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface AlexChatViewProps {
@@ -15,6 +15,7 @@ interface AlexChatViewProps {
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   onAwardEmeralds: (amount: number, xpAmount: number) => void;
   onCompleteLesson: (lessonId: number) => void;
+  onCheckMission?: (userText: string) => void;
   onBackToMap: () => void;
   onOpenSettings: () => void;
 }
@@ -71,6 +72,11 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const [callMicError, setCallMicError] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState<number>(0);
 
+  // Mic Permission Guide Modal & Diagnostic State
+  const [showMicHelpModal, setShowMicHelpModal] = useState<boolean>(false);
+  const [micTestStatus, setMicTestStatus] = useState<'idle' | 'testing' | 'success' | 'denied' | 'error'>('idle');
+  const [micTestMessage, setMicTestMessage] = useState<string>('');
+
   const isPhoneCallActiveRef = useRef<boolean>(false);
   const isSpeakingRef = useRef<boolean>(false);
   const recognitionRef = useRef<any>(null);
@@ -80,6 +86,9 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const animationFrameRef = useRef<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Check if current view is running inside an iframe
+  const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   useEffect(() => {
     isPhoneCallActiveRef.current = isPhoneCallActive;
@@ -113,6 +122,36 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     };
   }, []);
 
+  const handleTestMicrophone = async () => {
+    setMicTestStatus('testing');
+    setMicTestMessage('正在申请麦克风硬件访问权限，请在浏览器弹窗中点击【允许】...');
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setMicTestStatus('error');
+        setMicTestMessage('您的浏览器环境不支持媒体录音 API，请使用 Chrome 或 Edge 浏览器。');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Successfully got permission!
+      setMicTestStatus('success');
+      setMicTestMessage('✅ 麦克风已成功授权并连通！您可以正常与 Alex 语音对练。');
+      // Stop stream right away so it doesn't hold hardware
+      stream.getTracks().forEach(t => t.stop());
+    } catch (err: any) {
+      console.warn('Microphone test error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setMicTestStatus('denied');
+        setMicTestMessage('⚠️ 麦克风权限被拒绝。请按照下方指引点击浏览器地址栏 🔒 允许麦克风权限。');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setMicTestStatus('error');
+        setMicTestMessage('⚠️ 未检测到可用的麦克风硬件设备，请检查您的耳机或麦克风连接。');
+      } else {
+        setMicTestStatus('error');
+        setMicTestMessage(`⚠️ 麦克风检测失败 (${err.name || '未知原因'})，请在新标签页打开尝试。`);
+      }
+    }
+  };
+
   const startPhoneCallAudioLevelMeter = async () => {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -142,8 +181,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
           checkLevel();
         }
       }
-    } catch {
-      // Permission might be handled by speech recognition
+    } catch (err) {
+      console.warn('Audio level meter getUserMedia notice:', err);
     }
   };
 
@@ -179,7 +218,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setCallMicError('当前浏览器不支持网页语音识别，请直接点击下方常用对话卡与 Alex 交流');
+      setCallMicError('当前浏览器不支持网页实时语音识别，请直接点击下方常用例句卡与 Alex 交流！');
       return;
     }
 
@@ -221,9 +260,12 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
         console.warn('SpeechRecognition error:', event?.error);
         setIsListening(false);
         if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
-          setCallMicError('麦克风权限未允许，请在浏览器地址栏允许麦克风权限后使用');
-        } else if (event?.error === 'no-speech') {
-          // No speech detected, do nothing, wait for user to speak or press button
+          setCallMicError('麦克风权限未开启或被浏览器限制');
+          setShowMicHelpModal(true);
+        } else if (event?.error === 'audio-capture') {
+          setCallMicError('未检测到麦克风输入，请确认麦克风已连接');
+        } else if (event?.error === 'network') {
+          setCallMicError('语音网络连接超时，已为您切换为快捷口语卡');
         }
       };
 
@@ -367,10 +409,13 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
       recognition.onerror = (event: any) => {
         console.warn('SpeechRecognition error:', event?.error);
         setIsListening(false);
-        if (isPhoneCallActiveRef.current) {
-          if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
-            setCallMicError('麦克风权限未开启，请在浏览器权限中允许使用麦克风');
-          }
+        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+          setCallMicError('麦克风权限未开启或被浏览器限制');
+          setShowMicHelpModal(true);
+        } else if (event?.error === 'audio-capture') {
+          setCallMicError('未检测到麦克风输入，请确认麦克风设备');
+        } else if (event?.error === 'network') {
+          setCallMicError('语音网络连接超时，已为您切换为快捷口语卡');
         }
       };
 
@@ -608,6 +653,19 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             title="切换中文解释显示"
           >
             {showTranslations ? '双语' : '仅英文'}
+          </button>
+
+          {/* Mic Help & Diagnostics Button */}
+          <button
+            onClick={() => {
+              playClickSound();
+              setShowMicHelpModal(true);
+            }}
+            className="px-2 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white rounded-xl border-2 border-black text-xs font-bold shadow-sm flex items-center gap-1 shrink-0"
+            title="麦克风权限排查与帮助"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">麦克风权限</span>
           </button>
 
           {activeLesson && (() => {
@@ -857,16 +915,30 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               </span>
             </div>
 
-            <button
-              onClick={() => setAutoListenMode(!autoListenMode)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
-                autoListenMode
-                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                  : 'bg-slate-800 border-slate-600 text-slate-300'
-              }`}
-            >
-              {autoListenMode ? '⚡ 免提全自动' : '👆 手动按键说'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setShowMicHelpModal(true);
+                }}
+                className="px-2 py-1 rounded-xl text-xs font-bold bg-amber-500/20 border border-amber-400/50 text-amber-300 flex items-center gap-1 hover:bg-amber-500/30"
+                title="麦克风排查与帮助"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>权限帮助</span>
+              </button>
+
+              <button
+                onClick={() => setAutoListenMode(!autoListenMode)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
+                  autoListenMode
+                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                    : 'bg-slate-800 border-slate-600 text-slate-300'
+                }`}
+              >
+                {autoListenMode ? '⚡ 免提全自动' : '👆 手动按键说'}
+              </button>
+            </div>
             
             <div className="text-base sm:text-lg font-black font-mono text-amber-300 bg-black/40 px-3 py-1 rounded-xl border border-amber-400/30">
               ⏱️ {Math.floor(callDuration / 60).toString().padStart(2, '0')}:{(callDuration % 60).toString().padStart(2, '0')}
@@ -957,8 +1029,14 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               </div>
 
               {callMicError && (
-                <div className="text-xs bg-amber-500/20 border border-amber-400/50 text-amber-200 p-2 rounded-xl text-center font-bold">
-                  ⚠️ {callMicError}
+                <div className="text-xs bg-amber-500/20 border border-amber-400/50 text-amber-200 p-2.5 rounded-xl text-center font-bold flex items-center justify-between gap-2">
+                  <span>⚠️ {callMicError}</span>
+                  <button
+                    onClick={() => setShowMicHelpModal(true)}
+                    className="px-2 py-0.5 bg-amber-400 text-amber-950 rounded text-xs font-black shrink-0 hover:bg-amber-300"
+                  >
+                    查看解决指引
+                  </button>
                 </div>
               )}
 
@@ -1008,6 +1086,152 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             </button>
           </div>
 
+        </div>
+      )}
+
+      {/* Mic Permission Diagnostics & Setup Guide Modal */}
+      {showMicHelpModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+          <div className="bg-white border-4 border-[#487E2C] rounded-2xl sm:rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-4 sm:p-6 space-y-4 text-slate-800">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b pb-3 border-slate-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-10 h-10 bg-emerald-100 border-2 border-[#487E2C] rounded-xl flex items-center justify-center text-xl">
+                  🎙️
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black font-mono text-slate-900">
+                    麦克风权限开启与排查指引
+                  </h3>
+                  <p className="text-xs text-slate-500 font-bold">
+                    解决与 Alex 老师语音对话提示未开启的问题
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMicHelpModal(false)}
+                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full font-bold flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 1. Quick Diagnostic Test */}
+            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>第一步：一键检测麦克风状态</span>
+                </span>
+                <button
+                  onClick={handleTestMicrophone}
+                  disabled={micTestStatus === 'testing'}
+                  className="px-3 py-1 bg-[#487E2C] hover:bg-[#355E20] text-white text-xs font-bold rounded-lg shadow-xs active:scale-95 transition-all"
+                >
+                  {micTestStatus === 'testing' ? '正在检测...' : '▶️ 点击检测'}
+                </button>
+              </div>
+
+              {micTestStatus !== 'idle' && (
+                <div className={`p-2.5 rounded-lg text-xs font-bold ${
+                  micTestStatus === 'success'
+                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                    : micTestStatus === 'testing'
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                      : 'bg-rose-100 text-rose-900 border border-rose-300'
+                }`}>
+                  {micTestMessage}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Iframe Preview Notice (If in Iframe) */}
+            {isInIframe && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3.5 space-y-2">
+                <div className="flex items-start space-x-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-xs space-y-1">
+                    <p className="font-black text-amber-950">
+                      提示：当前处于内嵌预览窗口 (Iframe)
+                    </p>
+                    <p className="text-amber-900 leading-relaxed">
+                      现代浏览器（如 Chrome/Safari）为保护隐私，默认会阻止内嵌小窗访问麦克风。点击下方按钮在新标签页打开即可完美使用！
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => window.open(window.location.href, '_blank')}
+                  className="w-full py-2 bg-amber-400 hover:bg-amber-500 border-2 border-amber-950 text-amber-950 rounded-xl text-xs font-black shadow-xs flex items-center justify-center gap-1.5 transition-transform active:scale-98"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>在新标签页打开（推荐 🚀）</span>
+                </button>
+              </div>
+            )}
+
+            {/* 3. Browser Specific Step-by-Step Guides */}
+            <div className="space-y-2.5 text-xs">
+              <h4 className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                <span>🛠️ 常见浏览器开启方法：</span>
+              </h4>
+
+              {/* Chrome / Edge */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                <p className="font-bold text-slate-800 flex items-center gap-1">
+                  <span>💻 Google Chrome / 微软 Edge 浏览器：</span>
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-600 leading-relaxed">
+                  <li>点击浏览器最上方地址栏左侧的 <strong>🔒 锁形图标</strong> 或 <strong>⚙️ 网站设置</strong></li>
+                  <li>找到 <strong>【麦克风 (Microphone)】</strong> 选项，从“禁止”修改为 <strong>【允许】</strong></li>
+                  <li>点击刷新页面即可正常开启语音识别对练</li>
+                </ol>
+              </div>
+
+              {/* iOS / Safari */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                <p className="font-bold text-slate-800 flex items-center gap-1">
+                  <span>🍎 苹果 iPhone / iPad / Mac Safari：</span>
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-600 leading-relaxed">
+                  <li>点击 Safari 网址左侧的 <strong>aA</strong> 或 <strong>大小</strong> 图标</li>
+                  <li>点击 <strong>【网站设置】</strong> ➔ 将【麦克风】设置为 <strong>【允许】</strong></li>
+                  <li>若提示系统未授权：进入手机【设置】➔【Safari 浏览器】➔【麦克风】允许</li>
+                </ol>
+              </div>
+
+              {/* WeChat / Mobile App */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                <p className="font-bold text-slate-800 flex items-center gap-1">
+                  <span>📱 微信内置浏览器：</span>
+                </p>
+                <p className="text-slate-600 leading-relaxed">
+                  微信内嵌窗口不支持 Web 语音识别。请点击右上角 <strong>「...」</strong> ➔ 选择 <strong>「在默认浏览器中打开」</strong> 即可体验全自动语音。
+                </p>
+              </div>
+            </div>
+
+            {/* 4. Alternate Talking Mode Notice */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs space-y-1 text-blue-900">
+              <p className="font-black text-blue-950 flex items-center gap-1">
+                <span>💡 免麦克风也能练口语：</span>
+              </p>
+              <p className="leading-relaxed">
+                即使暂时不方便开麦，也可以直接点击输入框上方的 <strong>【快捷例句卡】</strong> 或给 Alex <strong>【赠送礼物】</strong>，Alex 老师同样会全语音朗读、纠正语法并互动！
+              </p>
+            </div>
+
+            {/* Close Button */}
+            <div className="pt-2">
+              <button
+                onClick={() => setShowMicHelpModal(false)}
+                className="w-full py-2.5 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl text-sm font-black shadow-sm"
+              >
+                我知道了，返回对话
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 

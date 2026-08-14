@@ -701,6 +701,8 @@ export default function App() {
                 profile={profile}
                 onToggleMasterWord={handleToggleMasterWord}
                 onAwardEmeralds={handleAwardEmeralds}
+                onOpenVipModal={() => setIsVipModalOpen(true)}
+                onNavigateToLesson={handleSelectLessonForChat}
               />
             </>
           )}
@@ -710,6 +712,8 @@ export default function App() {
               profile={profile}
               onAwardEmeralds={handleAwardEmeralds}
               onMasterWord={handleToggleMasterWord}
+              onOpenVipModal={() => setIsVipModalOpen(true)}
+              onNavigateToLesson={handleSelectLessonForChat}
             />
           )}
 

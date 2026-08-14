@@ -163,7 +163,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="button"
                 onClick={() => {
                   setProvider('gemini');
-                  setModel('gemini-3.6-flash');
+                  setModel('gemini-3.7-flash');
                 }}
                 className={`py-2.5 px-3 rounded-xl border-2 font-black flex items-center justify-center space-x-1.5 transition-all ${
                   provider === 'gemini'
@@ -174,6 +174,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>✨ Gemini AI</span>
               </button>
             </div>
+
+            {provider === 'gemini' && (
+              <div>
+                <label className="block text-slate-600 font-bold mb-1">模型选择 (Model):</label>
+                <select
+                  value={model.startsWith('gemini') ? model : 'gemini-3.7-flash'}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full bg-white border-2 border-slate-300 rounded-xl px-2.5 py-2 text-slate-800 font-mono font-bold"
+                >
+                  <option value="gemini-3.7-flash">gemini-3.7-flash (默认推荐，思维对话)</option>
+                  <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (极速响应，超低延迟)</option>
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-[#487E2C] font-black mb-1">

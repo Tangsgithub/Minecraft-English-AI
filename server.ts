@@ -476,15 +476,33 @@ app.use(express.json());
         if (!geminiKey) {
           throw new Error("Missing Gemini API Key in environment");
         }
-        const ai = new GoogleGenAI({ apiKey: geminiKey });
+        const ai = new GoogleGenAI({
+          apiKey: geminiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            }
+          }
+        });
         const promptText = `${systemPrompt}\n\nConversation History:\n` +
           messages.map((m: any) => `${m.role === 'user' ? 'Student' : 'Alex Teacher'}: ${m.content}`).join('\n');
 
         let requestModel = config?.model || 'gemini-3.7-flash';
-        if (requestModel.includes('deepseek') || requestModel.includes('openai') || requestModel.includes('llama') || requestModel.includes('3.6')) {
+        if (
+          requestModel.includes('deepseek') ||
+          requestModel.includes('openai') ||
+          requestModel.includes('llama') ||
+          requestModel.includes('3.6') ||
+          requestModel.includes('pro')
+        ) {
           requestModel = 'gemini-3.7-flash';
         }
-        const candidateModels = Array.from(new Set([requestModel, 'gemini-3.7-flash', 'gemini-3.1-pro-preview']));
+        const candidateModels = Array.from(new Set([
+          requestModel,
+          'gemini-3.7-flash',
+          'gemini-3.1-flash-lite',
+          'gemini-flash-latest'
+        ]));
 
         let responseText = '';
         let lastError: any = null;
@@ -504,7 +522,8 @@ app.use(express.json());
         }
 
         if (!responseText && lastError) {
-          throw lastError;
+          console.warn("All Gemini candidate models returned error, providing graceful companion fallback:", lastError?.message);
+          return "Alex: Great English practice in Minecraft! Let's keep exploring and learning new words together! [太棒的 Minecraft 英语练习！让我们继续探索并一起学习新单词吧！]";
         }
         return responseText || "Alex: Great effort! Keep exploring!";
       };
@@ -592,11 +611,25 @@ app.use(express.json());
         if (!geminiKey) {
           return res.json({ success: false, message: "No API Key provided" });
         }
-        const ai = new GoogleGenAI({ apiKey: geminiKey });
-        await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: 'Say Hello in one word'
+        const ai = new GoogleGenAI({
+          apiKey: geminiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            }
+          }
         });
+        try {
+          await ai.models.generateContent({
+            model: 'gemini-3.7-flash',
+            contents: 'Say Hello in one word'
+          });
+        } catch {
+          await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite',
+            contents: 'Say Hello in one word'
+          });
+        }
         return res.json({ success: true, message: "Gemini AI connection successful! Alex is ready to teach." });
       }
 
