@@ -177,6 +177,19 @@ async function getAllCloudCodes(): Promise<any[]> {
   return Array.from(codeMap.values());
 }
 
+async function clearAllCloudCodes(): Promise<void> {
+  memoryCodesFallback.clear();
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      await sql`DELETE FROM activation_codes`;
+    } catch (e) {
+      console.warn("Neon Postgres clearAllCodes error:", e);
+    }
+  }
+}
+
 // Exclusive Neon PostgreSQL Database Handlers
 async function getCloudUser(accountOrUid: string): Promise<any | null> {
   if (!accountOrUid) return null;
@@ -1132,6 +1145,17 @@ app.use(express.json());
       return res.status(200).json({ success: false, error: "未知操作类型" });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "卡密重置处理失败" });
+    }
+  });
+
+  // ===== Admin: Clear All Codes Endpoint =====
+  app.post("/api/admin/clear-codes", async (req, res) => {
+    try {
+      await clearAllCloudCodes();
+      return res.json({ success: true, message: "已成功清空所有激活码！" });
+    } catch (err: any) {
+      console.error("Clear codes error:", err);
+      return res.status(200).json({ success: false, error: "清空激活码失败" });
     }
   });
 

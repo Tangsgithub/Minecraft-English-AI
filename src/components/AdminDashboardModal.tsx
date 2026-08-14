@@ -253,6 +253,30 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     setTimeout(() => setCodeMsg(null), 4000);
   };
 
+  const handleClearAllCodes = () => {
+    setConfirmDialog({
+      message: '🚨 危险操作！确定要彻底删除云端数据库中所有的激活码吗？此操作不可逆转！',
+      onConfirm: async () => {
+        try {
+          const resp = await fetch('/api/admin/clear-codes', { method: 'POST' });
+          const data = await resp.json();
+          if (data.success) {
+            playEmeraldSound();
+            setCodeMsg(data.message);
+            await fetchActivationCodes();
+            setTimeout(() => setCodeMsg(null), 3000);
+          } else {
+            setCodeMsg(`❌ ${data.error || '操作失败'}`);
+            setTimeout(() => setCodeMsg(null), 3000);
+          }
+        } catch {
+          setCodeMsg(`❌ 处理异常，请稍后重试`);
+          setTimeout(() => setCodeMsg(null), 3000);
+        }
+      }
+    });
+  };
+
   const handleRevokeCode = async (code: string, action: 'unbind' | 'reset') => {
     const confirmMsg = action === 'unbind' 
       ? `确定要清空激活码 (${code}) 绑定的所有设备列表吗？` 
@@ -718,6 +742,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         >
                           <Copy className="w-3.5 h-3.5" />
                           <span>📋 一键复制全部未使用卡密</span>
+                        </button>
+                        <button
+                          onClick={handleClearAllCodes}
+                          className="bg-red-900 hover:bg-red-800 text-red-200 border border-red-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>🔥 清空全部库卡密</span>
                         </button>
                       </div>
                     </div>
