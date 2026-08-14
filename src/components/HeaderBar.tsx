@@ -99,27 +99,52 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                     <span>{currentVolume.title.replace('新概念英语 ', '新概念 ')}</span>
                     <ChevronDown className="w-3 h-3 stroke-[3]" />
                   </button>
-                  <div className="absolute left-0 top-full mt-2 w-52 bg-slate-900 border-2 border-amber-400/60 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden p-1">
-                    <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                      切换新概念教材分册
+                  <div className="absolute left-0 top-full mt-2 w-60 bg-slate-900 border-2 border-amber-400/60 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden p-1.5">
+                    <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 flex items-center justify-between">
+                      <span>新概念教材分册</span>
+                      <span className="text-amber-400 text-[9px]">1册 & 2册全量开放</span>
                     </div>
-                    {APP_VERSION_INFO.volumes.map(vol => (
-                      <button
-                        key={vol.id}
-                        onClick={() => {
-                          playClickSound();
-                          onChangeVolumeId(vol.id);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold font-mono transition-colors flex items-center justify-between cursor-pointer ${
-                          selectedVolumeId === vol.id
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'text-slate-200 hover:bg-slate-800 hover:text-amber-300'
-                        }`}
-                      >
-                        <span>{vol.title}</span>
-                        {selectedVolumeId === vol.id && <span className="text-amber-300 text-xs">✓</span>}
-                      </button>
-                    ))}
+                    {APP_VERSION_INFO.volumes.map(vol => {
+                      const isLocked = vol.status === 'coming_soon';
+                      const statusText = isLocked 
+                        ? '教研打磨中 · 敬请期待' 
+                        : vol.id === 'vol1' 
+                        ? '144关真实课文已全量开放' 
+                        : '96关真实课文已全量开放';
+                      return (
+                        <button
+                          key={vol.id}
+                          disabled={isLocked}
+                          onClick={() => {
+                            if (isLocked) return;
+                            playClickSound();
+                            onChangeVolumeId(vol.id);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold font-mono transition-colors flex items-center justify-between my-0.5 ${
+                            isLocked
+                              ? 'text-slate-500 bg-slate-950/40 cursor-not-allowed opacity-75'
+                              : selectedVolumeId === vol.id
+                              ? 'bg-emerald-600 text-white shadow-xs cursor-pointer'
+                              : 'text-slate-200 hover:bg-slate-800 hover:text-amber-300 cursor-pointer'
+                          }`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="flex items-center space-x-1">
+                              <span>{vol.title}</span>
+                              {isLocked && <span className="text-[10px]">🔒</span>}
+                            </span>
+                            <span className="text-[10px] font-normal opacity-70">
+                              {statusText}
+                            </span>
+                          </div>
+                          {selectedVolumeId === vol.id ? (
+                            <span className="text-amber-300 text-xs">✓</span>
+                          ) : isLocked ? (
+                            <span className="text-[9px] bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded border border-slate-700">敬请期待</span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -200,10 +225,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <span className="max-w-[55px] sm:max-w-[80px] truncate text-white font-extrabold text-[11px] sm:text-xs">
                 {currentUser?.nickname || profile.nickname || '档案'}
               </span>
-              {profile.isVip ? (
-                <span className="bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 font-black text-[9px] px-1 py-0.2 rounded border border-amber-500 flex items-center space-x-0.5 shadow-xs">
+              {profile.isVip || (profile.activatedVolumes && profile.activatedVolumes.length > 0) ? (
+                <span className="bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 font-black text-[9px] px-1 py-0.2 rounded border border-amber-500 flex items-center space-x-0.5 shadow-xs" title="已激活权益">
                   <span>👑</span>
-                  <span className="hidden sm:inline">VIP</span>
+                  <span className="hidden sm:inline">
+                    {profile.isVip ? 'VIP' : profile.activatedVolumes?.map(v => v.replace('vol', '册')).join(',')}
+                  </span>
                 </span>
               ) : (
                 <span className="bg-emerald-800 text-emerald-200 text-[9px] px-1 py-0.2 rounded">

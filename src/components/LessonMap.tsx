@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Lesson, UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import { getBiomeChapterByUnit } from '../data/storyData';
+import { getVolumeProgress } from '../utils/volumeProgress';
 import {
   BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play,
   MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid,
@@ -29,15 +30,19 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   onCompleteLesson,
   onAwardEmeralds
 }) => {
+  const volProg = getVolumeProgress(profile, selectedVolumeId);
+  const currentLessonId = volProg.currentLessonId;
+  const unlockedList = volProg.unlockedLessonIds;
+  const completedList = volProg.completedLessonIds;
+
   // Default to current player's unit, or Unit 1
-  const initialUnit = Math.min(12, Math.max(1, Math.ceil((profile.currentLessonId || 1) / 12)));
+  const initialUnit = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
   const [selectedUnit, setSelectedUnit] = useState<number>(initialUnit);
   const [viewMode, setViewMode] = useState<'grid' | 'world' | 'map'>('grid'); // Default to clean, efficient grid
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string } | null>(null);
 
-  const currentLessonId = profile.currentLessonId || 1;
   const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
   const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
   const currentBiome = getBiomeChapterByUnit(currentUnitNum);
@@ -86,10 +91,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   };
 
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
-
-  // Unit completion stats
-  const unlockedList = profile.unlockedLessonIds || [1];
-  const completedList = profile.completedLessonIds || [];
 
   return (
     <div className="space-y-4">
@@ -327,9 +328,9 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {filteredCatalog.map(item => {
-              const isCompleted = item.id < profile.currentLessonId || completedList.includes(item.id) || (unlockedList.includes(item.id) && unlockedList.includes(item.id + 1));
-              const isUnlocked = unlockedList.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
-              const isCurrent = profile.currentLessonId === item.id;
+              const isCompleted = item.id < currentLessonId || completedList.includes(item.id);
+              const isUnlocked = unlockedList.includes(item.id) || item.id === 1;
+              const isCurrent = currentLessonId === item.id;
 
               return (
                 <div

@@ -4,6 +4,7 @@ import { BIOME_CHAPTERS, BiomeChapter, getBiomeChapterByUnit } from '../data/sto
 import { LessonStudyModal } from './LessonStudyModal';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
+import { getVolumeProgress } from '../utils/volumeProgress';
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
   Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X,
@@ -226,6 +227,10 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
   const selectedVolId = profile.selectedVolumeId || 'vol1';
   const catalog = getFullLessonsCatalog(selectedVolId);
+  const volProg = getVolumeProgress(profile, selectedVolId);
+  const currentLessonId = volProg.currentLessonId;
+  const unlockedLessonIds = volProg.unlockedLessonIds;
+  const completedLessonIds = volProg.completedLessonIds;
 
   // Scroll to selected biome section
   const biomeSectionRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -457,9 +462,9 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
               {BIOME_CHAPTERS.map(ch => {
                 const isActive = selectedUnit === ch.unit;
                 const unitLessons = catalog.filter(l => l.unit === ch.unit);
-                const completedCount = unitLessons.filter(l => l.id < profile.currentLessonId || profile.unlockedLessonIds.includes(l.id + 1)).length;
+                const completedCount = unitLessons.filter(l => l.id < currentLessonId || completedLessonIds.includes(l.id)).length;
                 const isUnitFinished = completedCount === 12;
-                const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
+                const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
                 const isPlayerHere = currentUnitNum === ch.unit;
 
                 return (
@@ -625,9 +630,9 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 {/* 12 Lessons Grid Nodes inside this Biome */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 relative z-10">
                   {unitLessons.map((item) => {
-                    const isCompleted = item.id < profile.currentLessonId || (profile.completedLessonIds || []).includes(item.id) || (profile.unlockedLessonIds.includes(item.id) && profile.unlockedLessonIds.includes(item.id + 1));
-                    const isUnlocked = profile.unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
-                    const isCurrent = profile.currentLessonId === item.id;
+                    const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
+                    const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1;
+                    const isCurrent = currentLessonId === item.id;
                     const isBossNode = item.id % 12 === 0;
 
                     const isBreaking = breakingLessonId === item.id;

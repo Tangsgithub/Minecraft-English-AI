@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
 import { Lesson, UserProfile } from '../types';
 import { getBiomeChapterByUnit } from '../data/storyData';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { SceneOralCheckInModal, RealWorldSceneItem } from './SceneOralCheckInModal';
+import { RedstoneLogicWorkbench } from './RedstoneLogicWorkbench';
+import { StoryRetellingDeck } from './StoryRetellingDeck';
 
 interface LessonStudyModalProps {
   lesson: Lesson;
@@ -272,7 +274,24 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   const [playedAudioIds, setPlayedAudioIds] = useState<Set<string>>(new Set());
   const [isPlayingAllDialogue, setIsPlayingAllDialogue] = useState<boolean>(false);
   const [currentDialogueIndex, setCurrentDialogueIndex] = useState<number | null>(null);
+  const [isMaximized, setIsMaximized] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mc_study_modal_maximized') === 'true';
+    }
+    return false;
+  });
   const stopPlayRef = useRef<boolean>(false);
+
+  const toggleMaximize = () => {
+    playClickSound();
+    setIsMaximized(prev => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_study_modal_maximized', String(next));
+      }
+      return next;
+    });
+  };
 
   const isAlreadyCompleted = isAlreadyCompletedProp || (profile ? (
     (profile.completedLessonIds || []).includes(lesson.id) ||
@@ -399,13 +418,19 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   const isAllPlayed = isAlreadyCompleted || playedAudioIds.size >= totalAudioItems;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto pt-safe pb-safe animate-in fade-in duration-200">
-      <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-3xl text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.2)] overflow-hidden my-auto max-h-[92dvh] flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto pt-safe pb-safe animate-in fade-in duration-200">
+      <div
+        className={`bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[16px_16px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden my-auto flex flex-col transition-all duration-300 ${
+          isMaximized
+            ? 'w-[98vw] max-w-[98vw] h-[96dvh] max-h-[96dvh]'
+            : 'w-full max-w-5xl xl:max-w-6xl max-h-[94dvh]'
+        }`}
+      >
         
         {/* Modal Header */}
-        <div className="bg-[#487E2C] p-4 sm:p-6 border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
+        <div className="bg-[#487E2C] p-3.5 sm:p-5 border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
           <div>
-            <div className="flex items-center space-x-2 text-xs font-mono text-[#7CFC00] font-bold mb-1">
+            <div className="flex items-center space-x-2 text-xs font-mono text-[#7CFC00] font-bold mb-1 flex-wrap gap-y-1">
               <span>Unit {lesson.unit}</span>
               <span>•</span>
               <span>Lesson {lesson.id}</span>
@@ -419,15 +444,35 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             </h2>
           </div>
 
-          <button
-            onClick={() => {
-              playClickSound();
-              onClose();
-            }}
-            className="bg-black/20 hover:bg-black/40 text-white px-3 sm:px-4 py-2 rounded-xl font-mono text-xs sm:text-sm font-bold border-2 border-white/30 transition-colors shrink-0 whitespace-nowrap ml-2"
-          >
-            ✕ 暂离
-          </button>
+          <div className="flex items-center space-x-2 shrink-0 ml-2">
+            <button
+              onClick={toggleMaximize}
+              className="bg-black/20 hover:bg-black/40 text-white px-2.5 sm:px-3.5 py-2 rounded-xl font-mono text-xs sm:text-sm font-bold border-2 border-white/30 transition-all flex items-center space-x-1.5 active:scale-95 shadow-sm"
+              title={isMaximized ? "还原窗口大小" : "切换为全屏大窗口"}
+            >
+              {isMaximized ? (
+                <>
+                  <Minimize2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">还原小窗</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">全屏大窗</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => {
+                playClickSound();
+                onClose();
+              }}
+              className="bg-black/20 hover:bg-red-600/80 text-white px-3 sm:px-4 py-2 rounded-xl font-mono text-xs sm:text-sm font-bold border-2 border-white/30 transition-all shrink-0 whitespace-nowrap active:scale-95 shadow-sm"
+            >
+              ✕ 暂离
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -720,6 +765,27 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             )}
           </div>
 
+          {/* 第二册专属差异化学习模式：红石逻辑电路工作台 & 篇章复述挑战 */}
+          {(profile?.selectedVolumeId === 'vol2' || lesson.topic.toLowerCase().includes('past') || lesson.topic.toLowerCase().includes('perfect') || lesson.topic.toLowerCase().includes('infinitive') || lesson.topic.toLowerCase().includes('indirect')) && (
+            <div className="space-y-5">
+              {/* 1. 红石逻辑连词与时态中继器 */}
+              <RedstoneLogicWorkbench
+                lesson={lesson}
+                onSuccessReward={(emeralds, xp) => {
+                  if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
+                }}
+              />
+
+              {/* 2. 篇章摘要与故事复述挑战 */}
+              <StoryRetellingDeck
+                lesson={lesson}
+                onSuccessReward={(emeralds, xp) => {
+                  if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
+                }}
+              />
+            </div>
+          )}
+
           {/* 4. 丰富生活场景迁移 (Real-World Bridge) - Dynamically tailored to current lesson theme */}
           <div className="bg-amber-50 p-4 sm:p-5 rounded-2xl border-2 border-amber-300 space-y-4">
             <div className="flex items-center justify-between border-b border-amber-200 pb-2">
@@ -813,7 +879,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             <h3 className="text-xs font-mono font-black text-[#487E2C] flex items-center space-x-2 uppercase tracking-wider">
               <span>📦 本课 Minecraft 核心词汇</span>
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {lesson.vocabulary.map((vocab, idx) => {
                 const audioId = `vocab_${vocab.id}_${idx}`;
                 const isPlayed = playedAudioIds.has(audioId);

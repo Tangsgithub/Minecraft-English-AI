@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserProfile, Lesson, CourseVolumeId } from '../types';
 import { getLessonById } from '../data/lessonsData';
 import { getBiomeChapterByUnit } from '../data/storyData';
+import { getVolumeProgress } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { speakText, playClickSound, playEmeraldSound } from '../utils/audio';
 import {
@@ -24,7 +25,8 @@ export const MainStoryQuestHero: React.FC<MainStoryQuestHeroProps> = ({
   onStartChat,
   onScrollToCurrentBiome
 }) => {
-  const currentLessonId = profile.currentLessonId || 1;
+  const volProg = getVolumeProgress(profile, selectedVolumeId);
+  const currentLessonId = volProg.currentLessonId;
   const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
   const currentUnit = Math.ceil(currentLessonId / 12);
   const biomeChapter = getBiomeChapterByUnit(currentUnit);
@@ -49,7 +51,7 @@ export const MainStoryQuestHero: React.FC<MainStoryQuestHeroProps> = ({
   // Calculate Unit Progress (e.g. lesson 3 in unit 1 => 3/12 completed or in progress)
   const unitStartId = (currentUnit - 1) * 12 + 1;
   const unitEndId = currentUnit * 12;
-  const completedInUnit = (profile.completedLessonIds || []).filter(
+  const completedInUnit = (volProg.completedLessonIds || []).filter(
     id => id >= unitStartId && id <= unitEndId
   ).length;
   const progressPercent = Math.min(100, Math.round((completedInUnit / 12) * 100));

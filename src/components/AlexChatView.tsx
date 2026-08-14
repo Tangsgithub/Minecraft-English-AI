@@ -55,12 +55,17 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const [callDuration, setCallDuration] = useState<number>(0);
   const [callStatus, setCallStatus] = useState<'connecting' | 'connected' | 'ended'>('connected');
   const [phoneSubtitle, setPhoneSubtitle] = useState<string>('Hello! Press mic to talk to Alex!');
-  const [autoListenMode, setAutoListenMode] = useState<boolean>(true);
+  const [autoListenMode, setAutoListenMode] = useState<boolean>(false);
+  const [callMicError, setCallMicError] = useState<string | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
 
   const isPhoneCallActiveRef = useRef<boolean>(false);
   const isSpeakingRef = useRef<boolean>(false);
   const recognitionRef = useRef<any>(null);
-  const autoListenModeRef = useRef<boolean>(true);
+  const autoListenModeRef = useRef<boolean>(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -85,17 +90,91 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     return () => clearInterval(timer);
   }, [isPhoneCallActive, callStatus]);
 
+  // Clean up audio & recognition on unmount
+  useEffect(() => {
+    return () => {
+      stopPhoneCallAudioLevelMeter();
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  const startPhoneCallAudioLevelMeter = async () => {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          audioContextRef.current = ctx;
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 64;
+          const source = ctx.createMediaStreamSource(stream);
+          source.connect(analyser);
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          const checkLevel = () => {
+            if (!isPhoneCallActiveRef.current) return;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+              sum += dataArray[i];
+            }
+            const avg = sum / dataArray.length;
+            setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+            animationFrameRef.current = requestAnimationFrame(checkLevel);
+          };
+          checkLevel();
+        }
+      }
+    } catch {
+      // Permission might be handled by speech recognition
+    }
+  };
+
+  const stopPhoneCallAudioLevelMeter = () => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      try {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      } catch {}
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch {}
+      audioContextRef.current = null;
+    }
+    setAudioLevel(0);
+  };
+
   const startAutoListening = () => {
     if (typeof window === 'undefined') return;
+    if (!isPhoneCallActiveRef.current) return;
+    if (isSpeakingRef.current) {
+      stopSpeech();
+      isSpeakingRef.current = false;
+    }
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) return;
-    if (!isPhoneCallActiveRef.current || isSpeakingRef.current) return;
+    if (!SpeechRecognition) {
+      setCallMicError('当前浏览器不支持网页语音识别，请直接点击下方常用对话卡与 Alex 交流');
+      return;
+    }
 
     try {
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch {}
+        recognitionRef.current = null;
       }
 
       const recognition = new SpeechRecognition();
@@ -108,6 +187,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
 
       recognition.onstart = () => {
         setIsListening(true);
+        setCallMicError(null);
       };
 
       recognition.onresult = (event: any) => {
@@ -125,8 +205,14 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
         }
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition error:', event?.error);
         setIsListening(false);
+        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+          setCallMicError('麦克风权限未允许，请在浏览器地址栏允许麦克风权限后使用');
+        } else if (event?.error === 'no-speech') {
+          // No speech detected, do nothing, wait for user to speak or press button
+        }
       };
 
       recognition.onend = () => {
@@ -134,18 +220,12 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
         const finalToSubmit = capturedText.trim() || inputText.trim();
         if (finalToSubmit && isPhoneCallActiveRef.current) {
           handleSendMessage(finalToSubmit);
-        } else if (isPhoneCallActiveRef.current && !isSpeakingRef.current && autoListenModeRef.current) {
-          setTimeout(() => {
-            if (isPhoneCallActiveRef.current && !isSpeakingRef.current && autoListenModeRef.current) {
-              startAutoListening();
-            }
-          }, 300);
         }
       };
 
       recognition.start();
     } catch (err) {
-      console.warn('SpeechRecognition error:', err);
+      console.warn('SpeechRecognition start error:', err);
       setIsListening(false);
     }
   };
@@ -154,9 +234,12 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setIsPhoneCallActive(true);
     isPhoneCallActiveRef.current = true;
     setCallStatus('connected');
+    setCallMicError(null);
     playClickSound();
     unlockMobileAudio();
-    const greeting = `Hello ${profile.nickname || 'there'}! I'm Alex! What are you building in Minecraft today?`;
+    startPhoneCallAudioLevelMeter();
+
+    const greeting = `Hello ${profile.nickname || 'there'}! I'm Alex! What are you building in Minecraft today? [你好呀！我是 Alex 老师！你今天在我的世界里造了什么呢？]`;
     setPhoneSubtitle(greeting);
 
     isSpeakingRef.current = true;
@@ -171,6 +254,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const handleEndPhoneCall = () => {
     isPhoneCallActiveRef.current = false;
     isSpeakingRef.current = false;
+    stopPhoneCallAudioLevelMeter();
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
@@ -182,7 +266,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     playEmeraldSound();
     setTimeout(() => {
       setIsPhoneCallActive(false);
-    }, 1000);
+    }, 500);
   };
 
   const scrollToBottom = () => {
@@ -203,58 +287,92 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const handleToggleVoiceInput = () => {
     if (typeof window === 'undefined') return;
 
-    if (isPhoneCallActiveRef.current) {
-      if (isListening) {
-        if (recognitionRef.current) {
-          try { recognitionRef.current.abort(); } catch {}
-        }
-        setIsListening(false);
-      } else {
-        startAutoListening();
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+        recognitionRef.current = null;
       }
+      setIsListening(false);
       return;
+    }
+
+    // If Alex is currently speaking, interrupt playback so the user can speak immediately
+    if (isSpeakingRef.current) {
+      stopSpeech();
+      isSpeakingRef.current = false;
     }
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('您的浏览器暂不支持语音识别，请直接使用键盘输入英文哦！');
-      return;
-    }
-
-    if (isListening) {
-      setIsListening(false);
+      if (isPhoneCallActiveRef.current) {
+        setCallMicError('您的浏览器暂不支持网页语音识别，请点击下方快捷卡片进行对话！');
+      } else {
+        alert('您的浏览器暂不支持语音识别，请直接使用键盘输入英文或点击快捷对话卡哦！');
+      }
       return;
     }
 
     try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+        recognitionRef.current = null;
+      }
+
       const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       recognition.lang = 'en-US';
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
+
+      let capturedText = '';
 
       recognition.onstart = () => {
         setIsListening(true);
+        if (isPhoneCallActiveRef.current) {
+          setCallMicError(null);
+        }
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText(prev => (prev ? `${prev} ${transcript}` : transcript));
-        setIsListening(false);
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            capturedText += event.results[i][0].transcript;
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        const current = (capturedText || interim).trim();
+        if (current) {
+          setInputText(current);
+        }
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition error:', event?.error);
         setIsListening(false);
+        if (isPhoneCallActiveRef.current) {
+          if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+            setCallMicError('麦克风权限未开启，请在浏览器权限中允许使用麦克风');
+          }
+        }
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        const finalToSubmit = capturedText.trim() || inputText.trim();
+        if (finalToSubmit) {
+          handleSendMessage(finalToSubmit);
+        }
       };
 
       recognition.start();
     } catch (err) {
-      console.error(err);
+      console.error('Speech recognition start failed:', err);
       setIsListening(false);
     }
   };
@@ -287,7 +405,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     const systemPrompt = buildAlexSystemPrompt(
       profile,
       activeLesson ? `Lesson ${activeLesson.id}: ${activeLesson.title}` : undefined,
-      'Build a house & practice English'
+      'Build a house & practice English',
+      profile.selectedVolumeId || 'vol1'
     );
 
     const alexRes = await sendChatMessageToAlex(newHistory, systemPrompt, profile.apiKeyConfig);
@@ -342,8 +461,42 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setTimeout(() => setRecentGift(null), 4000);
   };
 
-  // Structured Scenario Roleplay Chips for Children
-  const promptCategories = [
+  // Structured Scenario Roleplay Chips for Children & Book 2 Redstone Engineers
+  const isVol2 = profile.selectedVolumeId === 'vol2';
+
+  const promptCategories = isVol2 ? [
+    {
+      categoryName: '⚡ 红石与叙事逻辑',
+      icon: '🔴',
+      prompts: [
+        'I turned on the redstone lamp because it was getting dark. 💡',
+        'Although the creeper exploded, our cobblestone wall stayed strong! 🧱',
+        'When we arrived at the Nether fortress, the blazes were flying everywhere! 🔥',
+        'By tomorrow morning, we will have gathered thirty diamonds! 💎'
+      ]
+    },
+    {
+      categoryName: '📚 第二册核心句',
+      icon: '📖',
+      prompts: [
+        activeLesson
+          ? `Lesson ${activeLesson.id}: ${activeLesson.targetSentences[0] || 'It was a very interesting story!'}`
+          : 'Can you explain why the redstone circuit needs a repeater?',
+        activeLesson && activeLesson.targetSentences[1]
+          ? activeLesson.targetSentences[1]
+          : 'What happened after Steve entered the ancient stronghold?'
+      ]
+    },
+    {
+      categoryName: '🏰 远古要塞与工业',
+      icon: '🏛️',
+      prompts: [
+        'Let\'s build an automated sugarcane farm with redstone pistons! ⚙️',
+        'We must be careful because the Warden is sleeping nearby! 🤫',
+        'I upgraded my armor to netherite so that I can survive lava! 🛡️'
+      ]
+    }
+  ] : [
     {
       categoryName: '📚 本课核心句',
       icon: '✨',
@@ -754,18 +907,57 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               </div>
             </div>
 
-            {/* Current Real-Time Live Speech Recognition Hint */}
-            <div className="w-full bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-2.5 text-center text-xs text-emerald-200">
-              {isListening ? (
-                <div className="flex items-center justify-center space-x-2 animate-pulse text-emerald-300 font-bold">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-                  <span>🎙️ 正在倾听... 请直接说英文 (说完自动发送给 Alex)</span>
+            {/* Current Real-Time Live Speech Recognition Hint & Audio Level */}
+            <div className="w-full space-y-2">
+              <div className="w-full bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-3 text-center text-xs text-emerald-200">
+                {isListening ? (
+                  <div className="flex flex-col items-center justify-center space-y-2 text-emerald-300 font-bold">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+                      <span>🎙️ 正在倾听中... 请直接说英文 (说完后将自动发送)</span>
+                    </div>
+                    {/* Audio Level Volume Bar */}
+                    <div className="w-48 h-2 bg-emerald-900 rounded-full overflow-hidden border border-emerald-600/40">
+                      <div
+                        className="h-full bg-emerald-400 transition-all duration-75"
+                        style={{ width: `${Math.max(8, audioLevel)}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : isLoading ? (
+                  <div className="flex items-center justify-center space-x-2 text-amber-300 font-bold">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Alex 老师正在按 Minecraft 世界观思考回复...</span>
+                  </div>
+                ) : (
+                  <span className="text-slate-300">💡 点击下方绿色「开启麦克风」按钮说话，或点击快捷句卡直接对练</span>
+                )}
+              </div>
+
+              {callMicError && (
+                <div className="text-xs bg-amber-500/20 border border-amber-400/50 text-amber-200 p-2 rounded-xl text-center font-bold">
+                  ⚠️ {callMicError}
                 </div>
-              ) : isLoading ? (
-                <span className="text-amber-300 font-bold">💭 Alex 正在思考回复...</span>
-              ) : (
-                <span className="text-slate-300">🔊 Alex 正在回答... 说完后麦克风将自动开启</span>
               )}
+
+              {/* Quick Talk Chips in Call */}
+              <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {[
+                  'Hello Alex! 👩‍🦰',
+                  'I built a wooden house! 🪵',
+                  'Let\'s go mining! ⛏️',
+                  'Look at this diamond! 💎'
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSendMessage(chip.replace(/[^\w\s!?,]/g, '').trim())}
+                    disabled={isLoading}
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 rounded-lg text-xs font-bold border border-slate-600 whitespace-nowrap transition-colors"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -776,12 +968,12 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               onClick={handleToggleVoiceInput}
               className={`flex-1 py-4 sm:py-5 rounded-2xl font-black text-base sm:text-lg border-2 sm:border-4 border-black shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
                 isListening
-                  ? 'bg-emerald-500 text-slate-950 animate-pulse'
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse'
                   : 'bg-[#7CFC00] hover:bg-[#68d600] text-emerald-950'
               }`}
             >
               {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              <span>{isListening ? '倾听中 (点击可结束)' : '🎙️ 开启麦克风对讲'}</span>
+              <span>{isListening ? '🛑 结束说话并发送' : '🎙️ 开启麦克风对讲'}</span>
             </button>
 
             {/* Hang Up Button */}

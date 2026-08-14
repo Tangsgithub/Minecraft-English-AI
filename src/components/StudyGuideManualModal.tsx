@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, BookOpen, MessageSquare, Hammer, Shield, Sparkles, CheckCircle2, Trophy, Volume2, UserCheck, X } from 'lucide-react';
+import { Compass, BookOpen, MessageSquare, Hammer, Shield, Sparkles, CheckCircle2, Trophy, Volume2, UserCheck, X, Layers, Zap } from 'lucide-react';
 import { playClickSound, speakText } from '../utils/audio';
 
 interface StudyGuideManualModalProps {
@@ -7,7 +7,7 @@ interface StudyGuideManualModalProps {
 }
 
 export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ onClose }) => {
-  const [activeSection, setActiveSection] = useState<'quickstart' | 'map' | 'alex' | 'craft' | 'parents'>('quickstart');
+  const [activeSection, setActiveSection] = useState<'quickstart' | 'volumes' | 'map' | 'alex' | 'craft' | 'parents'>('quickstart');
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
@@ -45,7 +45,8 @@ export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ on
         <div className="bg-slate-100 p-2 sm:p-3 border-b-2 border-slate-200 flex gap-2 overflow-x-auto shrink-0">
           {[
             { id: 'quickstart', label: '🚀 快速上手', icon: Compass },
-            { id: 'map', label: '🗺️ 144课地图', icon: BookOpen },
+            { id: 'volumes', label: '🏛️ 四册差异化教学法', icon: Layers },
+            { id: 'map', label: '🗺️ 课程地图', icon: BookOpen },
             { id: 'alex', label: '💬 Alex AI口语', icon: MessageSquare },
             { id: 'craft', label: '🔨 3x3合成工坊', icon: Hammer },
             { id: 'parents', label: '🛡️ 家长管理中心', icon: Shield },
@@ -119,6 +120,101 @@ export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ on
                   </div>
                   <p className="text-xs text-slate-600">
                     完成日常任务与随机突发事件，赚取绿宝石，在流浪商人宝库换取稀有防具！
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: VOLUMES DIFFERENTIATION */}
+          {activeSection === 'volumes' && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl space-y-2">
+                <h3 className="text-base font-black text-amber-900 flex items-center space-x-2">
+                  <Layers className="w-5 h-5 text-amber-800" />
+                  <span>《新概念英语》四册阶梯差异化教学体系</span>
+                </h3>
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  各分册语言难度与认知要求呈阶梯式跃升。我们深度结合 Minecraft 沙盒机制，为每一册量身打造了<strong>完全不同的学习互动方式</strong>：
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3.5">
+                {/* Book 1 */}
+                <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-300 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-emerald-950 text-sm flex items-center gap-1.5">
+                      <span>🏡</span>
+                      <span>第一册《英语初阶》(First Things First · 144课)</span>
+                    </span>
+                    <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+                      宁静村庄与农场 · 听说启蒙
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-900 font-bold">
+                    🎯 专属学习方式：【图文配对 + 3x3 积木拼句 + 场景朗读】
+                  </p>
+                  <ul className="text-xs text-emerald-800 space-y-1 pl-4 list-disc">
+                    <li><strong>基础三词排砖</strong>：直观掌握主语 (S)、谓语 (V)、宾语 (O) 词序。</li>
+                    <li><strong>原声听音与跟读评分</strong>：儿童友好语音慢速带读，建立纯正音感。</li>
+                    <li><strong>生活场景迁移</strong>：将游戏道具替换为校园文具、家庭餐桌与日常礼貌表达。</li>
+                  </ul>
+                </div>
+
+                {/* Book 2 */}
+                <div className="bg-red-50 p-4 rounded-2xl border-2 border-red-300 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-red-950 text-sm flex items-center gap-1.5">
+                      <span>⚡</span>
+                      <span>第二册《实践与进步》(Practice & Progress · 96课)</span>
+                    </span>
+                    <span className="text-[10px] bg-red-200 text-red-900 px-2 py-0.5 rounded-full font-bold">
+                      红石工业与远古要塞 · 逻辑进阶
+                    </span>
+                  </div>
+                  <p className="text-xs text-red-900 font-bold">
+                    🎯 专属学习方式：【红石电路逻辑连线 + 故事摘要 3 段式复述】
+                  </p>
+                  <ul className="text-xs text-red-800 space-y-1 pl-4 list-disc">
+                    <li><strong>红石逻辑连词门</strong>：使用 but, because, so, although 连通红石信号，击破复合句难点。</li>
+                    <li><strong>时态中继器拨片</strong>：强化过去完成时 (had done)、将来完成时 (will have done) 与被动语态。</li>
+                    <li><strong>篇章复述挑战 (Story Retelling)</strong>：根据 3 组核心线索词，口述还原整篇幽默叙事短文。</li>
+                  </ul>
+                </div>
+
+                {/* Book 3 */}
+                <div className="bg-purple-50 p-4 rounded-2xl border-2 border-purple-300 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-purple-950 text-sm flex items-center gap-1.5">
+                      <span>🌌</span>
+                      <span>第三册《培养技能》(Developing Skills · 60篇社科名篇)</span>
+                    </span>
+                    <span className="text-[10px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full font-bold">
+                      末地神殿与炼药附魔 · 高阶精读
+                    </span>
+                  </div>
+                  <p className="text-xs text-purple-900 font-bold">
+                    🎯 专属学习方式：【长难句附魔台 + 同义词提纯 + AI 辩论】
+                  </p>
+                  <ul className="text-xs text-purple-800 space-y-1 pl-4 list-disc">
+                    <li><strong>非谓语与倒装附魔</strong>：剖析长难句结构，给句子注入高级修辞属性。</li>
+                    <li><strong>同义替换炼药</strong>：进阶词汇精准替换，提升书面写作表达质感。</li>
+                  </ul>
+                </div>
+
+                {/* Book 4 */}
+                <div className="bg-slate-100 p-4 rounded-2xl border-2 border-slate-300 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                      <span>🏛️</span>
+                      <span>第四册《流利英语》(Fluency in English · 48篇原版典籍)</span>
+                    </span>
+                    <span className="text-[10px] bg-slate-300 text-slate-800 px-2 py-0.5 rounded-full font-bold">
+                      远古图书馆 · 学术流利
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-800 font-bold">
+                    🎯 专属学习方式：【名篇断句精译 + 学术讲台演讲答辩】
                   </p>
                 </div>
               </div>

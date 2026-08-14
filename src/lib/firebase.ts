@@ -1,6 +1,4 @@
 import { UserProfile } from '../types';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 
 export interface User {
   uid: string;
@@ -9,53 +7,11 @@ export interface User {
   email?: string | null;
 }
 
-// Firebase Client Configuration
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDJzMAKbssDBC4k-cqMNobMQIXJi9ordJI",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "norse-guild-nv8b6.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "norse-guild-nv8b6",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "norse-guild-nv8b6.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "83817873016",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:83817873016:web:03d44cabd25d0d863f378d"
-};
-
-const databaseId = import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "ai-studio-minecraftenglish-09c013a2-2881-4a93-95fb-4e535f6d9608";
-
-let app: any = null;
-let firestoreDb: any = null;
-
-try {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-  firestoreDb = getFirestore(app, databaseId);
-} catch (e) {
-  console.warn("Firebase initialization warning:", e);
-}
-
-export const db = firestoreDb;
-
 const getApiBase = () => {
   if (typeof window !== 'undefined') {
     return window.location.origin;
   }
   return '';
-};
-
-// Helper to wrap promise with timeout
-const withTimeout = <T>(promise: Promise<T>, ms: number = 2000): Promise<T> => {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error("Network connection timeout"));
-    }, ms);
-    promise
-      .then((res) => {
-        clearTimeout(timer);
-        resolve(res);
-      })
-      .catch((err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-  });
 };
 
 export const auth: { currentUser: User | null } = {
@@ -86,7 +42,6 @@ export const serverProxyRegister = async (
 ): Promise<{ success: boolean; message: string; user?: User; profile?: UserProfile }> => {
   const cleanAccount = account.trim().toLowerCase();
   const userNickname = nickname?.trim() || account.trim();
-  const uid = 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
   try {
     const resp = await fetch(`${getApiBase()}/api/auth/register`, {
@@ -101,58 +56,35 @@ export const serverProxyRegister = async (
     });
     const text = await resp.text();
     let data: any = {};
-    try { data = JSON.parse(text); } catch {}
-
-    if (data.success && data.user) {
-      auth.currentUser = data.user;
-      if (data.profile) {
-        localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
-      }
-      return { success: true, message: data.message || '注册成功！账号已成功关联云端数据库', user: data.user, profile: data.profile };
-    } else if (data.error || data.message) {
-      return { success: false, message: data.error || data.message };
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, message: '服务器响应异常，请重试' };
     }
-  } catch (err) {
-    console.warn("Server API register network call error:", err);
+
+    if (resp.ok && data.success) {
+      const user: User = data.user || {
+        uid: data.uid || ('user_' + Date.now()),
+        account: cleanAccount,
+        nickname: userNickname
+      };
+      auth.currentUser = user;
+      return {
+        success: true,
+        message: data.message || '注册成功！已连接 Neon 专属 PostgreSQL 数据库',
+        user,
+        profile: data.profile
+      };
+    } else {
+      return {
+        success: false,
+        message: data.error || data.message || '注册失败，该账号可能已被注册'
+      };
+    }
+  } catch (err: any) {
+    console.error("Register network error:", err);
+    return { success: false, message: '网络异常，请稍后再试' };
   }
-
-  // Local fallback registration
-  const localUser: User = { uid, account: cleanAccount, nickname: userNickname };
-  const initialProfile: UserProfile = {
-    ...(existingProfile || {}),
-    id: uid,
-    nickname: userNickname,
-    account: cleanAccount,
-    age: existingProfile?.age || 8,
-    selectedVolumeId: existingProfile?.selectedVolumeId || 'vol1',
-    currentLessonId: existingProfile?.currentLessonId || 1,
-    unlockedLessonIds: existingProfile?.unlockedLessonIds?.length ? existingProfile.unlockedLessonIds : [1, 2],
-    completedLessonIds: existingProfile?.completedLessonIds || [],
-    completedMissionIds: existingProfile?.completedMissionIds || [],
-    unlockedBadgeIds: existingProfile?.unlockedBadgeIds || ['badge_first_words'],
-    masteredWords: existingProfile?.masteredWords || [],
-    emeralds: typeof existingProfile?.emeralds === 'number' ? existingProfile.emeralds : 100,
-    xp: typeof existingProfile?.xp === 'number' ? existingProfile.xp : 0,
-    level: existingProfile?.level || 1,
-    selectedAvatar: existingProfile?.selectedAvatar || '👦',
-    customAvatarUrl: existingProfile?.customAvatarUrl || '',
-    learningGoal: existingProfile?.learningGoal || 15,
-    todayMinutes: existingProfile?.todayMinutes || 0,
-    streakDays: existingProfile?.streakDays || 1,
-    lastActiveDate: new Date().toISOString().split('T')[0],
-    vocabulary: existingProfile?.vocabulary || [],
-    completedMissions: existingProfile?.completedMissions || [],
-    unlockedCraftingIds: existingProfile?.unlockedCraftingIds || [],
-    enderChestCount: existingProfile?.enderChestCount || 0,
-    eyeCareEnabled: existingProfile?.eyeCareEnabled ?? false,
-    eyeCareMinutes: existingProfile?.eyeCareMinutes || 20,
-    apiKeyConfig: existingProfile?.apiKeyConfig || { provider: 'deepseek', apiKey: '', baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
-    isInitialSetupDone: true
-  };
-
-  auth.currentUser = localUser;
-  localStorage.setItem('mc_english_user_profile', JSON.stringify(initialProfile));
-  return { success: true, message: '注册成功！已关联本地和服务器档案', user: localUser, profile: initialProfile };
 };
 
 export const serverProxyLogin = async (
@@ -161,7 +93,6 @@ export const serverProxyLogin = async (
 ): Promise<{ success: boolean; message: string; user?: User; profile?: UserProfile }> => {
   const cleanAccount = account.trim().toLowerCase();
 
-  // 1. Primary: Express Server Auth Endpoint
   try {
     const resp = await fetch(`${getApiBase()}/api/auth/login`, {
       method: 'POST',
@@ -170,23 +101,37 @@ export const serverProxyLogin = async (
     });
     const text = await resp.text();
     let data: any = {};
-    try { data = JSON.parse(text); } catch {}
-
-    if (data.success && data.user) {
-      auth.currentUser = data.user;
-      if (data.profile) {
-        localStorage.setItem('mc_english_user_profile', JSON.stringify(data.profile));
-      }
-      return { success: true, message: data.message || '登录成功！已从云端同步数据', user: data.user, profile: data.profile };
-    } else if (data.error || data.message) {
-      return { success: false, message: data.error || data.message };
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { success: false, message: '服务器响应异常，请重试' };
     }
-  } catch (err) {
-    console.warn("Server API login network call error:", err);
+
+    if (resp.ok && data.success) {
+      const user: User = data.user || {
+        uid: data.uid || ('user_' + Date.now()),
+        account: cleanAccount,
+        nickname: data.nickname || account
+      };
+      auth.currentUser = user;
+      return {
+        success: true,
+        message: '登录成功！已从 Neon PostgreSQL 数据库同步您的学习档案',
+        user,
+        profile: data.profile
+      };
+    } else {
+      return {
+        success: false,
+        message: data.error || data.message || '账号或密码不正确'
+      };
+    }
+  } catch (err: any) {
+    console.error("Login network error:", err);
   }
 
-  // 2. Local fallback login
-  const storedProfileRaw = localStorage.getItem('mc_english_user_profile');
+  // Local fallback if offline
+  const storedProfileRaw = typeof window !== 'undefined' ? localStorage.getItem('mc_english_user_profile') : null;
   if (storedProfileRaw) {
     try {
       const storedProfile: UserProfile = JSON.parse(storedProfileRaw);
@@ -210,43 +155,36 @@ export const saveUserProfileToCloud = async (
 
   if (!uid && !account) return false;
 
-  let apiSuccess = false;
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     const resp = await fetch(`${getApiBase()}/api/auth/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: uid || profile.id, account, profile })
+      body: JSON.stringify({ uid: uid || profile.id, account, profile }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     const text = await resp.text();
     try {
       const data = JSON.parse(text);
-      apiSuccess = data.success === true;
+      return data.success === true;
     } catch {
-      apiSuccess = false;
+      return false;
     }
   } catch (err) {
-    console.warn("Server API sync warning:", err);
+    console.warn("Neon database sync warning:", err);
+    return false;
   }
-
-  // Direct Firestore Document Backup
-  if (firestoreDb && uid) {
-    try {
-      await setDoc(doc(firestoreDb, 'user_profiles', uid), {
-        ...profile,
-        account: account || profile.account || '',
-        updatedAt: Date.now()
-      }, { merge: true });
-    } catch (err) {
-      console.warn("Firestore setDoc sync warning:", err);
-    }
-  }
-
-  return apiSuccess;
 };
 
 export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
   try {
-    const resp = await fetch(`${getApiBase()}/api/admin/users`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const resp = await fetch(`${getApiBase()}/api/admin/users`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     if (resp.ok) {
       const data = await resp.json();
       if (data.success && Array.isArray(data.users)) {
@@ -255,7 +193,7 @@ export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
     }
     return [];
   } catch (err) {
-    console.warn("Fetch admin users failed:", err);
+    console.warn("Fetch admin users from Neon failed:", err);
     return [];
   }
 };
@@ -263,16 +201,20 @@ export const fetchAllUsersFromFirestore = async (): Promise<any[]> => {
 export const fetchUserProfileFromCloud = async (uidOrAccount: string): Promise<UserProfile | null> => {
   if (!uidOrAccount) return null;
 
-  // 1. Try Express API
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
     const resp = await fetch(`${getApiBase()}/api/auth/profile`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         uid: uidOrAccount,
         account: auth.currentUser?.account || uidOrAccount
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     const text = await resp.text();
     try {
       const data = JSON.parse(text);
@@ -281,20 +223,7 @@ export const fetchUserProfileFromCloud = async (uidOrAccount: string): Promise<U
       }
     } catch {}
   } catch (err) {
-    console.warn("Server API fetch profile warning:", err);
-  }
-
-  // 2. Fallback to direct Firestore read
-  if (firestoreDb && uidOrAccount) {
-    try {
-      const docRef = doc(firestoreDb, 'user_profiles', uidOrAccount);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        return snap.data() as UserProfile;
-      }
-    } catch (err) {
-      console.warn("Firestore getDoc fetch warning:", err);
-    }
+    console.warn("Neon fetch profile warning:", err);
   }
 
   return null;
@@ -339,3 +268,11 @@ export const onAuthStateChanged = (_authObj: any, callback: (user: User | null) 
   return () => {};
 };
 
+// Pure Neon PostgreSQL activation codes fetch helper
+export const fetchActivationCodesFromFirestore = async (): Promise<any[]> => {
+  return [];
+};
+
+export const saveActivationCodeToFirestore = async (_codeObj: any): Promise<boolean> => {
+  return true;
+};

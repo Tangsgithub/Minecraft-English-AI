@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, getBiomeChapterByUnit, getBiomeChapterByLesson, BiomeChapter } from '../data/storyData';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
+import { getVolumeProgress } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import {
   CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
@@ -246,19 +247,21 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
 
   const currentVolId = profile.selectedVolumeId || 'vol1';
   const catalog = getFullLessonsCatalog(currentVolId);
+  const volProg = getVolumeProgress(profile, currentVolId);
+  const currentLessonId = volProg.currentLessonId;
+  const unlockedLessonIds = volProg.unlockedLessonIds;
+  const completedLessonIds = volProg.completedLessonIds;
 
   // Filter lessons based on selectedUnit (0 = all, 1-12 = unit 1-12)
   const displayLessons = catalog.filter(l => selectedUnit === 0 || l.unit === selectedUnit);
 
   const currentChapter: BiomeChapter = selectedUnit > 0
     ? getBiomeChapterByUnit(selectedUnit)
-    : getBiomeChapterByLesson(profile.currentLessonId);
-
-  const unlockedLessonIds = profile.unlockedLessonIds || [1];
+    : getBiomeChapterByLesson(currentLessonId);
 
   // Compute stats
   const completedInView = displayLessons.filter(l => {
-    return l.id < profile.currentLessonId || (unlockedLessonIds.includes(l.id) && unlockedLessonIds.includes(l.id + 1));
+    return l.id < currentLessonId || completedLessonIds.includes(l.id);
   }).length;
   const progressPercent = Math.round((completedInView / displayLessons.length) * 100) || 0;
 
@@ -267,7 +270,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
     if (activeNodeRef.current) {
       activeNodeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [selectedUnit, profile.currentLessonId]);
+  }, [selectedUnit, currentLessonId]);
 
   // Construct complete Lesson object with vocabulary and dialogues
   const getFullLessonObj = (lessonId: number): Lesson => {
@@ -394,9 +397,9 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const chapter = getBiomeChapterByUnit(unitNum);
             const storySnippet = chapter.lessonsStory[item.id] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 展开第 ${item.id} 课对话。`;
 
-            const isCompleted = item.id < profile.currentLessonId || (profile.completedLessonIds || []).includes(item.id) || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(item.id + 1));
-            const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1 || item.id <= profile.currentLessonId || isCompleted;
-            const isCurrent = profile.currentLessonId === item.id;
+            const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
+            const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1;
+            const isCurrent = currentLessonId === item.id;
             const isBossNode = item.id % 12 === 0;
             const isFirstInUnit = (item.id - 1) % 12 === 0;
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId } from './types';
+import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId, VolumeProgress } from './types';
 import { getLevelFromXp } from './data/gamificationData';
+import { getVolumeProgress, updateVolumeProgress, switchActiveVolume, DEFAULT_VOLUME_PROGRESS } from './utils/volumeProgress';
 import { HeaderBar } from './components/HeaderBar';
 import { FirstLaunchModal } from './components/FirstLaunchModal';
 import { LessonMap } from './components/LessonMap';
@@ -36,9 +37,16 @@ const DEFAULT_PROFILE: UserProfile = {
   streakDays: 1,
   lastActiveDate: new Date().toISOString().split('T')[0],
   selectedAvatar: '👦',
+  selectedVolumeId: 'vol1',
   currentLessonId: 1,
-  unlockedLessonIds: [1, 2],
+  unlockedLessonIds: [1],
   completedLessonIds: [],
+  volumeProgress: {
+    vol1: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+  },
   completedMissionIds: [],
   unlockedBadgeIds: ['badge_first_words'],
   masteredWords: ['block', 'craft', 'house'],
@@ -53,32 +61,64 @@ const DEFAULT_PROFILE: UserProfile = {
 
 const sanitizeProfile = (raw: any): UserProfile => {
   if (!raw || typeof raw !== 'object') return DEFAULT_PROFILE;
-  const merged = {
+
+  const rawVolProgress = raw.volumeProgress && typeof raw.volumeProgress === 'object' ? raw.volumeProgress : {};
+  const volProgress: Record<CourseVolumeId, VolumeProgress> = {
+    vol1: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+    ...rawVolProgress
+  };
+
+  // If raw has legacy top-level progress, preserve it in vol1
+  if (!raw.volumeProgress?.vol1 && (raw.currentLessonId || raw.unlockedLessonIds)) {
+    volProgress.vol1 = {
+      currentLessonId: raw.currentLessonId || 1,
+      unlockedLessonIds: Array.isArray(raw.unlockedLessonIds) ? raw.unlockedLessonIds : [1],
+      completedLessonIds: Array.isArray(raw.completedLessonIds) ? raw.completedLessonIds : []
+    };
+  }
+
+  // Sanitize each volume progress individually
+  (['vol1', 'vol2', 'vol3', 'vol4'] as CourseVolumeId[]).forEach(vId => {
+    const vp = volProgress[vId];
+    if (vp) {
+      const uSet = new Set<number>(Array.isArray(vp.unlockedLessonIds) ? vp.unlockedLessonIds : [1]);
+      uSet.add(1);
+      if (vp.currentLessonId) {
+        for (let i = 1; i <= vp.currentLessonId; i++) uSet.add(i);
+      }
+      if (vp.completedLessonIds && Array.isArray(vp.completedLessonIds)) {
+        vp.completedLessonIds.forEach(id => {
+          uSet.add(id);
+          uSet.add(id + 1);
+        });
+      }
+      vp.unlockedLessonIds = Array.from(uSet).sort((a, b) => a - b);
+      vp.completedLessonIds = Array.isArray(vp.completedLessonIds) ? vp.completedLessonIds : [];
+    }
+  });
+
+  const activeVolId: CourseVolumeId = raw.selectedVolumeId || 'vol1';
+  const activeProg = volProgress[activeVolId] || volProgress.vol1;
+
+  const merged: UserProfile = {
     ...DEFAULT_PROFILE,
     ...raw,
-    unlockedLessonIds: Array.isArray(raw.unlockedLessonIds) ? raw.unlockedLessonIds : [1, 2],
-    completedLessonIds: Array.isArray(raw.completedLessonIds) ? raw.completedLessonIds : [],
+    selectedVolumeId: activeVolId,
+    volumeProgress: volProgress,
+    currentLessonId: activeProg.currentLessonId,
+    unlockedLessonIds: activeProg.unlockedLessonIds,
+    completedLessonIds: activeProg.completedLessonIds,
     completedMissionIds: Array.isArray(raw.completedMissionIds)
       ? raw.completedMissionIds
       : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []),
     unlockedBadgeIds: Array.isArray(raw.unlockedBadgeIds) ? raw.unlockedBadgeIds : ['badge_first_words'],
     masteredWords: Array.isArray(raw.masteredWords) ? raw.masteredWords : []
   };
+
   if (merged.nickname === 'Tom') merged.nickname = 'Olaf';
-  const unlockedSet = new Set<number>(merged.unlockedLessonIds);
-  unlockedSet.add(1);
-  if (merged.currentLessonId) {
-    for (let i = 1; i <= merged.currentLessonId; i++) {
-      unlockedSet.add(i);
-    }
-  }
-  if (merged.completedLessonIds && merged.completedLessonIds.length > 0) {
-    merged.completedLessonIds.forEach(id => {
-      unlockedSet.add(id);
-      unlockedSet.add(id + 1);
-    });
-  }
-  merged.unlockedLessonIds = Array.from(unlockedSet).sort((a, b) => a - b);
   merged.level = getLevelFromXp(merged.xp || 40);
   return merged;
 };
@@ -128,31 +168,51 @@ export default function App() {
       fetchUserProfileFromCloud(target).then(cloudProfile => {
         if (cloudProfile) {
           setProfile(prev => {
-            const mergedUnlocked = Array.from(new Set([...(prev.unlockedLessonIds || [1, 2]), ...(cloudProfile.unlockedLessonIds || [1, 2])])).sort((a, b) => a - b);
-            const mergedCompleted = Array.from(new Set([...(prev.completedLessonIds || []), ...(cloudProfile.completedLessonIds || [])])).sort((a, b) => a - b);
-            const mergedMissions = Array.from(new Set([...(prev.completedMissionIds || []), ...(cloudProfile.completedMissionIds || [])]));
-            const mergedWords = Array.from(new Set([...(prev.masteredWords || []), ...(cloudProfile.masteredWords || [])]));
-            const maxLevel = Math.max(prev.level || 1, cloudProfile.level || 1);
-            const maxEmeralds = Math.max(prev.emeralds ?? 100, cloudProfile.emeralds ?? 100);
-            const maxXp = Math.max(prev.xp || 0, cloudProfile.xp || 0);
-            const maxCurrentLesson = Math.max(prev.currentLessonId || 1, cloudProfile.currentLessonId || 1);
-            const isVip = Boolean(prev.isVip || cloudProfile.isVip);
+            const isSwitchingAccount = prev.account && currentUser?.account && prev.account !== currentUser.account;
+            
+            let merged;
 
-            const merged = sanitizeProfile({
-              ...prev,
-              ...cloudProfile,
-              account: currentUser?.account || cloudProfile.account || prev.account,
-              nickname: currentUser?.nickname || cloudProfile.nickname || prev.nickname,
-              isVip,
-              level: maxLevel,
-              emeralds: maxEmeralds,
-              xp: maxXp,
-              currentLessonId: maxCurrentLesson,
-              unlockedLessonIds: mergedUnlocked,
-              completedLessonIds: mergedCompleted,
-              completedMissionIds: mergedMissions,
-              masteredWords: mergedWords
-            });
+            if (isSwitchingAccount) {
+              // Completely overwrite local state when switching to a different account
+              merged = sanitizeProfile({
+                ...cloudProfile,
+                account: currentUser?.account || cloudProfile.account,
+                nickname: currentUser?.nickname || cloudProfile.nickname
+              });
+            } else {
+              // Merge local guest progress with cloud profile, or update existing
+              const mergedUnlocked = Array.from(new Set([...(prev.unlockedLessonIds || [1]), ...(cloudProfile.unlockedLessonIds || [1])])).sort((a, b) => a - b);
+              const mergedCompleted = Array.from(new Set([...(prev.completedLessonIds || []), ...(cloudProfile.completedLessonIds || [])])).sort((a, b) => a - b);
+              const mergedMissions = Array.from(new Set([...(prev.completedMissionIds || []), ...(cloudProfile.completedMissionIds || [])]));
+              const mergedWords = Array.from(new Set([...(prev.masteredWords || []), ...(cloudProfile.masteredWords || [])]));
+              const maxLevel = Math.max(prev.level || 1, cloudProfile.level || 1);
+              const maxEmeralds = Math.max(prev.emeralds ?? 100, cloudProfile.emeralds ?? 100);
+              const maxXp = Math.max(prev.xp || 0, cloudProfile.xp || 0);
+              const maxCurrentLesson = Math.max(prev.currentLessonId || 1, cloudProfile.currentLessonId || 1);
+              const isVip = Boolean(prev.isVip || cloudProfile.isVip);
+              
+              const mergedActivatedVolumes = Array.from(new Set([
+                ...(prev.activatedVolumes || []),
+                ...(cloudProfile.activatedVolumes || [])
+              ]));
+
+              merged = sanitizeProfile({
+                ...prev,
+                ...cloudProfile,
+                account: currentUser?.account || cloudProfile.account || prev.account,
+                nickname: currentUser?.nickname || cloudProfile.nickname || prev.nickname,
+                isVip,
+                activatedVolumes: mergedActivatedVolumes,
+                level: maxLevel,
+                emeralds: maxEmeralds,
+                xp: maxXp,
+                currentLessonId: maxCurrentLesson,
+                unlockedLessonIds: mergedUnlocked,
+                completedLessonIds: mergedCompleted,
+                completedMissionIds: mergedMissions,
+                masteredWords: mergedWords
+              });
+            }
 
             if (typeof window !== 'undefined') {
               localStorage.setItem('mc_english_user_profile', JSON.stringify(merged));
@@ -272,6 +332,18 @@ export default function App() {
 
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
 
+  const handleChangeVolumeId = (newVolId: CourseVolumeId) => {
+    setSelectedVolumeId(newVolId);
+    setProfile(prev => {
+      const updated = switchActiveVolume(prev, newVolId);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(updated));
+      }
+      saveUserProfileToCloud(updated, currentUser?.uid);
+      return updated;
+    });
+  };
+
   const handleCompleteLesson = (lessonId: number) => {
     handleAwardEmeralds(10, 30);
     playEmeraldSound();
@@ -282,16 +354,18 @@ export default function App() {
     });
 
     setProfile(prev => {
-      const nextUnlocked = Array.from(new Set([...prev.unlockedLessonIds, lessonId, lessonId + 1])).sort((a, b) => a - b);
-      const nextCompleted = Array.from(new Set([...(prev.completedLessonIds || []), lessonId])).sort((a, b) => a - b);
-      const nextCurrentLessonId = Math.max(prev.currentLessonId, lessonId + 1);
+      const currentVolId = selectedVolumeId || prev.selectedVolumeId || 'vol1';
+      const volProg = getVolumeProgress(prev, currentVolId);
 
-      const nextProfile: UserProfile = {
-        ...prev,
+      const nextUnlocked = Array.from(new Set([...volProg.unlockedLessonIds, lessonId, lessonId + 1])).sort((a, b) => a - b);
+      const nextCompleted = Array.from(new Set([...(volProg.completedLessonIds || []), lessonId])).sort((a, b) => a - b);
+      const nextCurrentLessonId = Math.max(volProg.currentLessonId, lessonId + 1);
+
+      const nextProfile = updateVolumeProgress(prev, currentVolId, {
         currentLessonId: nextCurrentLessonId,
         unlockedLessonIds: nextUnlocked,
         completedLessonIds: nextCompleted
-      };
+      });
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(nextProfile));
@@ -356,6 +430,9 @@ export default function App() {
     setCurrentUser(null);
     setIsUserProfileOpen(false);
     setIsLandingView(true);
+    localStorage.removeItem('mc_english_user_profile');
+    localStorage.removeItem('mc_english_current_user');
+    setProfile(DEFAULT_PROFILE);
   };
 
   const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
@@ -413,6 +490,7 @@ export default function App() {
               setIsLandingView(false);
             } else if (!user) {
               setIsLandingView(true);
+              setProfile(DEFAULT_PROFILE);
             }
           }}
           currentProfile={profile}
@@ -427,7 +505,7 @@ export default function App() {
       {/* Fixed Top Status Header */}
       <HeaderBar
         selectedVolumeId={selectedVolumeId}
-        onChangeVolumeId={setSelectedVolumeId}
+        onChangeVolumeId={handleChangeVolumeId}
         profile={profile}
         currentUser={currentUser}
         onOpenAuth={() => setIsAuthOpen(true)}
@@ -735,6 +813,7 @@ export default function App() {
             setIsLandingView(false);
           } else if (!user) {
             setIsLandingView(true);
+            setProfile(DEFAULT_PROFILE);
           }
         }}
         currentProfile={profile}

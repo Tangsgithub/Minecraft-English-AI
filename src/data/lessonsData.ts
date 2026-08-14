@@ -1,6 +1,10 @@
 import { Lesson, CourseVolumeId } from '../types';
 import { getAuthenticVocabForLesson } from './authenticLessonVocab';
 import { AUTHENTIC_LESSON_DIALOGUES } from './authenticLessonDialogues';
+import { NCE_BOOK2_UNIT1_DATA } from './nceBook2Unit1Data';
+import { NCE_BOOK2_UNIT2_DATA } from './nceBook2Unit2Data';
+import { NCE_BOOK2_UNITS2_TO_4_DATA } from './nceBook2Units2to4Data';
+import { NCE_BOOK2_ALL_96_TITLES } from './nceBook2FullTitles';
 
 // ============================================================================
 // 《新概念英语》1/2/3册 权威原版课文与词汇/句型库 (Authentic New Concept English Curriculum)
@@ -221,18 +225,48 @@ export const NCE_BOOK3_TITLES: Record<number, { title: string; titleZh: string; 
 // ============================================================================
 
 export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1'): Lesson {
+  // 1. 若为第二册，检查是否有 100% 真实教研打磨数据 (Unit 1: 1-24课 或 Unit 2: 25-48课 或 Units 3-4: 49-96课)
+  if (volumeId === 'vol2') {
+    const detailedData = NCE_BOOK2_UNIT1_DATA[lessonId] || NCE_BOOK2_UNIT2_DATA[lessonId] || NCE_BOOK2_UNITS2_TO_4_DATA[lessonId];
+    if (detailedData) {
+      const unit = Math.ceil(lessonId / 12);
+      const vocabWithIds = detailedData.vocab.map((v, idx) => ({
+        ...v,
+        id: `vol2_l${lessonId}_${idx + 1}`,
+        requiredLessonId: lessonId
+      }));
+
+      return {
+        id: lessonId,
+        unit: unit,
+        title: `Lesson ${lessonId}: ${detailedData.title}`,
+        titleZh: `第 ${lessonId} 课：${detailedData.titleZh}`,
+        topic: detailedData.topic,
+        topicZh: detailedData.topicZh,
+        difficulty: lessonId <= 32 ? 'easy' : lessonId <= 64 ? 'medium' : 'hard',
+        minecraftScene: `${detailedData.mcScene} (第 ${lessonId} 关)`,
+        sceneDescription: detailedData.mcSceneDesc,
+        vocabulary: vocabWithIds,
+        targetSentences: detailedData.sentences.map(s => s.en),
+        targetSentenceTranslations: detailedData.sentences.map(s => s.zh),
+        dialogueScript: detailedData.dialogue,
+        grammarNote: `【语法要点】${detailedData.grammar}。${detailedData.grammarDetail}`
+      };
+    }
+  }
+
   let titleData = NCE_BOOK1_TITLES[lessonId];
   let defaultTheme = '村庄广场';
 
   if (volumeId === 'vol2') {
-    titleData = NCE_BOOK2_TITLES[lessonId] || {
+    titleData = NCE_BOOK2_ALL_96_TITLES[lessonId] || NCE_BOOK2_TITLES[lessonId] || {
       title: `Lesson ${lessonId}`,
       titleZh: `第 ${lessonId} 课`,
       topic: "Redstone & Complex English",
       topicZh: "红石要塞与进阶表达",
       grammar: "新概念第二册核心语法句型"
     };
-    defaultTheme = '红石要塞';
+    defaultTheme = (NCE_BOOK2_ALL_96_TITLES[lessonId]?.mcScene) || '红石要塞';
   } else if (volumeId === 'vol3') {
     titleData = NCE_BOOK3_TITLES[lessonId] || {
       title: `Lesson ${lessonId}`,
@@ -263,6 +297,14 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
   const genVocab = generateVocabForLesson(lessonId, cleanTitle, cleanTitleZh, volumeId);
   const genSentences = generateSentencesForLesson(lessonId, cleanTitle, cleanTitleZh, genVocab, volumeId);
 
+  const sceneDesc = (volumeId === 'vol2' && NCE_BOOK2_ALL_96_TITLES[lessonId]?.mcSceneDesc)
+    ? NCE_BOOK2_ALL_96_TITLES[lessonId].mcSceneDesc
+    : `Steve 和 Alex 老师在 ${defaultTheme} 中，结合《${cleanTitleZh}》开展真实原版英语互动学习。`;
+
+  const grammarNoteText = (volumeId === 'vol2' && NCE_BOOK2_ALL_96_TITLES[lessonId]?.grammarDetail)
+    ? `【语法要点】${NCE_BOOK2_ALL_96_TITLES[lessonId].grammar}。${NCE_BOOK2_ALL_96_TITLES[lessonId].grammarDetail}`
+    : `【语法要点】${titleData.grammar}。在《新概念英语》第 ${lessonId} 课中，该语法是地道口语与写作的核心重点。`;
+
   return {
     id: lessonId,
     unit: unit,
@@ -272,7 +314,7 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
     topicZh: titleData.topicZh,
     difficulty: lessonId <= 48 ? 'easy' : lessonId <= 96 ? 'medium' : 'hard',
     minecraftScene: `${defaultTheme} (第 ${lessonId} 关)`,
-    sceneDescription: `Steve 和 Alex 老师在 ${defaultTheme} 中，结合《${cleanTitleZh}》开展真实原版英语互动学习。`,
+    sceneDescription: sceneDesc,
     vocabulary: genVocab,
     targetSentences: genSentences.map(s => s.en),
     targetSentenceTranslations: genSentences.map(s => s.zh),
@@ -281,18 +323,24 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
       : [
           {
             speaker: 'Alex',
-            text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! ${genSentences[0]?.en || ''}`,
-            translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！${genSentences[0]?.zh || ''}`,
+            text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! Let's explore grammar and redstone mechanics together.`,
+            translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！让我们一起探索核心语法与红石机械。`,
             avatar: '👩‍🦰'
           },
           {
             speaker: 'Steve',
-            text: genSentences[1]?.en || `I am excited to learn and build in Minecraft today!`,
-            translation: genSentences[1]?.zh || `今天能在我的世界里边学英语边建造，我太兴奋了！`,
+            text: genSentences[0]?.en || `I am ready to master this lesson and complete the redstone challenge!`,
+            translation: genSentences[0]?.zh || `我已经准备好掌握本课知识并完成红石挑战！`,
             avatar: '👦'
+          },
+          {
+            speaker: 'Alex',
+            text: genSentences[1]?.en || `Remember the core rule: ${titleData.grammar}.`,
+            translation: genSentences[1]?.zh || `请牢记本课核心语法要点：${titleData.grammar}。`,
+            avatar: '👩‍🦰'
           }
         ],
-    grammarNote: `【语法要点】${titleData.grammar}。在《新概念英语》第 ${lessonId} 课中，该语法是地道口语与写作的核心重点。`
+    grammarNote: grammarNoteText
   };
 }
 
@@ -300,6 +348,59 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
 function generateVocabForLesson(lessonId: number, title: string, titleZh: string, volumeId: CourseVolumeId) {
   if (volumeId === 'vol1') {
     return getAuthenticVocabForLesson(lessonId);
+  }
+
+  if (volumeId === 'vol2') {
+    const detailed = NCE_BOOK2_UNIT1_DATA[lessonId] || NCE_BOOK2_UNIT2_DATA[lessonId] || NCE_BOOK2_UNITS2_TO_4_DATA[lessonId];
+    if (detailed) {
+      return detailed.vocab.map((v, idx) => ({
+        ...v,
+        id: `vol2_l${lessonId}_${idx + 1}`,
+        requiredLessonId: lessonId
+      }));
+    }
+
+    const meta = NCE_BOOK2_ALL_96_TITLES[lessonId];
+    const words = title.replace(/[^a-zA-Z\s]/g, '').split(' ').filter(w => w.length > 2);
+    const w1 = (words[0] || 'redstone').toLowerCase();
+    const w2 = (words[1] || 'circuit').toLowerCase();
+    const w3 = (words[2] || 'energy').toLowerCase();
+
+    return [
+      {
+        id: `vol2_l${lessonId}_1`,
+        word: w1,
+        phonetic: `/${w1}/`,
+        meaning: `名词/动词：《${titleZh}》核心词汇`,
+        mcItem: 'Redstone Dust',
+        mcItemIcon: '⚡',
+        sampleSentence: `In Lesson ${lessonId} "${title}", we study "${w1}".`,
+        sampleTranslation: `在第 ${lessonId} 课《${titleZh}》中，我们学习重点词汇 "${w1}"。`,
+        requiredLessonId: lessonId
+      },
+      {
+        id: `vol2_l${lessonId}_2`,
+        word: w2,
+        phonetic: `/${w2}/`,
+        meaning: `名词：高频重点拓展词`,
+        mcItem: 'Redstone Repeater',
+        mcItemIcon: '🔁',
+        sampleSentence: `Mastering "${w2}" helps understand ${meta?.topic || 'the story'}.`,
+        sampleTranslation: `掌握 "${w2}" 有助于深入理解课文《${titleZh}》。`,
+        requiredLessonId: lessonId
+      },
+      {
+        id: `vol2_l${lessonId}_3`,
+        word: w3,
+        phonetic: `/${w3}/`,
+        meaning: `名词/形容词：中考高考进阶考点词`,
+        mcItem: 'Observer',
+        mcItemIcon: '👁️',
+        sampleSentence: `Pay attention to "${w3}" in daily English communication.`,
+        sampleTranslation: `在日常英语沟通中注意 "${w3}" 的地道表达。`,
+        requiredLessonId: lessonId
+      }
+    ];
   }
 
   // 二册与三册的精准词汇派生

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { LESSONS_DATA } from '../data/lessonsData';
-import { ShieldCheck, Unlock, Zap, Database, Terminal, RefreshCw, Key, Award, Check, AlertTriangle, Eye, Volume2, X, Download } from 'lucide-react';
+import { ShieldCheck, Unlock, Zap, Database, Terminal, RefreshCw, Key, Award, Check, AlertTriangle, Eye, Volume2, X, Download, Upload, Copy, FileText } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playLevelUpSound, speakText } from '../utils/audio';
-import { fetchAllUsersFromFirestore } from '../lib/firebase';
+import { fetchAllUsersFromFirestore, fetchActivationCodesFromFirestore, saveActivationCodeToFirestore } from '../lib/firebase';
 
 interface AdminDashboardModalProps {
   profile: UserProfile;
@@ -16,13 +16,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   onUpdateProfile,
   onClose
 }) => {
-  const DEVELOPER_EMAIL = 'deantang2014@gmail.com';
-  const MASTER_PIN = '2026888';
-
-  const isEmailDev = profile.email?.toLowerCase() === DEVELOPER_EMAIL.toLowerCase();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(isEmailDev);
-  const [pinInput, setPinInput] = useState<string>('');
-  const [pinError, setPinError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [adminAccountInput, setAdminAccountInput] = useState<string>('');
+  const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [selectedLessonInspect, setSelectedLessonInspect] = useState<Lesson>(LESSONS_DATA[0]);
   const [activeTab, setActiveTab] = useState<'codes' | 'users' | 'quick' | 'raw' | 'lessons'>('codes');
 
@@ -39,25 +37,163 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [isLoadingCodes, setIsLoadingCodes] = useState<boolean>(false);
   const [batchCount, setBatchCount] = useState<number>(10);
   const [batchPrefix, setBatchPrefix] = useState<string>('MC144');
+  const [batchTargetVolume, setBatchTargetVolume] = useState<string>('all');
   const [codeSearch, setCodeSearch] = useState<string>('');
   const [codeFilter, setCodeFilter] = useState<'all' | 'unused' | 'used'>('all');
   const [codeMsg, setCodeMsg] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState<boolean>(false);
+  const [importInputText, setImportInputText] = useState<string>('');
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string, onConfirm: () => void } | null>(null);
 
   const fetchActivationCodes = async () => {
     setIsLoadingCodes(true);
     try {
-      const resp = await fetch('/api/admin/codes');
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.success && Array.isArray(data.codes)) {
-          setActivationCodes(data.codes);
+      const codeMap = new Map<string, any>();
+
+      // 1. Load from Local Storage Backup first
+      try {
+        const localBackup = localStorage.getItem('mc_activation_codes_backup');
+        if (localBackup) {
+          const parsed = JSON.parse(localBackup);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((c: any) => {
+              if (c && c.code) {
+                codeMap.set(c.code.trim().toUpperCase(), c);
+              }
+            });
+          }
         }
+      } catch (e) {
+        console.warn("Local codes backup parse warning:", e);
       }
+
+      // 2. Load from Express Backend API (Neon Postgres)
+      try {
+        const resp = await fetch('/api/admin/codes');
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.success && Array.isArray(data.codes)) {
+            data.codes.forEach((c: any) => {
+              if (c && c.code) {
+                codeMap.set(c.code.trim().toUpperCase(), c);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("Fetch backend codes warning:", e);
+      }
+
+      // 3. Load from Cloud Firestore
+      try {
+        const firestoreList = await fetchActivationCodesFromFirestore();
+        if (Array.isArray(firestoreList)) {
+          firestoreList.forEach((c: any) => {
+            if (c && c.code) {
+              const clean = c.code.trim().toUpperCase();
+              const existing = codeMap.get(clean);
+              codeMap.set(clean, {
+                ...(existing || {}),
+                ...c
+              });
+            }
+          });
+        }
+      } catch (e) {
+        console.warn("Fetch firestore codes warning:", e);
+      }
+
+      const mergedList = Array.from(codeMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setActivationCodes(mergedList);
+
+      // Save updated merged backup to LocalStorage
+      try {
+        localStorage.setItem('mc_activation_codes_backup', JSON.stringify(mergedList));
+      } catch {}
+
+      // Auto sync any local-only codes back to server
+      if (mergedList.length > 0) {
+        fetch('/api/admin/sync-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codes: mergedList })
+        }).catch(() => {});
+      }
+
     } catch (e) {
       console.warn("Fetch codes warning:", e);
     } finally {
       setIsLoadingCodes(false);
     }
+  };
+
+  const handleImportRawCodes = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importInputText.trim()) {
+      alert('请先输入或粘贴激活码内容！');
+      return;
+    }
+
+    try {
+      const lines = importInputText
+        .split(/[\n,;]+/)
+        .map(s => s.trim().toUpperCase().replace(/\s+/g, ''))
+        .filter(s => s.length >= 5);
+
+      if (lines.length === 0) {
+        alert('未识别到有效的激活码字符串');
+        return;
+      }
+
+      const newItems: any[] = lines.map(c => ({
+        code: c,
+        isUsed: false,
+        usedByAccount: '',
+        usedAt: 0,
+        devices: [],
+        maxDevices: 3,
+        createdAt: Date.now()
+      }));
+
+      // Sync to Server
+      const resp = await fetch('/api/admin/sync-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codes: newItems })
+      });
+      const data = await resp.json();
+
+      // Sync to Firestore
+      for (const item of newItems) {
+        saveActivationCodeToFirestore(item).catch(() => {});
+      }
+
+      playLevelUpSound();
+      setShowImportModal(false);
+      setImportInputText('');
+      setCodeMsg(data.message || `成功导入并恢复 ${newItems.length} 个激活码！`);
+      await fetchActivationCodes();
+    } catch (err) {
+      alert('导入失败，请检查网络或格式');
+    }
+  };
+
+  const handleExportCodesTxt = () => {
+    if (activationCodes.length === 0) {
+      alert('当前暂无激活码数据');
+      return;
+    }
+    const txtContent = activationCodes
+      .map(c => `${c.code}\t[${c.isUsed ? `已激活: ${c.usedByAccount}` : '未使用待发货'}]\t分册: ${c.targetVolume === 'vol1' ? '册1' : c.targetVolume === 'vol2' ? '册2' : c.targetVolume === 'vol3' ? '册3' : c.targetVolume === 'vol4' ? '册4' : '全套'}\t设备: ${c.devices?.length || 0}/${c.maxDevices || 3}`)
+      .join('\n');
+    const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `minecraft_vip_codes_export_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    playEmeraldSound();
   };
 
   const handleGenerateBatchCodes = async (e: React.FormEvent) => {
@@ -71,13 +207,28 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         body: JSON.stringify({
           count: batchCount,
           prefix: batchPrefix.trim().toUpperCase() || 'MC144',
-          maxDevices: 3
+          maxDevices: 3,
+          targetVolume: batchTargetVolume
         })
       });
       const data = await resp.json();
       if (data.success) {
         playLevelUpSound();
         setCodeMsg(data.message || `成功生成 ${data.codes?.length} 个激活码！`);
+        // Save to Firestore as well
+        if (Array.isArray(data.codes)) {
+          data.codes.forEach((c: string) => {
+            saveActivationCodeToFirestore({
+              code: c,
+              isUsed: false,
+              usedByAccount: '',
+              usedAt: 0,
+              devices: [],
+              maxDevices: 3,
+              createdAt: Date.now()
+            }).catch(() => {});
+          });
+        }
         await fetchActivationCodes();
       } else {
         alert(data.error || '生成卡密失败');
@@ -106,26 +257,32 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     const confirmMsg = action === 'unbind' 
       ? `确定要清空激活码 (${code}) 绑定的所有设备列表吗？` 
       : `确定重置激活码 (${code}) 为全新未使用状态吗？`;
-    if (!confirm(confirmMsg)) return;
-
-    try {
-      const resp = await fetch('/api/admin/revoke-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, action })
-      });
-      const data = await resp.json();
-      if (data.success) {
-        playEmeraldSound();
-        setCodeMsg(data.message);
-        await fetchActivationCodes();
-        setTimeout(() => setCodeMsg(null), 3000);
-      } else {
-        alert(data.error || '操作失败');
+    
+    setConfirmDialog({
+      message: confirmMsg,
+      onConfirm: async () => {
+        try {
+          const resp = await fetch('/api/admin/revoke-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, action })
+          });
+          const data = await resp.json();
+          if (data.success) {
+            playEmeraldSound();
+            setCodeMsg(data.message);
+            await fetchActivationCodes();
+            setTimeout(() => setCodeMsg(null), 3000);
+          } else {
+            setCodeMsg(`❌ ${data.error || '操作失败'}`);
+            setTimeout(() => setCodeMsg(null), 3000);
+          }
+        } catch {
+          setCodeMsg(`❌ 处理异常，请稍后重试`);
+          setTimeout(() => setCodeMsg(null), 3000);
+        }
       }
-    } catch {
-      alert('处理异常，请稍后重试');
-    }
+    });
   };
 
   const fetchRegisteredUsers = async () => {
@@ -195,8 +352,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   };
 
   React.useEffect(() => {
-    if (isAuthenticated && activeTab === 'users') {
-      fetchRegisteredUsers();
+    if (isAuthenticated) {
+      fetchActivationCodes();
+      if (activeTab === 'users') {
+        fetchRegisteredUsers();
+      }
     }
   }, [isAuthenticated, activeTab]);
 
@@ -210,14 +370,38 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     downloadAnchor.remove();
   };
 
-  const handleVerifyPin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput.trim() === MASTER_PIN || pinInput.trim().toLowerCase() === 'admin') {
-      playLevelUpSound();
-      setIsAuthenticated(true);
-      setPinError(null);
-    } else {
-      setPinError('安全口令错误！请重试或检查开发者密码。');
+    if (!adminAccountInput.trim() || !adminPasswordInput.trim()) {
+      setLoginError('请输入管理员账号与登录密码！');
+      return;
+    }
+
+    setIsVerifying(true);
+    setLoginError(null);
+
+    try {
+      const resp = await fetch('/api/admin/verify-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          account: adminAccountInput.trim(),
+          password: adminPasswordInput.trim()
+        })
+      });
+
+      const data = await resp.json();
+      if (data.success) {
+        playLevelUpSound();
+        setIsAuthenticated(true);
+        setLoginError(null);
+      } else {
+        setLoginError(data.error || '管理员账号或密码错误！非管理员禁止访问。');
+      }
+    } catch {
+      setLoginError('连接后端验证服务失败，请检查网络后重试。');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -258,21 +442,50 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
   // Reset Progress
   const handleResetProgress = () => {
-    if (confirm('⚠️ 警告：确定要重置当前账号的所有关卡进度和绿宝石吗？')) {
-      onUpdateProfile(prev => ({
-        ...prev,
-        level: 1,
-        xp: 0,
-        emeralds: 100,
-        unlockedLessonIds: [1, 2],
-        completedLessonIds: []
-      }));
-      alert('已恢复至初始 1 级状态。');
-    }
+    setConfirmDialog({
+      message: '⚠️ 警告：确定要重置当前账号的所有关卡进度和绿宝石吗？',
+      onConfirm: () => {
+        onUpdateProfile(prev => ({
+          ...prev,
+          level: 1,
+          xp: 0,
+          emeralds: 100,
+          unlockedLessonIds: [1],
+          completedLessonIds: []
+        }));
+      }
+    });
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
+      {/* Custom Confirm Dialog Overlay */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-amber-500 rounded-xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center">
+            <AlertTriangle className="w-12 h-12 text-amber-500 mb-4" />
+            <p className="text-sm text-slate-200 mb-6 font-mono leading-relaxed">{confirmDialog.message}</p>
+            <div className="flex w-full space-x-3">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 font-bold transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmDialog(null);
+                  confirmDialog.onConfirm();
+                }}
+                className="flex-1 py-2.5 rounded-lg bg-amber-600 text-white font-bold hover:bg-amber-500 shadow-md transition-colors"
+              >
+                确认
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-[#18181B] border-2 sm:border-4 border-amber-500 rounded-2xl sm:rounded-[2rem] w-full max-w-4xl text-amber-50 shadow-[0_0_50px_rgba(245,158,11,0.2)] overflow-hidden my-auto max-h-[92dvh] flex flex-col font-mono">
         
         {/* Header */}
@@ -307,43 +520,67 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         {!isAuthenticated ? (
           <div className="p-6 sm:p-10 flex flex-col items-center justify-center text-center space-y-5 my-auto">
             <div className="w-16 h-16 bg-amber-900/40 border-2 border-amber-500/60 rounded-2xl flex items-center justify-center text-3xl shadow-inner">
-              🔒
+              🛡️
             </div>
 
             <div className="max-w-md space-y-2">
               <h3 className="text-lg font-black text-amber-400">
-                开发者身份安全门禁
+                系统后台超级管理员安全鉴权
               </h3>
               <p className="text-xs text-stone-300">
-                该控制台仅面向全服系统开发者开放。如果是开发者，请输入安全口令验证：
+                后台已启用双因子身份核验，必须同时输入正确的<strong>管理员专属账号</strong>与<strong>独立管理密码</strong>：
               </p>
             </div>
 
-            <form onSubmit={handleVerifyPin} className="w-full max-w-sm space-y-3">
-              <input
-                type="password"
-                value={pinInput}
-                onChange={e => setPinInput(e.target.value)}
-                placeholder="请输入开发者口令 (PIN)"
-                className="w-full bg-stone-900 border-2 border-stone-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-center text-sm text-white font-bold tracking-widest outline-none"
-              />
+            <form onSubmit={handleAdminLogin} className="w-full max-w-sm space-y-3 text-left">
+              <div>
+                <label className="text-[11px] font-bold text-amber-300/90 block mb-1">
+                  管理员账号 (Admin Account)
+                </label>
+                <input
+                  type="text"
+                  value={adminAccountInput}
+                  onChange={e => setAdminAccountInput(e.target.value)}
+                  placeholder="例如: admin / deantang"
+                  autoComplete="username"
+                  required
+                  className="w-full bg-stone-950 border-2 border-stone-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-white font-medium outline-none transition-colors"
+                />
+              </div>
 
-              {pinError && (
-                <div className="text-xs text-rose-400 font-bold bg-rose-950/60 p-2 rounded-lg border border-rose-800">
-                  {pinError}
+              <div>
+                <label className="text-[11px] font-bold text-amber-300/90 block mb-1">
+                  管理超级密码 (Password)
+                </label>
+                <input
+                  type="password"
+                  value={adminPasswordInput}
+                  onChange={e => setAdminPasswordInput(e.target.value)}
+                  placeholder="请输入管理安全密码"
+                  autoComplete="current-password"
+                  required
+                  className="w-full bg-stone-950 border-2 border-stone-700 focus:border-amber-500 rounded-xl px-4 py-2.5 text-sm text-white font-medium tracking-wider outline-none transition-colors"
+                />
+              </div>
+
+              {loginError && (
+                <div className="text-xs text-rose-400 font-bold bg-rose-950/60 p-2.5 rounded-lg border border-rose-800 flex items-center space-x-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{loginError}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md"
+                disabled={isVerifying}
+                className="w-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md mt-2 disabled:opacity-50"
               >
-                验证身份解锁后台
+                {isVerifying ? '正在核验证据库鉴权...' : '🔐 验证管理员身份并登录'}
               </button>
             </form>
 
-            <div className="text-[11px] text-stone-500 pt-2">
-              Tips: 当前登录账号为 <span className="text-amber-300 font-bold">{profile.email || '未登录/游客'}</span>
+            <div className="text-[11px] text-stone-500 pt-2 flex items-center justify-center space-x-1">
+              <span>🛡️ 仅授权管理员账号可访问 • Neon PostgreSQL 独立鉴权</span>
             </div>
           </div>
         ) : (
@@ -422,7 +659,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   {/* Top Stats */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
-                      <div className="text-[11px] text-stone-400">卡密总数</div>
+                      <div className="text-[11px] text-stone-400">数据库卡密总数</div>
                       <div className="text-xl font-black text-amber-400 mt-1">{activationCodes.length} 张</div>
                     </div>
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
@@ -438,26 +675,51 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       </div>
                     </div>
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
-                      <div className="text-[11px] text-stone-400">单账号设备限制</div>
-                      <div className="text-xs font-bold text-amber-300 mt-1">
-                        📱 最多 3 台设备绑定
+                      <div className="text-[11px] text-stone-400">持久化引擎</div>
+                      <div className="text-xs font-bold text-amber-300 mt-1 flex flex-wrap gap-1 items-center">
+                        <span className="text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700">🐘 Neon PostgreSQL</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Batch Code Generator Box */}
+                  {/* Batch Code Generator Box & Toolbar */}
                   <div className="bg-stone-900 border-2 border-amber-500/60 p-4 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+                    <div className="flex flex-wrap items-center justify-between border-b border-stone-800 pb-2.5 gap-2">
                       <h3 className="text-sm font-black text-amber-400 flex items-center space-x-2">
                         <Key className="w-4 h-4 text-amber-400" />
-                        <span>一键批量生成小红书专属 VIP 激活码</span>
+                        <span>小红书专属 VIP 激活码生成与全库检索</span>
                       </h3>
-                      <button
-                        onClick={handleCopyUnusedCodes}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1"
-                      >
-                        <span>📋 一键复制全部未使用卡密</span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={fetchActivationCodes}
+                          disabled={isLoadingCodes}
+                          className="bg-stone-800 hover:bg-stone-700 active:bg-stone-900 text-amber-300 border border-stone-600 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isLoadingCodes ? 'animate-spin' : ''}`} />
+                          <span>{isLoadingCodes ? '正在查询云端库...' : '🔄 强制拉取数据库'}</span>
+                        </button>
+                        <button
+                          onClick={() => setShowImportModal(true)}
+                          className="bg-blue-900 hover:bg-blue-800 text-blue-200 border border-blue-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>📥 导入/找回历史卡密</span>
+                        </button>
+                        <button
+                          onClick={handleExportCodesTxt}
+                          className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>📤 导出卡密列表</span>
+                        </button>
+                        <button
+                          onClick={handleCopyUnusedCodes}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center space-x-1"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>📋 一键复制全部未使用卡密</span>
+                        </button>
+                      </div>
                     </div>
 
                     <form onSubmit={handleGenerateBatchCodes} className="flex flex-wrap items-center gap-3 pt-1">
@@ -486,13 +748,28 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         />
                       </div>
 
+                      <div>
+                        <label className="block text-[11px] text-stone-400 font-bold mb-1">分册授权</label>
+                        <select
+                          value={batchTargetVolume}
+                          onChange={e => setBatchTargetVolume(e.target.value)}
+                          className="bg-stone-950 border border-stone-700 text-xs text-amber-300 px-3 py-1.5 rounded-xl outline-none"
+                        >
+                          <option value="all">全套四册</option>
+                          <option value="vol1">仅第一册</option>
+                          <option value="vol2">仅第二册</option>
+                          <option value="vol3">仅第三册</option>
+                          <option value="vol4">仅第四册</option>
+                        </select>
+                      </div>
+
                       <div className="pt-5">
                         <button
                           type="submit"
                           disabled={isLoadingCodes}
                           className="bg-amber-500 hover:bg-amber-400 text-black px-4 py-1.5 rounded-xl text-xs font-black shadow-md transition-all active:scale-95"
                         >
-                          {isLoadingCodes ? '正在生成中...' : '⚡ 立即生成卡密'}
+                          {isLoadingCodes ? '正在生成中...' : '⚡ 立即批量生成并持久化存库'}
                         </button>
                       </div>
                     </form>
@@ -539,13 +816,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </div>
 
                   {/* Codes Table */}
-                  <div className="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto">
+                  <div className="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden shadow-lg">
+                    <div className="overflow-x-auto max-h-96 overflow-y-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-stone-950 text-amber-400 border-b border-stone-800 font-bold">
+                        <thead className="bg-stone-950 text-amber-400 border-b border-stone-800 font-bold sticky top-0 z-10">
                           <tr>
                             <th className="p-3">激活码 (Code)</th>
                             <th className="p-3">状态</th>
+                            <th className="p-3">授权分册</th>
                             <th className="p-3">已激活绑定账号</th>
                             <th className="p-3">绑定设备</th>
                             <th className="p-3">生成时间</th>
@@ -566,7 +844,23 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             )
                             .map((c, idx) => (
                               <tr key={c.code || idx} className="hover:bg-stone-800/50 transition-colors">
-                                <td className="p-3 font-bold text-amber-300 select-all">{c.code}</td>
+                                <td className="p-3 font-bold text-amber-300 select-all">
+                                  <div className="flex items-center space-x-2">
+                                    <span>{c.code}</span>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(c.code);
+                                        playClickSound();
+                                        setCodeMsg(`📋 已复制卡密: ${c.code}`);
+                                        setTimeout(() => setCodeMsg(null), 2500);
+                                      }}
+                                      title="复制卡密"
+                                      className="text-stone-500 hover:text-amber-300 p-1"
+                                    >
+                                      <Copy className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
                                 <td className="p-3">
                                   {c.isUsed ? (
                                     <span className="bg-orange-950 text-orange-400 border border-orange-800 px-2 py-0.5 rounded font-bold">
@@ -577,6 +871,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                                       未使用
                                     </span>
                                   )}
+                                </td>
+                                <td className="p-3">
+                                  <span className="bg-blue-950/60 text-blue-300 border border-blue-800/50 px-2 py-0.5 rounded text-[10px] uppercase">
+                                    {c.targetVolume === 'vol1' ? '册1' : c.targetVolume === 'vol2' ? '册2' : c.targetVolume === 'vol3' ? '册3' : c.targetVolume === 'vol4' ? '册4' : '全套'}
+                                  </span>
                                 </td>
                                 <td className="p-3 font-bold text-stone-200">{c.usedByAccount || '—'}</td>
                                 <td className="p-3 text-blue-400 font-bold">
@@ -605,8 +904,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             ))}
                           {activationCodes.length === 0 && (
                             <tr>
-                              <td colSpan={6} className="p-6 text-center text-stone-500">
-                                暂无卡密，请在上方点击【批量生成卡密】！
+                              <td colSpan={6} className="p-8 text-center text-stone-400 space-y-2">
+                                <div className="text-sm font-bold text-amber-400">数据库卡密列表为空或暂未加载</div>
+                                <div className="text-xs text-stone-500">
+                                  您可以点击上方【🔄 强制拉取数据库】重新读取，或点击【📥 导入/找回历史卡密】恢复历史卡密，或点击【⚡ 立即批量生成】。
+                                </div>
                               </td>
                             </tr>
                           )}
@@ -614,6 +916,54 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       </table>
                     </div>
                   </div>
+
+                  {/* Import Modal */}
+                  {showImportModal && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                      <div className="bg-stone-900 border-2 border-amber-500/80 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+                          <h3 className="text-sm font-black text-amber-400 flex items-center space-x-2">
+                            <Upload className="w-4 h-4 text-amber-400" />
+                            <span>批量导入 / 找回已生成的激活码</span>
+                          </h3>
+                          <button
+                            onClick={() => setShowImportModal(false)}
+                            className="text-stone-400 hover:text-white p-1"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        <form onSubmit={handleImportRawCodes} className="space-y-3">
+                          <p className="text-xs text-stone-300">
+                            将您先前保存的激活码文本粘贴在下方（支持每行一个，或逗号/分号分隔），系统会自动去重并实时写入 Neon 数据库与 Firestore 云端：
+                          </p>
+                          <textarea
+                            value={importInputText}
+                            onChange={e => setImportInputText(e.target.value)}
+                            placeholder="例如：&#10;MC144-A1B2-C3D4-E5F6&#10;MC144-9988-7766-5544&#10;VIP8888"
+                            rows={6}
+                            className="w-full bg-stone-950 border border-stone-700 focus:border-amber-400 rounded-xl p-3 text-xs text-amber-300 font-mono outline-none resize-none"
+                          />
+                          <div className="flex justify-end gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowImportModal(false)}
+                              className="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-xs font-bold text-stone-300"
+                            >
+                              取消
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-black text-black shadow-md"
+                            >
+                              🚀 立即导入存库
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

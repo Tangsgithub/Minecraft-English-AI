@@ -135,6 +135,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSignOut = () => {
     playClickSound();
     auth.currentUser = null;
+    localStorage.removeItem('mc_english_user_profile');
+    localStorage.removeItem('mc_english_current_user');
     onUserChange(null);
     setMessage({ type: 'success', text: '已退出登录，您现在处于本地游客状态' });
     setTimeout(() => {

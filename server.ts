@@ -615,7 +615,7 @@ app.use(express.json());
         account: cleanAccount,
         selectedVolumeId: clientProfile?.selectedVolumeId || 'vol1',
         currentLessonId: clientProfile?.currentLessonId || 1,
-        unlockedLessonIds: clientProfile?.unlockedLessonIds?.length ? clientProfile.unlockedLessonIds : [1, 2],
+        unlockedLessonIds: clientProfile?.unlockedLessonIds?.length ? clientProfile.unlockedLessonIds : [1],
         completedLessonIds: clientProfile?.completedLessonIds || [],
         completedMissionIds: clientProfile?.completedMissionIds || [],
         unlockedBadgeIds: clientProfile?.unlockedBadgeIds || ['badge_first_words'],
@@ -750,7 +750,7 @@ app.use(express.json());
           ...userObj.profile,
           ...profile,
           // Ensure arrays are merged or updated
-          unlockedLessonIds: profile.unlockedLessonIds || userObj.profile?.unlockedLessonIds || [1, 2],
+          unlockedLessonIds: profile.unlockedLessonIds || userObj.profile?.unlockedLessonIds || [1],
           completedLessonIds: profile.completedLessonIds || userObj.profile?.completedLessonIds || [],
           masteredWords: profile.masteredWords || userObj.profile?.masteredWords || [],
           completedMissionIds: profile.completedMissionIds || userObj.profile?.completedMissionIds || []
@@ -836,7 +836,7 @@ app.use(express.json());
       let codeObj = await getCloudCode(cleanCode);
 
       // Support master codes or fallback format MC144-TEST for instant developer demo if DB empty
-      if (!codeObj && (cleanCode === 'MC144-8888-8888' || cleanCode === 'MC2026888' || cleanCode === 'VIP8888')) {
+      if (!codeObj && (cleanCode === 'MC144-8888-8888' || cleanCode === 'MC2026888' || cleanCode === 'VIP8888' || cleanCode === 'MCB1-8888-8888' || cleanCode === 'MCB2-8888-8888')) {
         codeObj = {
           code: cleanCode,
           isUsed: false,
@@ -854,6 +854,60 @@ app.use(express.json());
           error: "激活码不存在！请核对您从小红书客服领取的 16 位激活码"
         });
       }
+      
+      // Determine target volume from codeObj or code prefix
+      let targetVolume: any = (codeObj as any).targetVolume;
+      if (!targetVolume) {
+        if (cleanCode.startsWith('MCV1') || cleanCode.startsWith('MCB1')) targetVolume = 'vol1';
+        else if (cleanCode.startsWith('MCV2') || cleanCode.startsWith('MCB2')) targetVolume = 'vol2';
+        else if (cleanCode.startsWith('MCV3') || cleanCode.startsWith('MCB3')) targetVolume = 'vol3';
+        else if (cleanCode.startsWith('MCV4') || cleanCode.startsWith('MCB4')) targetVolume = 'vol4';
+        else targetVolume = 'all'; 
+      }
+
+      const applyVipToProfile = (profile: any, volume: string) => {
+        const newProfile = { ...profile };
+        newProfile.activatedVolumes = Array.from(new Set([...(newProfile.activatedVolumes || []), volume]));
+        
+        const vol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+        const vol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+        const vol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+        const vol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+
+        if (!newProfile.volumeProgress) newProfile.volumeProgress = {};
+        
+        if (volume === 'vol1' || volume === 'all') {
+          newProfile.volumeProgress.vol1 = {
+            ...(newProfile.volumeProgress.vol1 || { currentLessonId: 1, completedLessonIds: [] }),
+            unlockedLessonIds: vol1Ids
+          };
+          newProfile.unlockedLessonIds = Array.from(new Set([...(newProfile.unlockedLessonIds || []), ...vol1Ids]));
+        }
+        if (volume === 'vol2' || volume === 'all') {
+          newProfile.volumeProgress.vol2 = {
+            ...(newProfile.volumeProgress.vol2 || { currentLessonId: 1, completedLessonIds: [] }),
+            unlockedLessonIds: vol2Ids
+          };
+        }
+        if (volume === 'vol3' || volume === 'all') {
+          newProfile.volumeProgress.vol3 = {
+            ...(newProfile.volumeProgress.vol3 || { currentLessonId: 1, completedLessonIds: [] }),
+            unlockedLessonIds: vol3Ids
+          };
+        }
+        if (volume === 'vol4' || volume === 'all') {
+          newProfile.volumeProgress.vol4 = {
+            ...(newProfile.volumeProgress.vol4 || { currentLessonId: 1, completedLessonIds: [] }),
+            unlockedLessonIds: vol4Ids
+          };
+        }
+        
+        if (volume === 'all') {
+          newProfile.isVip = true;
+          newProfile.vipActivatedAt = Date.now();
+        }
+        return newProfile;
+      };
 
       // Check if code is already used
       if (codeObj.isUsed) {
@@ -875,14 +929,15 @@ app.use(express.json());
           // Ensure user profile in DB is VIP
           const userObj = await getCloudUser(cleanAccount);
           if (userObj) {
-            const allLessonIds = Array.from({ length: 144 }, (_, i) => i + 1);
-            userObj.profile = {
-              ...userObj.profile,
-              isVip: true,
-              unlockedLessonIds: Array.from(new Set([...(userObj.profile?.unlockedLessonIds || []), ...allLessonIds]))
-            };
+            userObj.profile = applyVipToProfile(userObj.profile || {}, targetVolume);
             await saveCloudUser(cleanAccount, userObj);
           }
+          
+          let volName = "全套 1~4 册";
+          if (targetVolume === 'vol1') volName = "《新概念一册》";
+          else if (targetVolume === 'vol2') volName = "《新概念二册》";
+          else if (targetVolume === 'vol3') volName = "《新概念三册》";
+          else if (targetVolume === 'vol4') volName = "《新概念四册》";
 
           return res.json({
             success: true,
@@ -906,8 +961,7 @@ app.use(express.json());
       codeObj.devices = initialDevices;
       await saveCloudCode(codeObj);
 
-      // Upgrade User Profile to VIP & Unlock All 144 Lessons
-      const allLessonIds = Array.from({ length: 144 }, (_, i) => i + 1);
+      // Upgrade User Profile to VIP & Unlock Lessons
       const userObj = await getCloudUser(cleanAccount) || {
         uid: 'user_' + Date.now(),
         account: cleanAccount,
@@ -915,17 +969,18 @@ app.use(express.json());
         profile: {}
       };
 
-      userObj.profile = {
-        ...userObj.profile,
-        isVip: true,
-        vipActivatedAt: Date.now(),
-        unlockedLessonIds: allLessonIds
-      };
+      userObj.profile = applyVipToProfile(userObj.profile || {}, targetVolume);
       await saveCloudUser(cleanAccount, userObj);
+      
+      let volName = "全套 1~4 册 348 关卡";
+      if (targetVolume === 'vol1') volName = "《新概念一册》 144 关卡";
+      else if (targetVolume === 'vol2') volName = "《新概念二册》 96 关卡";
+      else if (targetVolume === 'vol3') volName = "《新概念三册》 60 关卡";
+      else if (targetVolume === 'vol4') volName = "《新概念四册》 48 关卡";
 
       return res.json({
         success: true,
-        message: `🎉 激活成功！全套 1~4 册 348 关卡与 Alex AI 实时对练已永久解锁 (已绑定 1/3 台设备)`,
+        message: `🎉 激活成功！${volName}与 Alex AI 实时对练已永久解锁 (已绑定 1/3 台设备)`,
         profile: userObj.profile
       });
 
@@ -938,7 +993,7 @@ app.use(express.json());
   // ===== Admin: Generate Batch Activation Codes Endpoint =====
   app.post("/api/admin/generate-codes", async (req, res) => {
     try {
-      const { count = 10, prefix = 'MC144', maxDevices = 3 } = req.body || {};
+      const { count = 10, prefix = 'MC144', maxDevices = 3, targetVolume = 'all' } = req.body || {};
       const numToGenerate = Math.min(Math.max(Number(count) || 10, 1), 500);
 
       const generatedCodes: string[] = [];
@@ -957,6 +1012,7 @@ app.use(express.json());
           usedAt: 0,
           devices: [],
           maxDevices: Number(maxDevices) || 3,
+          targetVolume: targetVolume,
           createdAt: now
         };
 
@@ -979,14 +1035,69 @@ app.use(express.json());
   // ===== Admin: Fetch All Activation Codes Endpoint =====
   app.get("/api/admin/codes", async (_req, res) => {
     try {
-      const codes = await getAllCloudCodes();
+      let codes = await getAllCloudCodes();
+
+      // Ensure standard default test/admin master codes exist if list is empty
+      if (codes.length === 0) {
+        const defaultMasterCodes = [
+          { code: 'MC144-8888-8888', isUsed: false, usedByAccount: '', usedAt: 0, devices: [], maxDevices: 3, createdAt: Date.now() - 86400000 },
+          { code: 'MC2026888', isUsed: false, usedByAccount: '', usedAt: 0, devices: [], maxDevices: 3, createdAt: Date.now() - 86400000 },
+          { code: 'VIP8888', isUsed: false, usedByAccount: '', usedAt: 0, devices: [], maxDevices: 3, createdAt: Date.now() - 86400000 }
+        ];
+        for (const d of defaultMasterCodes) {
+          await saveCloudCode(d);
+        }
+        codes = await getAllCloudCodes();
+      }
+
       return res.json({
         success: true,
         count: codes.length,
+        neonConnected: Boolean(getNeonSql()),
         codes
       });
     } catch (err: any) {
+      console.error("Admin fetch codes error:", err);
       return res.status(200).json({ success: false, error: "读取激活码列表失败" });
+    }
+  });
+
+  // ===== Admin: Sync / Import Codes Endpoint =====
+  app.post("/api/admin/sync-codes", async (req, res) => {
+    try {
+      const { codes } = req.body || {};
+      if (!Array.isArray(codes) || codes.length === 0) {
+        return res.status(200).json({ success: false, error: "未传入有效激活码数组" });
+      }
+
+      let savedCount = 0;
+      for (const item of codes) {
+        if (!item || !item.code) continue;
+        const cleanCode = item.code.trim().toUpperCase();
+        const existing = await getCloudCode(cleanCode);
+        const codeObj = {
+          code: cleanCode,
+          isUsed: Boolean(item.isUsed ?? existing?.isUsed ?? false),
+          usedByAccount: item.usedByAccount || existing?.usedByAccount || '',
+          usedAt: item.usedAt || existing?.usedAt || 0,
+          devices: Array.isArray(item.devices) ? item.devices : (existing?.devices || []),
+          maxDevices: item.maxDevices || existing?.maxDevices || 3,
+          createdAt: item.createdAt || existing?.createdAt || Date.now()
+        };
+        await saveCloudCode(codeObj);
+        savedCount++;
+      }
+
+      const allCodes = await getAllCloudCodes();
+      return res.json({
+        success: true,
+        message: `成功同步/导入 ${savedCount} 个激活码到云端数据库！当前共 ${allCodes.length} 个卡密。`,
+        totalCount: allCodes.length,
+        codes: allCodes
+      });
+    } catch (err: any) {
+      console.error("Sync codes error:", err);
+      return res.status(200).json({ success: false, error: "同步激活码失败" });
     }
   });
 
@@ -1021,6 +1132,76 @@ app.use(express.json());
       return res.status(200).json({ success: false, error: "未知操作类型" });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "卡密重置处理失败" });
+    }
+  });
+
+  // ===== Admin Login Verification Endpoint =====
+  app.post("/api/admin/verify-login", async (req, res) => {
+    try {
+      const { account, password } = req.body || {};
+      if (!account || !password) {
+        return res.status(200).json({ success: false, error: "请输入管理员账号与密码" });
+      }
+
+      const cleanAccount = String(account).trim().toLowerCase();
+      const cleanPassword = String(password).trim();
+
+      // Official Admin credentials check
+      // 1. Dedicated Admin Root Accounts
+      const isOfficialAdminAccount = 
+        cleanAccount === 'admin' || 
+        cleanAccount === 'deantang' || 
+        cleanAccount === 'deantang2014@gmail.com' ||
+        cleanAccount === 'minecraft_admin';
+
+      // 2. Verified admin passwords
+      const isOfficialAdminPassword = 
+        cleanPassword === '2026888' || 
+        cleanPassword === 'Admin@2026888' ||
+        cleanPassword === 'DeanTang2026';
+
+      if (isOfficialAdminAccount && isOfficialAdminPassword) {
+        return res.json({
+          success: true,
+          message: "管理员身份核验通过，欢迎进入系统后台！",
+          adminUser: {
+            account: cleanAccount,
+            role: 'super_admin'
+          }
+        });
+      }
+
+      // 3. Fallback: check if the user is registered in Neon DB with admin role or matching credentials
+      const userObj = await getCloudUser(cleanAccount);
+      if (userObj) {
+        let passwordValid = false;
+        if (userObj.salt && userObj.hash) {
+          const candidateHash = hashPassword(cleanPassword, userObj.salt);
+          passwordValid = candidateHash === userObj.hash;
+        } else if (userObj.password) {
+          passwordValid = userObj.password === cleanPassword;
+        }
+
+        if (passwordValid && (userObj.profile?.isAdmin === true || cleanAccount === 'admin' || cleanAccount === 'deantang2014@gmail.com')) {
+          return res.json({
+            success: true,
+            message: "管理员身份核验通过",
+            adminUser: {
+              account: userObj.account,
+              nickname: userObj.nickname,
+              role: 'super_admin'
+            }
+          });
+        }
+      }
+
+      return res.status(200).json({
+        success: false,
+        error: "管理员账号或密码错误！非管理员禁止访问后台控制台。"
+      });
+    } catch (err: any) {
+      console.error("Admin verify login error:", err);
+      return res.status(200).json({ success: false, error: "管理员验证处理异常" });
     }
   });
 

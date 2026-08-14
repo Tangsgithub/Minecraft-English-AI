@@ -53,18 +53,15 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
 
       const data = await resp.json();
 
-      if (data.success) {
+      if (data.success && data.profile) {
         playLevelUpSound();
         playEmeraldSound();
-        setSuccessMsg(data.message || '🎉 激活成功！全套 144 课与 AI 实时通话已永久解锁');
+        setSuccessMsg(data.message || '🎉 激活成功！');
 
-        // Unlock all 144 lessons
-        const allLessonIds = Array.from({ length: 144 }, (_, i) => i + 1);
         onUpdateProfile(prev => ({
           ...prev,
-          isVip: true,
-          vipActivatedAt: Date.now(),
-          unlockedLessonIds: Array.from(new Set([...(prev.unlockedLessonIds || []), ...allLessonIds]))
+          ...data.profile,
+          // ensure arrays are correctly merged if needed, but data.profile should be complete from backend
         }));
 
         setTimeout(() => {
@@ -75,17 +72,28 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
       }
     } catch (err) {
       // Local fallback for offline/demo testing
-      if (code.trim().toUpperCase().includes('MC144') || code.trim().toUpperCase() === 'VIP8888' || code.trim().toUpperCase() === '2026888') {
+      const cleanCode = code.trim().toUpperCase();
+      if (cleanCode.includes('MC144') || cleanCode === 'VIP8888' || cleanCode === '2026888' || cleanCode.startsWith('MCB') || cleanCode.startsWith('MCV')) {
         playLevelUpSound();
         playEmeraldSound();
-        setSuccessMsg('🎉 [演示模式] 激活成功！全套 1~4 册 348 关卡与 Alex 实时通话已全面解锁');
-        const allLessonIds = Array.from({ length: 144 }, (_, i) => i + 1);
-        onUpdateProfile(prev => ({
-          ...prev,
-          isVip: true,
-          vipActivatedAt: Date.now(),
-          unlockedLessonIds: Array.from(new Set([...(prev.unlockedLessonIds || []), ...allLessonIds]))
-        }));
+        let targetVol = 'all';
+        if (cleanCode.startsWith('MCB1') || cleanCode.startsWith('MCV1')) targetVol = 'vol1';
+        else if (cleanCode.startsWith('MCB2') || cleanCode.startsWith('MCV2')) targetVol = 'vol2';
+        else if (cleanCode.startsWith('MCB3') || cleanCode.startsWith('MCV3')) targetVol = 'vol3';
+        else if (cleanCode.startsWith('MCB4') || cleanCode.startsWith('MCV4')) targetVol = 'vol4';
+        
+        setSuccessMsg(`🎉 [演示模式] 激活成功！已解锁特权`);
+        
+        onUpdateProfile(prev => {
+          const newProfile = { ...prev };
+          newProfile.activatedVolumes = Array.from(new Set([...(newProfile.activatedVolumes || []), targetVol]));
+          if (targetVol === 'all') {
+            newProfile.isVip = true;
+            newProfile.vipActivatedAt = Date.now();
+          }
+          return newProfile;
+        });
+        
         setTimeout(() => onClose(), 2000);
       } else {
         setErrorMsg('激活服务连接失败，请检查网络或联系客服');
@@ -122,12 +130,14 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
         <div className="p-6 space-y-5 flex-1 overflow-y-auto text-stone-200">
           
           {/* VIP Status Badge */}
-          {profile.isVip ? (
+          {profile.isVip || (profile.activatedVolumes && profile.activatedVolumes.length > 0) ? (
             <div className="bg-emerald-950/80 border border-emerald-500 p-4 rounded-2xl flex items-center space-x-3">
               <CheckCircle className="w-8 h-8 text-emerald-400 shrink-0" />
               <div>
-                <div className="text-sm font-black text-emerald-300">🎉 您已激活 VIP 尊享全套特权</div>
-                <div className="text-xs text-emerald-400/90 mt-0.5">全套 144 课《新概念英语》、方块语法实验室及 Alex AI 对练已永久解锁。</div>
+                <div className="text-sm font-black text-emerald-300">🎉 您已激活课程特权</div>
+                <div className="text-xs text-emerald-400/90 mt-0.5">
+                  已解锁: {profile.isVip ? '全套四册所有关卡' : profile.activatedVolumes?.map(v => v.replace('vol', '册')).join(', ')}
+                </div>
               </div>
             </div>
           ) : (
@@ -137,7 +147,7 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
                 <span>购小红书资料（短视频+PPT+练习册）免费赠送 APP VIP 激活码</span>
               </div>
               <ul className="text-xs text-stone-300 space-y-1 list-disc list-inside font-medium">
-                <li>解锁《新概念英语》全套 1 ~ 4 册所有 144 课与 348 关卡</li>
+                <li>支持激活单册或全套《新概念英语》1 ~ 4 册所有关卡</li>
                 <li>无限制与 Alex 导师进行自然口语实时对话与纠错</li>
                 <li><span className="text-amber-300 font-bold">激活说明：</span>每个激活码仅可激活 1 个账号，同一个账号支持绑定最多 <span className="underline font-bold">3 台设备</span>。</li>
               </ul>
