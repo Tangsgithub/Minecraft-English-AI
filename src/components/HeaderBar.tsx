@@ -105,9 +105,13 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                       <span className="text-amber-400 text-[9px]">1册 & 2册全量开放</span>
                     </div>
                     {APP_VERSION_INFO.volumes.map(vol => {
-                      const isLocked = vol.status === 'coming_soon';
-                      const statusText = isLocked 
+                      const isComingSoon = vol.status === 'coming_soon';
+                      const isUnactivated = !profile.isVip && vol.id !== 'vol1' && !(profile.activatedVolumes && profile.activatedVolumes.includes(vol.id));
+                      const isLocked = isComingSoon || isUnactivated;
+                      const statusText = isComingSoon 
                         ? '教研打磨中 · 敬请期待' 
+                        : isUnactivated
+                        ? '未解锁 · 需激活'
                         : vol.id === 'vol1' 
                         ? '144关真实课文已全量开放' 
                         : '96关真实课文已全量开放';

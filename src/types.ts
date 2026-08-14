@@ -29,7 +29,7 @@ export const APP_VERSION_INFO = {
   version: 'v2.0.0',
   buildCode: '2026.08.13-BUILD-PROD',
   editionName: 'Minecraft English World (新概念第1册 + 第2册 100% 官方全量版)',
-  releaseNotes: '《新概念英语》第1册（1~144关）与第2册（1~96关）共 240 篇权威原版课文已 100% 全量真实上线！覆盖基础句型与红石复杂语法，第3、4册处于教研打磨中。',
+  releaseNotes: '《新概念英语》第1册（1~144关）与第2册（1~96关）共 240 篇权威原版课文已 100% 全量真实上线！覆盖基础句型与红石复杂语法，第3、4册处于教研打磨中，敬请期待！',
   volumes: [
     {
       id: 'vol1',

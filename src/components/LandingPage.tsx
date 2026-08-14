@@ -152,7 +152,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="pt-16 pb-12 text-center space-y-6">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-emerald-400 text-xs font-medium">
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Minecraft 方块双语启蒙 • 新概念1/2/3册体系</span>
+            <span>Minecraft 方块双语启蒙 • 新概念1/2/3/4册体系</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight max-w-3xl mx-auto">

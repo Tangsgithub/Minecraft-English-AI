@@ -476,7 +476,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           xp: 0,
           emeralds: 100,
           unlockedLessonIds: [1],
-          completedLessonIds: []
+          completedLessonIds: [],
+          isVip: false,
+          vipActivatedAt: 0,
+          activatedVolumes: [],
+          volumeProgress: {
+            vol1: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+            vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+            vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+            vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+          }
         }));
       }
     });
