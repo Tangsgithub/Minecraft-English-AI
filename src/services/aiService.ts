@@ -153,25 +153,49 @@ export async function testApiKeyConnection(config: ApiKeyConfig): Promise<{ succ
 function generateLocalAlexFallback(userMessage: string): ChatApiResponse {
   const msgLower = userMessage.toLowerCase();
   
-  if (msgLower.includes('hello') || msgLower.includes('hi')) {
+  if (msgLower.includes('hello') || msgLower.includes('hi') || msgLower.includes('hey')) {
     return {
-      text: "Hello there, young adventurer! 🌲 Welcome to our Minecraft English village! What are you building today? [你好，年轻的探险家！欢迎来到我们的 Minecraft 英语村庄！你今天在建造什么呢？]",
+      text: "Hello there, adventurer! 🌲 Welcome to our Minecraft English village! What are you building today? [你好，探险家！欢迎来到我们的 Minecraft 英语村庄！你今天在建造什么呢？]",
       encouragement: "Great greeting! 💎 +5 Emeralds"
     };
-  } else if (msgLower.includes('teacher') || msgLower.includes('are you')) {
+  } else if (msgLower.includes('gift') || msgLower.includes('for you') || msgLower.includes('here is') || msgLower.includes('sword') || msgLower.includes('apple') || msgLower.includes('sandwich') || msgLower.includes('diamond') || msgLower.includes('wood')) {
     return {
-      text: "Yes, I am Alex! I am your Minecraft village English teacher. Are you ready for our English mission? [是的，我是 Alex！我是你的 Minecraft 村庄英语老师。你准备好参加我们的英语任务了吗？]",
+      text: "Wow! Thank you so much for this wonderful gift! You are such a generous and brave adventurer! [哇！非常感谢你的精彩礼物！你真是一位大方又勇敢的探险家！]",
+      betterExpression: "Here is a special gift for you!",
+      encouragement: "Kind companion! 💎 +10 Emeralds"
+    };
+  } else if (msgLower.includes('teacher') || msgLower.includes('are you') || msgLower.includes('who')) {
+    return {
+      text: "I am Alex, your Minecraft village English teacher! Are you ready for today's exciting mission? [我是 Alex，你的 Minecraft 村庄英语老师！你准备好迎接今天的精彩任务了吗？]",
       encouragement: "Excellent question! 💎 +5 Emeralds"
     };
-  } else if (msgLower.includes('house') || msgLower.includes('build')) {
+  } else if (msgLower.includes('house') || msgLower.includes('build') || msgLower.includes('shelter')) {
     return {
-      text: "That sounds awesome! I love building block houses with oak wood and bricks. Can you say: 'I like building a wooden house'? [听起来太棒了！我喜欢用橡木和红砖盖方块房子。你能试着说：'I like building a wooden house' 吗？]",
-      betterExpression: "I like building a wooden house.",
-      encouragement: "Great Builder spirit! 🟩 +10 XP"
+      text: "That sounds awesome! I love building houses with oak wood and cobblestone. What blocks are you using? [听起来太棒了！我喜欢用橡木和原石盖房子。你正在用什么方块呢？]",
+      betterExpression: "I want to build a wooden house.",
+      encouragement: "Master Builder! 🟩 +10 XP"
+    };
+  } else if (msgLower.includes('mine') || msgLower.includes('pickaxe') || msgLower.includes('iron') || msgLower.includes('gold') || msgLower.includes('cave')) {
+    return {
+      text: "Let's go deep into the cave and mine some shiny ores! Don't forget your torches and iron pickaxe! [让我们深入洞穴去挖些闪亮的矿石吧！别忘了带上火把和铁镐！]",
+      betterExpression: "Let's go mining in the deep cave!",
+      encouragement: "Brave Miner! ⛏️ +10 XP"
+    };
+  } else if (msgLower.includes('creeper') || msgLower.includes('zombie') || msgLower.includes('monster') || msgLower.includes('fight') || msgLower.includes('watch out')) {
+    return {
+      text: "Watch out for the green creeper! Draw your diamond sword and shield! Sssss... boom! [小心那只绿色的苦力怕！拔出你的钻石剑和盾牌！嘶嘶……轰！]",
+      betterExpression: "Watch out! A dangerous creeper is nearby!",
+      encouragement: "Hero of the Village! ⚔️ +15 XP"
+    };
+  } else if (msgLower.includes('book') || msgLower.includes('lesson') || msgLower.includes('learn') || msgLower.includes('english')) {
+    return {
+      text: "You are doing fantastic in New Concept English! Every sentence brings you closer to becoming a Minecraft English Master! [你的新概念英语学得棒极了！每一句话都在让你成为 Minecraft 英语大师！]",
+      betterExpression: "I am practicing New Concept English.",
+      encouragement: "Star Scholar! 📚 +10 Emeralds"
     };
   } else {
     return {
-      text: `Wonderful effort! You said: "${userMessage}". Let us keep exploring the Minecraft world together! What block would you like to craft next? [太棒的尝试！让我们继续一起探索 Minecraft 世界吧！接下来你想合成什么方块？]`,
+      text: `Wonderful practice! You said: "${userMessage}". Let us keep exploring the Minecraft world together! What shall we do next? [太棒的尝试！让我们继续一起探索 Minecraft 世界吧！接下来我们要做什么？]`,
       encouragement: "Keep practicing! 💎 +5 Emeralds"
     };
   }

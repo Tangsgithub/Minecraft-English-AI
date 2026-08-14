@@ -142,27 +142,14 @@ export async function speakEdgeTtsText(
       audioCache.set(cacheKey, arrayBuffer);
     }
 
-    // Determine voice character pitch shift
-    const isMale = voice.includes('Guy') || voice.includes('Steve') || voice.includes('Male');
-    const isChild = voice.includes('Ana') || voice.includes('Child');
-
-    let pitchFactor = 1.0;
-    if (isMale) {
-      pitchFactor = 0.84; // Deep masculine tone for Steve (👦)
-    } else if (isChild) {
-      pitchFactor = 1.20; // Playful child tone
-    } else {
-      pitchFactor = 1.08; // Bright female tone for Alex (👩)
-    }
-
-    // Try Web Audio API decoding first for zero-latency, distinct pitch control
+    // Try Web Audio API decoding first for zero-latency, crisp neural voice playback
     const ctx = getAudioContext();
     if (ctx) {
       try {
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;
-        source.playbackRate.value = pitchFactor;
+        source.playbackRate.value = 1.0;
 
         return new Promise((resolve) => {
           let isDone = false;
@@ -203,18 +190,7 @@ export async function speakEdgeTtsText(
     audio.onerror = null;
     audio.src = audioUrl;
     audio.volume = 1.0;
-    
-    // Disable pitch preservation so playbackRate shifts voice pitch distinctly
-    if ('preservesPitch' in audio) {
-      (audio as any).preservesPitch = false;
-    }
-    if ('mozPreservesPitch' in audio) {
-      (audio as any).mozPreservesPitch = false;
-    }
-    if ('webkitPreservesPitch' in audio) {
-      (audio as any).webkitPreservesPitch = false;
-    }
-    audio.playbackRate = pitchFactor;
+    audio.playbackRate = 1.0;
 
     return new Promise((resolve) => {
       let isDone = false;

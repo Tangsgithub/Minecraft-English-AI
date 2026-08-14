@@ -514,39 +514,52 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
               {RECIPES.map(recipe => {
                 const isCrafted = craftedHistory.includes(recipe.id);
                 const isSelected = selectedRecipe.id === recipe.id;
+                const isUnlocked = profile.level >= recipe.unlockedLevel;
 
                 return (
                   <button
                     key={recipe.id}
-                    onClick={() => handleQuickFillRecipe(recipe)}
+                    disabled={!isUnlocked}
+                    onClick={() => {
+                      if (isUnlocked) {
+                        handleQuickFillRecipe(recipe);
+                      }
+                    }}
                     className={`w-full text-left p-2.5 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      isSelected
+                      !isUnlocked
+                        ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
+                        : isSelected
                         ? 'bg-amber-100 border-amber-600 shadow-sm'
                         : 'bg-white border-slate-200 hover:border-amber-400'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 bg-amber-900/10 border border-amber-800/30 rounded-lg flex items-center justify-center text-xl shrink-0">
+                      <div className={`w-9 h-9 border rounded-lg flex items-center justify-center text-xl shrink-0 ${!isUnlocked ? 'bg-slate-200 border-slate-300 grayscale' : 'bg-amber-900/10 border-amber-800/30'}`}>
                         {recipe.mcIcon}
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono font-black text-xs sm:text-sm text-slate-800">
+                          <span className={`font-mono font-black text-xs sm:text-sm ${!isUnlocked ? 'text-slate-500' : 'text-slate-800'}`}>
                             {recipe.nameEn}
                           </span>
-                          {isCrafted && (
+                          {!isUnlocked && (
+                            <span className="text-[9px] bg-slate-200 text-slate-500 font-bold px-1.5 py-0.2 rounded border border-slate-300 flex items-center space-x-0.5">
+                              <span>🔒 Lv.{recipe.unlockedLevel}</span>
+                            </span>
+                          )}
+                          {isUnlocked && isCrafted && (
                             <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-300">
                               已拥有
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-500 font-medium">
-                          {recipe.nameZh} • <span className="font-mono">{recipe.phonetic}</span>
+                        <div className={`text-[11px] font-medium ${!isUnlocked ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {recipe.nameZh} {isUnlocked && <span className="font-mono">• {recipe.phonetic}</span>}
                         </div>
                       </div>
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                    {isUnlocked && <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />}
                   </button>
                 );
               })}

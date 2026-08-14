@@ -18,14 +18,25 @@ interface AlexChatViewProps {
   onOpenSettings: () => void;
 }
 
-// Helper function to format Alex dialogue with clear linebreaks for kids
-function formatAlexDialogueWithLineBreaks(text: string): string {
+// Helper function to format Alex dialogue with clear linebreaks for kids and translation toggle
+function formatAlexDialogue(text: string, showTranslation: boolean = true): string {
   if (!text) return '';
   let cleaned = text.trim();
+  if (!showTranslation) {
+    cleaned = cleaned
+      .replace(/\[.*?\]/g, '')
+      .replace(/（.*?[\u4e00-\u9fa5].*?）/g, '')
+      .replace(/\(.*?\u4e00-\u9fa5.*?\)/g, '')
+      .replace(/\n{2,}/g, '\n')
+      .trim();
+    return cleaned;
+  }
   // Ensure [中文...] bracketed translation is on its own paragraph with double linebreaks
   cleaned = cleaned
     .replace(/(\S)\s*(\[[^\]]+\])/g, '$1\n\n$2')
     .replace(/(\[[^\]]+\])\s*(\S)/g, '$1\n\n$2')
+    .replace(/(\S)\s*([（(][^）)]*[\u4e00-\u9fa5]+[^）)]*[）)])/g, '$1\n\n$2')
+    .replace(/([（(][^）)]*[\u4e00-\u9fa5]+[^）)]*[）)])\s*(\S)/g, '$1\n\n$2')
     .replace(/\n{3,}/g, '\n\n');
   return cleaned;
 }
@@ -413,7 +424,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
 
     setIsLoading(false);
 
-    const formattedAlexText = formatAlexDialogueWithLineBreaks(alexRes.text);
+    const formattedAlexText = formatAlexDialogue(alexRes.text, true);
 
     const alexMsg: ChatMessage = {
       id: `alex_${Date.now()}`,
@@ -692,7 +703,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
                     ? 'text-base sm:text-xl leading-relaxed tracking-wide'
                     : 'text-sm sm:text-base leading-normal'
                 }`}>
-                  {isAlex ? formatAlexDialogueWithLineBreaks(msg.text) : msg.text}
+                  {isAlex ? formatAlexDialogue(msg.text, showTranslations) : msg.text}
                 </div>
 
                 {/* Optional Alex Encouragement Badge */}
@@ -903,7 +914,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
                 </button>
               </div>
               <div className="text-base sm:text-xl font-bold leading-relaxed whitespace-pre-wrap text-white tracking-wide">
-                {formatAlexDialogueWithLineBreaks(phoneSubtitle)}
+                {formatAlexDialogue(phoneSubtitle, showTranslations)}
               </div>
             </div>
 

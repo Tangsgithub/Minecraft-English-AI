@@ -398,11 +398,22 @@ app.use(express.json());
       }
 
       // Clean markdown tags, emojis and bracket notes for pristine pronunciation
-      const cleanText = text
+      let cleanText = text
         .replace(/[*#_`~]/g, '')
         .replace(/\[.*?\]/g, '')
+        .replace(/（.*?[\u4e00-\u9fa5].*?）/g, '')
+        .replace(/\(.*?\u4e00-\u9fa5.*?\)/g, '')
         .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
         .trim();
+
+      // If voice is an English voice and text contains English + Chinese, remove Chinese and keep English punctuation
+      if (voice.startsWith('en-') && /[a-zA-Z]/.test(cleanText)) {
+        cleanText = cleanText
+          .replace(/[\u4e00-\u9fa5]/g, '')
+          .replace(/[（）【】《》、]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
 
       if (!cleanText) {
         return res.status(400).json({ error: "Cleaned text is empty" });
@@ -412,7 +423,7 @@ app.use(express.json());
       try {
         audioBuffer = await edgeTts(cleanText, {
           voice: voice,
-          rate: rate
+          rate: rate || '+0%'
         });
       } catch (_edgeErr) {
         // Fallback to Google TTS gracefully if Edge TTS websocket endpoint is restricted in container
@@ -455,27 +466,25 @@ app.use(express.json());
     try {
       const { messages, systemPrompt, config } = req.body;
       const provider = config?.provider || 'deepseek';
-      const apiKey = config?.apiKey || (provider === 'deepseek' ? process.env.DEEPSEEK_API_KEY : process.env.GEMINI_API_KEY) || process.env.GEMINI_API_KEY || '';
+      const userApiKey = config?.apiKey?.trim() || '';
       const baseUrl = config?.baseUrl || 'https://api.deepseek.com';
-      const model = config?.model || (provider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.6-flash');
+      const model = config?.model || (provider === 'deepseek' ? 'deepseek-chat' : 'gemini-3.7-flash');
 
-      if (provider === 'gemini' || (!config?.apiKey && process.env.GEMINI_API_KEY)) {
-        // Use Gemini API
-        const geminiKey = process.env.GEMINI_API_KEY || apiKey;
+      // Helper to call Gemini backend
+      const callGemini = async (): Promise<string> => {
+        const geminiKey = process.env.GEMINI_API_KEY || (provider === 'gemini' ? userApiKey : '');
         if (!geminiKey) {
-          return res.status(400).json({ error: "Missing Gemini API Key" });
+          throw new Error("Missing Gemini API Key in environment");
         }
         const ai = new GoogleGenAI({ apiKey: geminiKey });
-        
-        // Format prompt
         const promptText = `${systemPrompt}\n\nConversation History:\n` +
           messages.map((m: any) => `${m.role === 'user' ? 'Student' : 'Alex Teacher'}: ${m.content}`).join('\n');
 
-        let requestModel = config?.model || 'gemini-3.6-flash';
-        if (requestModel.includes('deepseek') || requestModel.includes('openai') || requestModel.includes('llama')) {
-          requestModel = 'gemini-3.6-flash';
+        let requestModel = config?.model || 'gemini-3.7-flash';
+        if (requestModel.includes('deepseek') || requestModel.includes('openai') || requestModel.includes('llama') || requestModel.includes('3.6')) {
+          requestModel = 'gemini-3.7-flash';
         }
-        const candidateModels = Array.from(new Set([requestModel, 'gemini-3.6-flash', 'gemini-3.1-pro-preview']));
+        const candidateModels = Array.from(new Set([requestModel, 'gemini-3.7-flash', 'gemini-3.1-pro-preview']));
 
         let responseText = '';
         let lastError: any = null;
@@ -489,7 +498,7 @@ app.use(express.json());
             responseText = response.text || '';
             if (responseText) break;
           } catch (err: any) {
-            console.warn(`Gemini model ${mod} failed, trying fallback model:`, err?.message || err);
+            console.warn(`Gemini model ${mod} attempt failed:`, err?.message || err);
             lastError = err;
           }
         }
@@ -497,47 +506,72 @@ app.use(express.json());
         if (!responseText && lastError) {
           throw lastError;
         }
+        return responseText || "Alex: Great effort! Keep exploring!";
+      };
 
-        const replyText = responseText || "Alex: Great effort! Keep exploring!";
-        return res.json({ text: replyText });
+      // 1. Direct Gemini Provider or default fallback when no user key configured
+      if (provider === 'gemini' || (!userApiKey && process.env.GEMINI_API_KEY)) {
+        try {
+          const text = await callGemini();
+          return res.json({ text });
+        } catch (geminiErr: any) {
+          console.error("Gemini call failed:", geminiErr);
+          return res.status(500).json({ error: geminiErr?.message || "Gemini AI generation failed" });
+        }
       }
 
-      // DeepSeek or OpenAI-compatible endpoint
-      if (!apiKey) {
-        return res.status(400).json({ error: "Please configure your DeepSeek API Key in Settings ⚙️" });
+      // 2. DeepSeek / OpenAI-compatible Custom Provider with user API Key
+      if (userApiKey) {
+        const endpoint = `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
+        const payloadMessages = [
+          { role: 'system', content: systemPrompt },
+          ...messages
+        ];
+
+        try {
+          const dsRes = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${userApiKey}`
+            },
+            body: JSON.stringify({
+              model: model || 'deepseek-chat',
+              messages: payloadMessages,
+              temperature: 0.7,
+              max_tokens: 800
+            })
+          });
+
+          if (dsRes.ok) {
+            const dsData = await dsRes.json();
+            const replyText = dsData.choices?.[0]?.message?.content || "Alex: Great English practice!";
+            return res.json({ text: replyText });
+          } else {
+            const errorText = await dsRes.text();
+            console.warn("DeepSeek API error response:", errorText);
+            // If user key fails and server Gemini is available, failover seamlessly
+            if (process.env.GEMINI_API_KEY) {
+              console.log("Falling back to Gemini AI due to DeepSeek API error...");
+              const fallbackText = await callGemini();
+              return res.json({ text: fallbackText });
+            }
+            return res.status(dsRes.status).json({
+              error: `DeepSeek API Error (${dsRes.status}): ${errorText || dsRes.statusText}`
+            });
+          }
+        } catch (fetchErr: any) {
+          console.warn("DeepSeek fetch failed:", fetchErr);
+          if (process.env.GEMINI_API_KEY) {
+            const fallbackText = await callGemini();
+            return res.json({ text: fallbackText });
+          }
+          throw fetchErr;
+        }
       }
 
-      const endpoint = `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`;
-      const payloadMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ];
-
-      const dsRes = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: payloadMessages,
-          temperature: 0.7,
-          max_tokens: 800
-        })
-      });
-
-      if (!dsRes.ok) {
-        const errorText = await dsRes.text();
-        console.error("DeepSeek API Response Error:", errorText);
-        return res.status(dsRes.status).json({
-          error: `DeepSeek API Error (${dsRes.status}): ${errorText || dsRes.statusText}`
-        });
-      }
-
-      const dsData = await dsRes.json();
-      const replyText = dsData.choices?.[0]?.message?.content || "Alex: Great English practice!";
-      return res.json({ text: replyText });
+      // 3. If neither user key nor Gemini key available
+      return res.status(400).json({ error: "Please configure your DeepSeek API Key in Settings ⚙️" });
 
     } catch (err: any) {
       console.error("Chat API endpoint error:", err);

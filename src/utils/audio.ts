@@ -385,18 +385,20 @@ export async function speakText(
   let cleanText = text
     .replace(/[*#_`~]/g, '')
     .replace(/\[.*?\]/g, '') // remove bracketed notes
+    .replace(/（.*?[\u4e00-\u9fa5].*?）/g, '') // remove full-width parenthesized Chinese
+    .replace(/\(.*?\u4e00-\u9fa5.*?\)/g, '') // remove half-width parenthesized Chinese
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
     .trim();
 
-  // If we are reading English words, strip remaining Chinese characters
+  // If we are reading English words, strip remaining Chinese characters and Chinese-only punctuation, keeping English punctuation intact
   const hasEnglish = /[a-zA-Z]/.test(cleanText);
   const hasChinese = /[\u4e00-\u9fa5]/.test(cleanText);
 
   let targetLang = options?.lang || 'en-US';
   if (targetLang.startsWith('en') && hasEnglish && hasChinese) {
     cleanText = cleanText.replace(/[\u4e00-\u9fa5]/g, '').trim();
-    // Remove orphaned punctuation left behind after removing Chinese text
-    cleanText = cleanText.replace(/[（）()：:【】！!？?，,。.""'']/g, ' ').replace(/\s+/g, ' ').trim();
+    // Remove Chinese-specific punctuation, keep English .,!?'"
+    cleanText = cleanText.replace(/[，。！？：；“”‘’【】《》、（）]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   if (!cleanText) return;
@@ -409,8 +411,15 @@ export async function speakText(
   // 1. High Quality Edge Neural Speech (Ultra natural, 100-200ms latency)
   if (engine === 'edge') {
     const edgeVoice = resolveVoiceForSpeaker(options?.speaker, options?.gender, options?.voice);
+    // Convert numeric rate (e.g. 0.85 -> -15%, 1.0 -> +0%)
+    let rateParam = '+0%';
+    if (options?.rate !== undefined && options?.rate !== 1.0) {
+      const diffPercent = Math.round((options.rate - 1.0) * 100);
+      rateParam = diffPercent >= 0 ? `+${diffPercent}%` : `${diffPercent}%`;
+    }
     const success = await speakEdgeTtsText(cleanText, {
       voice: edgeVoice,
+      rate: rateParam,
       onEnd
     });
     if (success) {
