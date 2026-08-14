@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId, VolumeProgress } from './types';
 import { getLevelFromXp } from './data/gamificationData';
-import { getVolumeProgress, updateVolumeProgress, switchActiveVolume, DEFAULT_VOLUME_PROGRESS } from './utils/volumeProgress';
+import { getVolumeProgress, updateVolumeProgress, switchActiveVolume, DEFAULT_VOLUME_PROGRESS, hasLessonAccess } from './utils/volumeProgress';
 import { HeaderBar } from './components/HeaderBar';
 import { FirstLaunchModal } from './components/FirstLaunchModal';
 import { LessonMap } from './components/LessonMap';
@@ -357,9 +357,20 @@ export default function App() {
       const currentVolId = selectedVolumeId || prev.selectedVolumeId || 'vol1';
       const volProg = getVolumeProgress(prev, currentVolId);
 
-      const nextUnlocked = Array.from(new Set([...volProg.unlockedLessonIds, lessonId, lessonId + 1])).sort((a, b) => a - b);
       const nextCompleted = Array.from(new Set([...(volProg.completedLessonIds || []), lessonId])).sort((a, b) => a - b);
-      const nextCurrentLessonId = Math.max(volProg.currentLessonId, lessonId + 1);
+      
+      const nextLessonId = lessonId + 1;
+      const canAccessNext = hasLessonAccess(prev, currentVolId, nextLessonId);
+
+      let nextUnlocked = [...volProg.unlockedLessonIds, lessonId];
+      if (canAccessNext) {
+        nextUnlocked.push(nextLessonId);
+      }
+      nextUnlocked = Array.from(new Set(nextUnlocked)).sort((a, b) => a - b);
+
+      const nextCurrentLessonId = canAccessNext
+        ? Math.max(volProg.currentLessonId, nextLessonId)
+        : Math.min(volProg.currentLessonId, lessonId);
 
       const nextProfile = updateVolumeProgress(prev, currentVolId, {
         currentLessonId: nextCurrentLessonId,
@@ -633,6 +644,7 @@ export default function App() {
                 onSelectLessonForChat={handleSelectLessonForChat}
                 onCompleteLesson={handleCompleteLesson}
                 onAwardEmeralds={handleAwardEmeralds}
+                onOpenVipModal={() => setIsVipModalOpen(true)}
               />
             </>
           )}

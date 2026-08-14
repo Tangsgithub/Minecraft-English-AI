@@ -4,7 +4,8 @@ import { sendChatMessageToAlex } from '../services/aiService';
 import { buildAlexSystemPrompt } from '../utils/aiTeacherPrompt';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
-import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award, Phone, PhoneOff, PhoneCall } from 'lucide-react';
+import { hasLessonAccess } from '../utils/volumeProgress';
+import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award, Phone, PhoneOff, PhoneCall, Lock } from 'lucide-react';
 import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface AlexChatViewProps {
@@ -609,21 +610,31 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             {showTranslations ? '双语' : '仅英文'}
           </button>
 
-          {activeLesson && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  playEmeraldSound();
-                  onCompleteLesson(activeLesson.id);
-                  onBackToMap();
-                }}
-                className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black font-mono text-[10px] sm:text-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-none flex items-center gap-1 shrink-0 animate-in fade-in zoom-in"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-900" />
-                <span>通关解锁 L{activeLesson.id + 1}</span>
-              </button>
-            </div>
-          )}
+          {activeLesson && (() => {
+            const nextLessonId = activeLesson.id + 1;
+            const currentVolId = profile.selectedVolumeId || 'vol1';
+            const canAccessNext = hasLessonAccess(profile, currentVolId, nextLessonId);
+
+            return (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    playEmeraldSound();
+                    onCompleteLesson(activeLesson.id);
+                    onBackToMap();
+                  }}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-2 font-black font-mono text-[10px] sm:text-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-none flex items-center gap-1 shrink-0 animate-in fade-in zoom-in ${
+                    canAccessNext
+                      ? 'bg-amber-400 hover:bg-amber-300 text-amber-950'
+                      : 'bg-emerald-400 hover:bg-emerald-300 text-emerald-950'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>{canAccessNext ? `通关解锁 L${nextLessonId}` : '完成本课学习 ❇️'}</span>
+                </button>
+              </div>
+            );
+          })()}
 
           <button
             onClick={onOpenSettings}

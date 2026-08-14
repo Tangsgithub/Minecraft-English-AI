@@ -2,11 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Lesson, UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import { getBiomeChapterByUnit } from '../data/storyData';
-import { getVolumeProgress } from '../utils/volumeProgress';
+import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked } from '../utils/volumeProgress';
 import {
   BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play,
   MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid,
-  Globe, Flame, Zap, Compass, Star, ArrowRight, CheckCircle2, Headphones
+  Globe, Flame, Zap, Compass, Star, ArrowRight, CheckCircle2, Headphones, Key
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
@@ -21,6 +21,7 @@ interface LessonMapProps {
   onSelectLessonForChat: (lesson: Lesson) => void;
   onCompleteLesson: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
+  onOpenVipModal?: () => void;
 }
 
 export const LessonMap: React.FC<LessonMapProps> = ({
@@ -28,7 +29,8 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   profile,
   onSelectLessonForChat,
   onCompleteLesson,
-  onAwardEmeralds
+  onAwardEmeralds,
+  onOpenVipModal
 }) => {
   const volProg = getVolumeProgress(profile, selectedVolumeId);
   const currentLessonId = volProg.currentLessonId;
@@ -46,6 +48,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
   const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
   const currentBiome = getBiomeChapterByUnit(currentUnitNum);
+  const hasCurrentLessonAccess = hasLessonAccess(profile, selectedVolumeId, currentLesson.id);
 
   const unitNavRef = useRef<HTMLDivElement>(null);
   const unitTabRefs = useRef<{ [key: number]: HTMLButtonElement | null }>({});
@@ -79,6 +82,11 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   });
 
   const handleOpenLessonDetail = (lessonId: number) => {
+    if (!hasLessonAccess(profile, selectedVolumeId, lessonId)) {
+      playClickSound();
+      if (onOpenVipModal) onOpenVipModal();
+      return;
+    }
     playClickSound();
     const lessonData = getLessonById(lessonId, selectedVolumeId);
     setActiveLesson(lessonData);
@@ -123,19 +131,41 @@ export const LessonMap: React.FC<LessonMapProps> = ({
         </div>
 
         <div className="flex items-center space-x-2 w-full sm:w-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => handleOpenLessonDetail(currentLesson.id)}
-            className="flex-1 sm:flex-none bg-[#FF6321] hover:bg-[#ff7a42] text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-mono font-black border border-black flex items-center justify-center space-x-1.5 shadow-sm active:translate-y-0.5 cursor-pointer"
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>进入学习 (第 {currentLesson.id} 课)</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {hasCurrentLessonAccess ? (
+            <button
+              type="button"
+              onClick={() => handleOpenLessonDetail(currentLesson.id)}
+              className="flex-1 sm:flex-none bg-[#FF6321] hover:bg-[#ff7a42] text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-mono font-black border border-black flex items-center justify-center space-x-1.5 shadow-sm active:translate-y-0.5 cursor-pointer"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>进入学习 (第 {currentLesson.id} 课)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                if (onOpenVipModal) onOpenVipModal();
+              }}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-amber-950 px-4 py-2 rounded-xl text-xs sm:text-sm font-mono font-black border border-black flex items-center justify-center space-x-1.5 shadow-sm active:translate-y-0.5 cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>激活 VIP 解锁第 {currentLesson.id} 课</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={() => onSelectLessonForChat(currentLesson)}
+            onClick={() => {
+              if (!hasCurrentLessonAccess) {
+                playClickSound();
+                if (onOpenVipModal) onOpenVipModal();
+                return;
+              }
+              onSelectLessonForChat(currentLesson);
+            }}
             className="bg-black/40 hover:bg-black/60 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center space-x-1 shrink-0 cursor-pointer"
             title="与 Alex 老师练习本课口语"
           >
@@ -328,14 +358,23 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {filteredCatalog.map(item => {
+              const hasAccess = hasLessonAccess(profile, selectedVolumeId, item.id);
+              const isPaywallLocked = !hasAccess;
+              const isTrial = selectedVolumeId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
               const isCompleted = item.id < currentLessonId || completedList.includes(item.id);
-              const isUnlocked = unlockedList.includes(item.id) || item.id === 1;
+              const isProgressionUnlocked = unlockedList.includes(item.id) || item.id === 1;
+              const isUnlocked = isProgressionUnlocked && hasAccess;
               const isCurrent = currentLessonId === item.id;
 
               return (
                 <div
                   key={item.id}
                   onClick={() => {
+                    if (isPaywallLocked) {
+                      playClickSound();
+                      if (onOpenVipModal) onOpenVipModal();
+                      return;
+                    }
                     if (isUnlocked) {
                       handleOpenLessonDetail(item.id);
                     }
@@ -343,20 +382,33 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                   className={`rounded-xl border-2 p-3 sm:p-3.5 transition-all flex flex-col justify-between cursor-pointer relative ${
                     isCurrent
                       ? 'bg-amber-50/60 border-[#FF6321] shadow-sm hover:shadow-md scale-[1.01]'
+                      : isPaywallLocked
+                      ? 'bg-amber-50/20 border-amber-300/80 hover:border-amber-500 hover:shadow-sm'
                       : isUnlocked
                       ? 'bg-white border-slate-300 hover:border-[#487E2C] hover:shadow-sm'
                       : 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
                   }`}
                 >
-                  {/* Top Bar: Lesson ID & Fast Audio Icon */}
+                  {/* Top Bar: Lesson ID & Badges */}
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center space-x-1.5">
-                      <span className={`text-xs font-mono font-black ${isCurrent ? 'text-[#FF6321]' : 'text-[#487E2C]'}`}>
+                      <span className={`text-xs font-mono font-black ${isCurrent ? 'text-[#FF6321]' : isPaywallLocked ? 'text-amber-700' : 'text-[#487E2C]'}`}>
                         Lesson {item.id}
                       </span>
                       {isCurrent && (
                         <span className="bg-[#FF6321] text-white text-[9px] font-mono font-black px-1.5 py-0.2 rounded">
                           当前
+                        </span>
+                      )}
+                      {isTrial && (
+                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded">
+                          🆓 试学
+                        </span>
+                      )}
+                      {isPaywallLocked && (
+                        <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-mono font-black px-1.5 py-0.2 rounded flex items-center space-x-0.5">
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>需激活</span>
                         </span>
                       )}
                     </div>
@@ -395,7 +447,12 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                     </span>
 
                     <div>
-                      {isCompleted ? (
+                      {isPaywallLocked ? (
+                        <span className="text-amber-700 font-bold flex items-center space-x-0.5 text-[11px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                          <Lock className="w-3 h-3 text-amber-600" />
+                          <span>激活解锁</span>
+                        </span>
+                      ) : isCompleted ? (
                         <span className="text-emerald-600 font-bold flex items-center space-x-0.5 text-[11px]">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>已学完</span>
@@ -424,6 +481,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           onSelectLessonForChat={onSelectLessonForChat}
           onCompleteLesson={onCompleteLesson}
           onAwardEmeralds={onAwardEmeralds}
+          onOpenVipModal={onOpenVipModal}
         />
       ) : (
         <MinecraftAdventureMap
@@ -432,6 +490,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           onSelectLesson={handleOpenLessonDetail}
           onStartChat={onSelectLessonForChat}
           onOralTest={(target) => setOralTarget(target)}
+          onOpenVipModal={onOpenVipModal}
         />
       )}
 
@@ -454,6 +513,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
             onSelectLessonForChat(lesson);
           }}
           onAwardEmeralds={onAwardEmeralds}
+          onOpenVipModal={onOpenVipModal}
         />
       )}
 

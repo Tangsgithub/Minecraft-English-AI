@@ -4,7 +4,7 @@ import { BIOME_CHAPTERS, BiomeChapter, getBiomeChapterByUnit } from '../data/sto
 import { LessonStudyModal } from './LessonStudyModal';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
-import { getVolumeProgress } from '../utils/volumeProgress';
+import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked } from '../utils/volumeProgress';
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
   Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X,
@@ -17,6 +17,7 @@ interface GiantWorldMapProps {
   onSelectLessonForChat: (lesson: Lesson) => void;
   onCompleteLesson: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
+  onOpenVipModal?: () => void;
 }
 
 interface MapNPC {
@@ -211,7 +212,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   profile,
   onSelectLessonForChat,
   onCompleteLesson,
-  onAwardEmeralds
+  onAwardEmeralds,
+  onOpenVipModal
 }) => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [biomeNavMode, setBiomeNavMode] = useState<'grid' | 'scroll'>('grid'); // Default to grid for 100% full visibility of 1-12
@@ -255,7 +257,12 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
     }
   };
 
-  const handleOpenLessonDetail = (lessonId: number, isUnlocked: boolean) => {
+  const handleOpenLessonDetail = (lessonId: number, isUnlocked: boolean, isPaywallLocked: boolean) => {
+    if (isPaywallLocked) {
+      playClickSound();
+      if (onOpenVipModal) onOpenVipModal();
+      return;
+    }
     if (!isUnlocked) return;
     playBlockBreakSound();
     setBreakingLessonId(lessonId);
@@ -630,8 +637,13 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 {/* 12 Lessons Grid Nodes inside this Biome */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 relative z-10">
                   {unitLessons.map((item) => {
+                    const hasAccess = hasLessonAccess(profile, selectedVolId, item.id);
+                    const isPaywallLocked = !hasAccess;
+                    const isTrial = selectedVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
+
                     const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
-                    const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1;
+                    const isProgressionUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1;
+                    const isUnlocked = isProgressionUnlocked && hasAccess;
                     const isCurrent = currentLessonId === item.id;
                     const isBossNode = item.id % 12 === 0;
 
@@ -678,13 +690,15 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         {/* Pixel Node Button */}
                         <button
                           type="button"
-                          onClick={() => handleOpenLessonDetail(item.id, isUnlocked)}
-                          disabled={!isUnlocked}
+                          onClick={() => handleOpenLessonDetail(item.id, isUnlocked, isPaywallLocked)}
+                          disabled={!isUnlocked && !isPaywallLocked}
                           className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                             isBreaking ? 'scale-125 rotate-6 brightness-150' : ''
                           } ${
                             isCurrent
-                              ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_6px_0_0_#992E00] ring-4 ring-amber-400 scale-105 z-20 group-hover:-translate-y-2 group-hover:scale-115 group-hover:shadow-[0_0_25px_rgba(251,191,36,0.9)] group-hover:ring-amber-300'
+                              ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_6px_0_0_#992E00] ring-4 ring-amber-400 scale-105 z-20 group-hover:-translate-y-2 group-hover:scale-115 group-hover:shadow-[0_0_25px_rgba(251,191,36,0.9)] group-hover:ring-amber-300 cursor-pointer'
+                              : isPaywallLocked
+                              ? 'bg-amber-950/80 border-amber-500/80 shadow-[0_5px_0_0_#451a03] text-amber-200 group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-400 group-hover:z-30 cursor-pointer'
                               : isCompleted
                               ? 'bg-[#487E2C] border-[#2A4718] shadow-[0_5px_0_0_#182B0E] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(72,126,44,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30 cursor-pointer'
                               : isUnlocked
@@ -702,7 +716,24 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                             </div>
                           )}
 
-                          {isCompleted ? (
+                          {/* Trial Badge */}
+                          {isTrial && (
+                            <div className="absolute -top-2 -left-2 bg-emerald-500 border border-black rounded-lg px-1 py-0.2 text-[8px] font-black text-white shadow-md">
+                              试学
+                            </div>
+                          )}
+
+                          {/* Paywall Lock Badge */}
+                          {isPaywallLocked && (
+                            <div className="absolute -top-2 -left-2 bg-amber-500 border border-black rounded-lg px-1 py-0.2 text-[8px] font-black text-black shadow-md flex items-center space-x-0.5">
+                              <Lock className="w-2 h-2" />
+                              <span>VIP</span>
+                            </div>
+                          )}
+
+                          {isPaywallLocked ? (
+                            <Lock className="w-5 h-5 text-amber-400 drop-shadow-md" />
+                          ) : isCompleted ? (
                             <CheckCircle className="w-6 h-6 text-amber-300 drop-shadow-md" />
                           ) : isCurrent ? (
                             <Compass className="w-6 h-6 text-white animate-spin-slow drop-shadow-md" />
@@ -719,7 +750,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
                         {/* Title text under node */}
                         <div className="mt-2 text-center max-w-[120px] bg-black/70 border border-white/20 rounded-lg p-1">
-                          <p className={`text-[10px] font-mono font-bold truncate ${isCurrent ? 'text-amber-300' : isUnlocked ? 'text-white' : 'text-slate-500'}`}>
+                          <p className={`text-[10px] font-mono font-bold truncate ${isCurrent ? 'text-amber-300' : isPaywallLocked ? 'text-amber-300' : isUnlocked ? 'text-white' : 'text-slate-500'}`}>
                             {item.title.split(':')[0]}
                           </p>
                           <p className="text-[9px] text-slate-300 truncate">
@@ -786,6 +817,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
             onSelectLessonForChat(lesson);
           }}
           onAwardEmeralds={onAwardEmeralds}
+          onOpenVipModal={onOpenVipModal}
         />
       )}
 

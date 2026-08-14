@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, getBiomeChapterByUnit, getBiomeChapterByLesson, BiomeChapter } from '../data/storyData';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
-import { getVolumeProgress } from '../utils/volumeProgress';
+import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import {
   CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
@@ -16,6 +16,7 @@ interface MinecraftAdventureMapProps {
   onSelectLesson: (lessonId: number) => void;
   onStartChat: (lesson: Lesson) => void;
   onOralTest?: (target: { text: string; translation?: string; phonetic?: string }) => void;
+  onOpenVipModal?: () => void;
 }
 
 // Rich Minecraft Biome Theme Data
@@ -236,7 +237,8 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   selectedUnit,
   onSelectLesson,
   onStartChat,
-  onOralTest
+  onOralTest,
+  onOpenVipModal
 }) => {
   // Active selected lesson object for FIXED OVERLAY MODAL
   const [modalLesson, setModalLesson] = useState<Lesson | null>(null);
@@ -277,7 +279,12 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
     return getLessonById(lessonId, currentVolId);
   };
 
-  const handleOpenNodeModal = (lessonId: number, isUnlocked: boolean) => {
+  const handleOpenNodeModal = (lessonId: number, isUnlocked: boolean, isPaywallLocked: boolean) => {
+    if (isPaywallLocked) {
+      playClickSound();
+      if (onOpenVipModal) onOpenVipModal();
+      return;
+    }
     if (!isUnlocked) return;
     playBlockBreakSound();
     setBreakingNodeId(lessonId);
@@ -397,8 +404,13 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const chapter = getBiomeChapterByUnit(unitNum);
             const storySnippet = chapter.lessonsStory[item.id] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 展开第 ${item.id} 课对话。`;
 
+            const hasAccess = hasLessonAccess(profile, currentVolId, item.id);
+            const isPaywallLocked = !hasAccess;
+            const isTrial = currentVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
+
             const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
-            const isUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1;
+            const isProgressionUnlocked = unlockedLessonIds.includes(item.id) || item.id === 1;
+            const isUnlocked = isProgressionUnlocked && hasAccess;
             const isCurrent = currentLessonId === item.id;
             const isBossNode = item.id % 12 === 0;
             const isFirstInUnit = (item.id - 1) % 12 === 0;
@@ -551,13 +563,15 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                     {/* 3D Minecraft Pixel Block Button */}
                     <button
                       type="button"
-                      onClick={() => handleOpenNodeModal(item.id, isUnlocked)}
-                      disabled={!isUnlocked}
+                      onClick={() => handleOpenNodeModal(item.id, isUnlocked, isPaywallLocked)}
+                      disabled={!isUnlocked && !isPaywallLocked}
                       className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                         breakingNodeId === item.id ? 'scale-125 rotate-6 brightness-150' : ''
                       } ${
                         isCurrent
-                          ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_8px_0_0_#992E00] ring-4 ring-amber-400/80 scale-110 z-20 group-hover:-translate-y-2 group-hover:scale-120 group-hover:shadow-[0_0_30px_rgba(251,191,36,0.9)] group-hover:ring-amber-300'
+                          ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_8px_0_0_#992E00] ring-4 ring-amber-400/80 scale-110 z-20 group-hover:-translate-y-2 group-hover:scale-120 group-hover:shadow-[0_0_30px_rgba(251,191,36,0.9)] group-hover:ring-amber-300 cursor-pointer'
+                          : isPaywallLocked
+                          ? 'bg-amber-950/80 border-amber-500/80 shadow-[0_6px_0_0_#451a03] text-amber-200 group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-400 group-hover:z-30 cursor-pointer'
                           : isCompleted
                           ? `${theme.blockBg} ${theme.blockBorder} ${theme.blockShadow} text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(72,126,44,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30 cursor-pointer`
                           : isUnlocked
@@ -572,11 +586,28 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                         </div>
                       )}
 
+                      {/* Trial Badge */}
+                      {isTrial && (
+                        <div className="absolute -top-2.5 -left-2 bg-emerald-500 border-2 border-black rounded-lg px-1 py-0.2 text-[9px] font-black text-white shadow-md">
+                          试学
+                        </div>
+                      )}
+
+                      {/* Paywall Lock Badge */}
+                      {isPaywallLocked && (
+                        <div className="absolute -top-2.5 -left-2 bg-amber-500 border-2 border-black rounded-lg px-1 py-0.2 text-[9px] font-black text-black shadow-md flex items-center space-x-0.5">
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>VIP</span>
+                        </div>
+                      )}
+
                       {/* Top Bevel Pixel Highlight */}
                       <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/30 rounded-t-xl pointer-events-none" />
 
                       {/* Status Icon */}
-                      {isCompleted ? (
+                      {isPaywallLocked ? (
+                        <Lock className="w-7 h-7 text-amber-400 drop-shadow-md" />
+                      ) : isCompleted ? (
                         <CheckCircle className="w-8 h-8 text-amber-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]" />
                       ) : isCurrent ? (
                         <Compass className="w-8 h-8 text-white animate-spin-slow drop-shadow-md" />
@@ -593,7 +624,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
 
                     {/* Title Box below block */}
                     <div className="mt-2.5 text-center max-w-[140px] mx-auto bg-black/80 border-2 border-white/20 rounded-xl p-1.5 shadow-md backdrop-blur-sm">
-                      <p className={`text-[11px] font-mono font-black truncate ${isCurrent ? 'text-amber-300' : isUnlocked ? 'text-white' : 'text-slate-400'}`}>
+                      <p className={`text-[11px] font-mono font-black truncate ${isCurrent ? 'text-amber-300' : isPaywallLocked ? 'text-amber-300' : isUnlocked ? 'text-white' : 'text-slate-400'}`}>
                         {item.title.split(':')[0]}
                       </p>
                       <p className="text-[10px] font-bold text-slate-300 truncate">

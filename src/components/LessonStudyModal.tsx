@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2 } from 'lucide-react';
+import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2, Lock } from 'lucide-react';
 import { Lesson, UserProfile } from '../types';
 import { getBiomeChapterByUnit } from '../data/storyData';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
+import { hasLessonAccess } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { SceneOralCheckInModal, RealWorldSceneItem } from './SceneOralCheckInModal';
 import { RedstoneLogicWorkbench } from './RedstoneLogicWorkbench';
@@ -16,6 +17,7 @@ interface LessonStudyModalProps {
   onStartPractice: (lesson: Lesson) => void;
   onCompleteLesson?: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
+  onOpenVipModal?: () => void;
 }
 
 export interface WordGrammarRole {
@@ -269,7 +271,8 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   onClose,
   onStartPractice,
   onCompleteLesson,
-  onAwardEmeralds
+  onAwardEmeralds,
+  onOpenVipModal
 }) => {
   const [playedAudioIds, setPlayedAudioIds] = useState<Set<string>>(new Set());
   const [isPlayingAllDialogue, setIsPlayingAllDialogue] = useState<boolean>(false);
@@ -932,41 +935,68 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                 锁定的实战练习通道 🔒
               </button>
             </div>
-          ) : (
-            <div className="flex flex-col items-center text-center space-y-3 animate-in slide-in-from-bottom-2">
-              <p className="text-xs sm:text-sm font-black text-[#487E2C] font-mono animate-pulse">
-                {isAlreadyCompleted
-                  ? '🌟 本课已打卡通关！你可以随时重复收听与复习 🌟'
-                  : '✨ 恭喜完成全课预习！点击下方按钮通关并同步进度到数据库 ✨'}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
-                <button
-                  onClick={() => {
-                    playEmeraldSound();
-                    if (onCompleteLesson) {
-                      onCompleteLesson(lesson.id);
-                    }
-                    onClose();
-                  }}
-                  className="w-full py-3 sm:py-3.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono"
-                >
-                  <span>🏅 打卡通关并解锁第 {lesson.id + 1} 课</span>
-                </button>
-                <button
-                  onClick={() => {
-                    playEmeraldSound();
-                    if (onCompleteLesson) {
-                      onCompleteLesson(lesson.id);
-                    }
-                    onStartPractice(lesson);
-                  }}
-                  className="w-full py-3 sm:py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl border-3 border-slate-950 shadow-[3px_3px_0_0_#0F172A] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono"
-                >
-                  <span>⚔️ 开启 1V1 AI 口语实战对练</span>
-                </button>
+          ) : (() => {
+            const currentVol = profile?.selectedVolumeId || 'vol1';
+            const hasNextLessonAccess = profile ? hasLessonAccess(profile, currentVol, lesson.id + 1) : true;
+            const isFinishingTrial = lesson.id === 10 && !hasNextLessonAccess;
+
+            return (
+              <div className="flex flex-col items-center text-center space-y-3 animate-in slide-in-from-bottom-2">
+                <p className="text-xs sm:text-sm font-black text-[#487E2C] font-mono animate-pulse">
+                  {isAlreadyCompleted
+                    ? '🌟 本课已打卡通关！你可以随时重复收听与复习 🌟'
+                    : isFinishingTrial
+                    ? '🎉 恭喜完成前 10 课免费试学！激活 VIP 或第 1 册卡密即可畅享 11-144 课！'
+                    : '✨ 恭喜完成全课预习！点击下方按钮通关并同步进度到数据库 ✨'}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+                  {isFinishingTrial ? (
+                    <button
+                      onClick={() => {
+                        playEmeraldSound();
+                        if (onCompleteLesson) {
+                          onCompleteLesson(lesson.id);
+                        }
+                        onClose();
+                        if (onOpenVipModal) {
+                          onOpenVipModal();
+                        }
+                      }}
+                      className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-amber-950 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer"
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>🎉 打卡通关 · 激活 VIP 解锁 11-144 课</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        playEmeraldSound();
+                        if (onCompleteLesson) {
+                          onCompleteLesson(lesson.id);
+                        }
+                        onClose();
+                      }}
+                      className="w-full py-3 sm:py-3.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer"
+                    >
+                      <span>🏅 打卡通关并解锁第 {lesson.id + 1} 课</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      playEmeraldSound();
+                      if (onCompleteLesson) {
+                        onCompleteLesson(lesson.id);
+                      }
+                      onStartPractice(lesson);
+                    }}
+                    className="w-full py-3 sm:py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl border-3 border-slate-950 shadow-[3px_3px_0_0_#0F172A] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer"
+                  >
+                    <span>⚔️ 开启 1V1 AI 口语实战对练</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
       </div>

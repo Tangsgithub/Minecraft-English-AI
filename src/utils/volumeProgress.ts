@@ -24,6 +24,55 @@ export const DEFAULT_VOLUME_PROGRESS: Record<CourseVolumeId, VolumeProgress> = {
 };
 
 /**
+ * Free Trial Limits:
+ * Volume 1 (第一册): Lessons 1-10 are free trial for all users.
+ * Volume 1 Lessons 11-144: Requires VIP or Volume 1 activation.
+ * Volume 2, 3, 4: Requires specific volume activation or VIP.
+ */
+export const FREE_TRIAL_LESSONS_LIMIT = 10;
+
+/**
+ * Check if the user has full access to a specific volume.
+ */
+export function isVolumeFullyUnlocked(profile: UserProfile, volumeId: CourseVolumeId = 'vol1'): boolean {
+  if (profile.isVip) return true;
+  if (profile.activatedVolumes && (profile.activatedVolumes.includes(volumeId) || (profile.activatedVolumes as string[]).includes('all'))) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if the user has access to study a specific lesson in a volume.
+ */
+export function hasLessonAccess(
+  profile: UserProfile,
+  volumeId: CourseVolumeId = 'vol1',
+  lessonId: number
+): boolean {
+  if (isVolumeFullyUnlocked(profile, volumeId)) {
+    return true;
+  }
+  // Free trial policy: Volume 1 lessons 1 to 10 are completely free
+  if (volumeId === 'vol1' && lessonId <= FREE_TRIAL_LESSONS_LIMIT) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Check if a lesson is locked due to needing VIP / Activation (Paywall),
+ * vs locked because prior lessons haven't been completed yet.
+ */
+export function isLessonPaywallLocked(
+  profile: UserProfile,
+  volumeId: CourseVolumeId = 'vol1',
+  lessonId: number
+): boolean {
+  return !hasLessonAccess(profile, volumeId, lessonId);
+}
+
+/**
  * Get isolated progress for a specific volume
  */
 export function getVolumeProgress(
