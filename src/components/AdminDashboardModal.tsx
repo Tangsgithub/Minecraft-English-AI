@@ -261,6 +261,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           const resp = await fetch('/api/admin/clear-codes', { method: 'POST' });
           const data = await resp.json();
           if (data.success) {
+            localStorage.removeItem('mc_activation_codes_backup');
             playEmeraldSound();
             setCodeMsg(data.message);
             await fetchActivationCodes();
