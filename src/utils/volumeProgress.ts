@@ -1,5 +1,12 @@
 import { UserProfile, CourseVolumeId, VolumeProgress } from '../types';
 
+export const VOLUME_LESSON_COUNTS: Record<CourseVolumeId, number> = {
+  vol1: 144,
+  vol2: 96,
+  vol3: 60,
+  vol4: 48
+};
+
 export const DEFAULT_VOLUME_PROGRESS: Record<CourseVolumeId, VolumeProgress> = {
   vol1: {
     currentLessonId: 1,
@@ -36,8 +43,10 @@ export const FREE_TRIAL_LESSONS_LIMIT = 10;
  */
 export function isVolumeFullyUnlocked(profile: UserProfile, volumeId: CourseVolumeId = 'vol1'): boolean {
   if (profile.isVip) return true;
-  if (profile.activatedVolumes && (profile.activatedVolumes.includes(volumeId) || (profile.activatedVolumes as string[]).includes('all'))) {
-    return true;
+  if (profile.activatedVolumes && Array.isArray(profile.activatedVolumes)) {
+    if (profile.activatedVolumes.includes(volumeId) || profile.activatedVolumes.includes('all' as any)) {
+      return true;
+    }
   }
   return false;
 }
@@ -79,20 +88,29 @@ export function getVolumeProgress(
   profile: UserProfile,
   volumeId: CourseVolumeId = 'vol1'
 ): VolumeProgress {
+  const isVolFullyUnlocked = isVolumeFullyUnlocked(profile, volumeId);
+  const totalLessons = VOLUME_LESSON_COUNTS[volumeId] || 144;
+  const allLessonIds = Array.from({ length: totalLessons }, (_, i) => i + 1);
+
   const existing = profile.volumeProgress?.[volumeId];
   if (existing) {
     const unlockedSet = new Set<number>(existing.unlockedLessonIds || [1]);
     unlockedSet.add(1);
-    if (existing.currentLessonId) {
-      for (let i = 1; i <= existing.currentLessonId; i++) {
-        unlockedSet.add(i);
+
+    if (isVolFullyUnlocked) {
+      allLessonIds.forEach(id => unlockedSet.add(id));
+    } else {
+      if (existing.currentLessonId) {
+        for (let i = 1; i <= existing.currentLessonId; i++) {
+          unlockedSet.add(i);
+        }
       }
-    }
-    if (existing.completedLessonIds && existing.completedLessonIds.length > 0) {
-      existing.completedLessonIds.forEach(id => {
-        unlockedSet.add(id);
-        unlockedSet.add(id + 1);
-      });
+      if (existing.completedLessonIds && existing.completedLessonIds.length > 0) {
+        existing.completedLessonIds.forEach(id => {
+          unlockedSet.add(id);
+          unlockedSet.add(id + 1);
+        });
+      }
     }
 
     return {
@@ -104,6 +122,13 @@ export function getVolumeProgress(
 
   // Fallback for legacy profile that only had global progress on vol1
   if (volumeId === 'vol1' || !profile.selectedVolumeId || profile.selectedVolumeId === 'vol1') {
+    if (isVolFullyUnlocked) {
+      return {
+        currentLessonId: profile.currentLessonId || 1,
+        unlockedLessonIds: allLessonIds,
+        completedLessonIds: profile.completedLessonIds || []
+      };
+    }
     return {
       currentLessonId: profile.currentLessonId || 1,
       unlockedLessonIds: profile.unlockedLessonIds?.length ? profile.unlockedLessonIds : [1],
@@ -111,7 +136,15 @@ export function getVolumeProgress(
     };
   }
 
-  // Brand new volume progress (e.g. vol2 defaults to lesson 1 unlocked only)
+  // Brand new volume progress
+  if (isVolFullyUnlocked) {
+    return {
+      currentLessonId: 1,
+      unlockedLessonIds: allLessonIds,
+      completedLessonIds: []
+    };
+  }
+
   return DEFAULT_VOLUME_PROGRESS[volumeId] || {
     currentLessonId: 1,
     unlockedLessonIds: [1],

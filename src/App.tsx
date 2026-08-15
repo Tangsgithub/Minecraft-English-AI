@@ -81,11 +81,20 @@ const sanitizeProfile = (raw: any): UserProfile => {
   }
 
   // Sanitize each volume progress individually
+  const isVipUser = Boolean(raw.isVip);
+  const activatedVols: string[] = Array.isArray(raw.activatedVolumes) ? raw.activatedVolumes : [];
+
   (['vol1', 'vol2', 'vol3', 'vol4'] as CourseVolumeId[]).forEach(vId => {
     const vp = volProgress[vId];
+    const isVolUnlocked = isVipUser || activatedVols.includes(vId) || activatedVols.includes('all');
+    const totalCount = vId === 'vol1' ? 144 : vId === 'vol2' ? 96 : vId === 'vol3' ? 60 : 48;
+
     if (vp) {
       const uSet = new Set<number>(Array.isArray(vp.unlockedLessonIds) ? vp.unlockedLessonIds : [1]);
       uSet.add(1);
+      if (isVolUnlocked) {
+        for (let i = 1; i <= totalCount; i++) uSet.add(i);
+      }
       if (vp.currentLessonId) {
         for (let i = 1; i <= vp.currentLessonId; i++) uSet.add(i);
       }
