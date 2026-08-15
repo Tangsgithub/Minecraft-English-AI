@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Lesson, UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
 import { getBiomeChapterByUnit } from '../data/storyData';
-import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked } from '../utils/volumeProgress';
+import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked, getLessonUnlockStatus, LessonUnlockStatus } from '../utils/volumeProgress';
 import {
   BookOpen, Search, Volume2, Sparkles, CheckCircle, Lock, Play,
   MessageSquare, ChevronRight, ChevronLeft, Award, Map, LayoutGrid,
   Globe, Flame, Zap, Compass, Star, ArrowRight, CheckCircle2, Headphones, Key
 } from 'lucide-react';
-import { playClickSound, playEmeraldSound, speakText } from '../utils/audio';
+import { playClickSound, playEmeraldSound, speakText, playAnvilSound } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
 import { MinecraftAdventureMap } from './MinecraftAdventureMap';
 import { GiantWorldMap } from './GiantWorldMap';
@@ -44,6 +44,8 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string } | null>(null);
+
+  const [lockedNotice, setLockedNotice] = useState<{ lessonId: number; msg: string } | null>(null);
 
   const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
   const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
@@ -358,14 +360,9 @@ export const LessonMap: React.FC<LessonMapProps> = ({
           {/* Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {filteredCatalog.map(item => {
-              const hasAccess = hasLessonAccess(profile, selectedVolumeId, item.id);
-              const isPaywallLocked = !hasAccess;
+              const unlockStatus = getLessonUnlockStatus(profile, selectedVolumeId, item.id);
+              const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
               const isTrial = selectedVolumeId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
-              const isCompleted = item.id < currentLessonId || completedList.includes(item.id);
-              const isVolUnlocked = isVolumeFullyUnlocked(profile, selectedVolumeId);
-              const isProgressionUnlocked = isVolUnlocked || item.id <= 10 || unlockedList.includes(item.id) || item.id === 1;
-              const isUnlocked = hasAccess && isProgressionUnlocked;
-              const isCurrent = currentLessonId === item.id;
 
               return (
                 <div
@@ -374,6 +371,15 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                     if (isPaywallLocked) {
                       playClickSound();
                       if (onOpenVipModal) onOpenVipModal();
+                      return;
+                    }
+                    if (isProgressionLocked) {
+                      playAnvilSound();
+                      setLockedNotice({
+                        lessonId: item.id,
+                        msg: unlockStatus.lockReasonMsg
+                      });
+                      setTimeout(() => setLockedNotice(null), 3500);
                       return;
                     }
                     handleOpenLessonDetail(item.id);
@@ -385,13 +391,13 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                       ? 'bg-amber-50/20 border-amber-300/80 hover:border-amber-500 hover:shadow-sm'
                       : isUnlocked
                       ? 'bg-white border-slate-300 hover:border-[#487E2C] hover:shadow-sm'
-                      : 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed'
+                      : 'bg-slate-50 border-slate-200 opacity-60 cursor-pointer hover:border-slate-400'
                   }`}
                 >
                   {/* Top Bar: Lesson ID & Badges */}
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center space-x-1.5">
-                      <span className={`text-xs font-mono font-black ${isCurrent ? 'text-[#FF6321]' : isPaywallLocked ? 'text-amber-700' : 'text-[#487E2C]'}`}>
+                      <span className={`text-xs font-mono font-black ${isCurrent ? 'text-[#FF6321]' : isPaywallLocked ? 'text-amber-700' : isUnlocked ? 'text-[#487E2C]' : 'text-slate-500'}`}>
                         Lesson {item.id}
                       </span>
                       {isCurrent && (
@@ -408,6 +414,12 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                         <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-mono font-black px-1.5 py-0.2 rounded flex items-center space-x-0.5">
                           <Lock className="w-2.5 h-2.5" />
                           <span>需激活</span>
+                        </span>
+                      )}
+                      {isProgressionLocked && !isPaywallLocked && (
+                        <span className="bg-slate-200 text-slate-700 border border-slate-300 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded flex items-center space-x-0.5">
+                          <Lock className="w-2.5 h-2.5" />
+                          <span>未解锁</span>
                         </span>
                       )}
                     </div>
@@ -464,7 +476,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                       ) : (
                         <span className="text-slate-400 flex items-center space-x-0.5 text-[11px]">
                           <Lock className="w-3 h-3" />
-                          <span>未解锁</span>
+                          <span>前课未完</span>
                         </span>
                       )}
                     </div>
@@ -526,6 +538,23 @@ export const LessonMap: React.FC<LessonMapProps> = ({
             if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
           }}
         />
+      )}
+
+      {/* Progression Lock Guidance Toast */}
+      {lockedNotice && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-slate-950/95 border-2 border-amber-500 text-amber-200 px-5 py-3 rounded-2xl shadow-[0_8px_25px_rgba(0,0,0,0.8)] font-mono text-xs sm:text-sm font-black flex items-center space-x-3">
+            <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+            <span>{lockedNotice.msg}</span>
+            <button
+              type="button"
+              onClick={() => setLockedNotice(null)}
+              className="ml-2 text-slate-400 hover:text-white text-xs bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700"
+            >
+              知道了
+            </button>
+          </div>
+        </div>
       )}
 
     </div>

@@ -913,16 +913,13 @@ app.use(express.json());
   // ===== Activation Code Activation Endpoint =====
   app.post("/api/auth/activate-code", async (req, res) => {
     try {
-      const { code, account, deviceId } = req.body || {};
-      if (!code || typeof code !== 'string') {
+      const { code, account: reqAccount, deviceId } = req.body || {};
+      if (!code || typeof code !== 'string' || !code.trim()) {
         return res.status(200).json({ success: false, error: "请输入 16 位 VIP 激活码" });
-      }
-      if (!account || typeof account !== 'string') {
-        return res.status(200).json({ success: false, error: "请先登录或注册账号再进行激活" });
       }
 
       const cleanCode = code.trim().toUpperCase().replace(/\s+/g, '');
-      const cleanAccount = account.trim().toLowerCase();
+      const cleanAccount = (reqAccount && typeof reqAccount === 'string' && reqAccount.trim()) ? reqAccount.trim().toLowerCase() : 'guest_user';
       const currentDeviceId = deviceId || 'device_' + cleanAccount;
 
       // Find code in DB
@@ -958,6 +955,22 @@ app.use(express.json());
         newProfile.activatedVolumes = Array.from(new Set([...existingActivated, volume, 'vol1', 'vol2', 'vol3', 'vol4', 'all']));
         newProfile.isVip = true;
         newProfile.vipActivatedAt = Date.now();
+        const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+        const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+        const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+        const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+        newProfile.unlockedLessonIds = allVol1Ids;
+        newProfile.volumeProgress = {
+          vol1: { currentLessonId: 1, unlockedLessonIds: allVol1Ids, completedLessonIds: newProfile.volumeProgress?.vol1?.completedLessonIds || [] },
+          vol2: { currentLessonId: 1, unlockedLessonIds: allVol2Ids, completedLessonIds: newProfile.volumeProgress?.vol2?.completedLessonIds || [] },
+          vol3: { currentLessonId: 1, unlockedLessonIds: allVol3Ids, completedLessonIds: newProfile.volumeProgress?.vol3?.completedLessonIds || [] },
+          vol4: { currentLessonId: 1, unlockedLessonIds: allVol4Ids, completedLessonIds: newProfile.volumeProgress?.vol4?.completedLessonIds || [] },
+          ...(newProfile.volumeProgress || {})
+        };
+        newProfile.volumeProgress.vol1.unlockedLessonIds = allVol1Ids;
+        newProfile.volumeProgress.vol2.unlockedLessonIds = allVol2Ids;
+        newProfile.volumeProgress.vol3.unlockedLessonIds = allVol3Ids;
+        newProfile.volumeProgress.vol4.unlockedLessonIds = allVol4Ids;
         return newProfile;
       };
 

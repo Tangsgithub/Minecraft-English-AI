@@ -430,19 +430,40 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
   };
 
-  // 1-Click Unlock All 144 Lessons
+  // 1-Click Unlock All 144 Lessons & VIP
   const handleUnlockAllLessons = () => {
     playLevelUpSound();
     playEmeraldSound();
-    const allIds = Array.from({ length: 144 }, (_, i) => i + 1);
-    onUpdateProfile(prev => ({
-      ...prev,
-      unlockedLessonIds: allIds,
-      completedLessonIds: allIds.slice(0, 50),
-      level: Math.max(prev.level, 10),
-      emeralds: prev.emeralds + 500
-    }));
-    alert('⚡ 开发者命令已执行：成功解锁全系 144 门课目关卡！');
+    const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+    const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+    const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+    const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+
+    onUpdateProfile(prev => {
+      const updated = {
+        ...prev,
+        isVip: true,
+        vipActivatedAt: Date.now(),
+        activatedVolumes: ['vol1', 'vol2', 'vol3', 'vol4', 'all'],
+        unlockedLessonIds: allVol1Ids,
+        completedLessonIds: allVol1Ids.slice(0, 20),
+        level: Math.max(prev.level, 10),
+        emeralds: prev.emeralds + 500,
+        volumeProgress: {
+          vol1: { currentLessonId: 1, unlockedLessonIds: allVol1Ids, completedLessonIds: allVol1Ids.slice(0, 20) },
+          vol2: { currentLessonId: 1, unlockedLessonIds: allVol2Ids, completedLessonIds: [] },
+          vol3: { currentLessonId: 1, unlockedLessonIds: allVol3Ids, completedLessonIds: [] },
+          vol4: { currentLessonId: 1, unlockedLessonIds: allVol4Ids, completedLessonIds: [] }
+        }
+      };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    playEmeraldSound();
+    setCodeMsg('⚡ 开发者命令已执行：成功开通全套 VIP 并解锁全系 1~4 册全部关卡！');
+    setTimeout(() => setCodeMsg(null), 4000);
   };
 
   // Add 1000 Emeralds and 5000 XP

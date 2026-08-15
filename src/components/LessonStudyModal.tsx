@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2, Lock } from 'lucide-react';
+import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2, Lock, ShieldCheck, Check, AlertTriangle, ArrowDown } from 'lucide-react';
 import { Lesson, UserProfile } from '../types';
 import { getBiomeChapterByUnit } from '../data/storyData';
-import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
+import { speakText, stopSpeech, playClickSound, playEmeraldSound, playAnvilSound, playLevelUpSound } from '../utils/audio';
 import { hasLessonAccess } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { SceneOralCheckInModal, RealWorldSceneItem } from './SceneOralCheckInModal';
@@ -274,6 +274,10 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   onAwardEmeralds,
   onOpenVipModal
 }) => {
+  const [hasPlayedFullDialogue, setHasPlayedFullDialogue] = useState<boolean>(false);
+  const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
+  const [studyNotice, setStudyNotice] = useState<string | null>(null);
+
   const [playedAudioIds, setPlayedAudioIds] = useState<Set<string>>(new Set());
   const [isPlayingAllDialogue, setIsPlayingAllDialogue] = useState<boolean>(false);
   const [currentDialogueIndex, setCurrentDialogueIndex] = useState<number | null>(null);
@@ -413,8 +417,61 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
       await new Promise(res => setTimeout(res, 350));
     }
 
+    if (!stopPlayRef.current) {
+      setHasPlayedFullDialogue(true);
+      playEmeraldSound();
+    }
+
     setIsPlayingAllDialogue(false);
     setCurrentDialogueIndex(null);
+  };
+
+  // Study Requirements Validation
+  const dialogueAudioCount = Array.from(playedAudioIds).filter((id: string) => id.startsWith('dialogue_')).length;
+  const vocabAudioCount = Array.from(playedAudioIds).filter((id: string) => id.startsWith('vocab_')).length;
+
+  const isDialogueDone = isAlreadyCompleted || hasPlayedFullDialogue || dialogueAudioCount >= Math.min(2, lesson.dialogueScript.length);
+  const isScaffoldDone = isAlreadyCompleted || isScaffoldSuccess;
+  const isRealWorldDone = isAlreadyCompleted || completedQuests.size >= 1;
+  const isVocabDone = isAlreadyCompleted || vocabAudioCount >= Math.min(2, lesson.vocabulary.length);
+
+  const completedTaskCount = (isDialogueDone ? 1 : 0) + (isScaffoldDone ? 1 : 0) + (isRealWorldDone ? 1 : 0) + (isVocabDone ? 1 : 0);
+  const isAllTasksCompleted = isAlreadyCompleted || completedTaskCount === 4;
+
+  const scrollToSection = (sectionId: string, noticeText: string) => {
+    setHighlightedSection(sectionId);
+    setStudyNotice(noticeText);
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    setTimeout(() => setHighlightedSection(null), 3500);
+    setTimeout(() => setStudyNotice(null), 4500);
+  };
+
+  const handleTriggerCompleteLesson = () => {
+    if (!isAllTasksCompleted) {
+      playAnvilSound();
+      if (!isDialogueDone) {
+        scrollToSection('section-dialogue', '🎧 任务 1：请先收听课文对话（可点击【一键连读】整篇）！');
+      } else if (!isScaffoldDone) {
+        scrollToSection('section-scaffold', '🧱 任务 2：请在方块拼句工作台拼出正确的核心句子！');
+      } else if (!isRealWorldDone) {
+        scrollToSection('section-realworld', '🎙️ 任务 3：请在下方 3 个生活场景中完成至少 1 个场景的朗读打卡！');
+      } else if (!isVocabDone) {
+        scrollToSection('section-vocabulary', '📦 任务 4：请点击收听本课 Minecraft 核心词汇发音！');
+      }
+      return;
+    }
+
+    playEmeraldSound();
+    if (onAwardEmeralds) {
+      onAwardEmeralds(15, 30);
+    }
+    if (onCompleteLesson) {
+      onCompleteLesson(lesson.id);
+    }
+    onClose();
   };
 
   const totalAudioItems = coreSentences.length + lesson.vocabulary.length + lesson.dialogueScript.length;
@@ -440,6 +497,14 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               <span>•</span>
               <span className="bg-black/20 px-2 py-0.5 rounded-full border border-white/20 text-white">
                 {lesson.minecraftScene}
+              </span>
+              <span>•</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-black border ${
+                isAllTasksCompleted
+                  ? 'bg-emerald-500/80 text-white border-emerald-300'
+                  : 'bg-amber-500/80 text-amber-950 border-amber-300'
+              }`}>
+                {isAllTasksCompleted ? '✓ 学习已达标' : `学习任务: ${completedTaskCount}/4`}
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black font-mono leading-tight">
@@ -478,6 +543,22 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           </div>
         </div>
 
+        {/* Floating Study Guidance Toast */}
+        {studyNotice && (
+          <div className="sticky top-0 z-50 bg-amber-500 text-slate-950 px-4 py-2.5 font-mono text-xs sm:text-sm font-black border-b-2 border-amber-700 shadow-md flex items-center justify-between animate-in slide-in-from-top-2">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-slate-950 shrink-0 animate-bounce" />
+              <span>{studyNotice}</span>
+            </div>
+            <button
+              onClick={() => setStudyNotice(null)}
+              className="text-slate-900 hover:text-black font-bold text-xs bg-amber-400 px-2 py-0.5 rounded border border-amber-600 ml-2"
+            >
+              知道了
+            </button>
+          </div>
+        )}
+
         {/* Modal Body */}
         <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto flex-1">
           
@@ -486,8 +567,179 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             <p className="text-sm text-amber-950 font-bold">{lesson.sceneDescription}</p>
           </div>
 
+          {/* 🛡️ 通关探险任务清单 (Study Quest Progress Tracker) */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white p-4 sm:p-5 rounded-2xl border-3 border-emerald-600 shadow-lg space-y-3.5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">📋</span>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>探险通关学习任务单</span>
+                    <span className="text-[10px] bg-emerald-900/90 text-emerald-200 px-2 py-0.2 rounded border border-emerald-600 font-bold">
+                      {isAllTasksCompleted ? '全部已达成 ✨' : `达标进度: ${completedTaskCount}/4`}
+                    </span>
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-mono">
+                    完成以下 4 项核心学习环节，即可通关并解锁下一课探险！
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="flex items-center space-x-2 shrink-0">
+                <div className="w-24 sm:w-32 bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      isAllTasksCompleted ? 'bg-gradient-to-r from-amber-400 to-emerald-400' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${isAlreadyCompleted ? 100 : (completedTaskCount / 4) * 100}%` }}
+                  />
+                </div>
+                <span className="text-xs font-mono font-bold text-amber-300">
+                  {isAlreadyCompleted ? '100%' : `${Math.round((completedTaskCount / 4) * 100)}%`}
+                </span>
+              </div>
+            </div>
+
+            {/* 4 Interactive Quest Badges */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+              {/* Task 1: Dialogue Listening */}
+              <div
+                onClick={() => {
+                  if (!isDialogueDone) {
+                    scrollToSection('section-dialogue', '🎧 正在定位课文对话：可点击【连续朗读】连听整篇！');
+                  }
+                }}
+                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
+                  isDialogueDone
+                    ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <span>🎧 1. 课文听读</span>
+                  </span>
+                  {isDialogueDone ? (
+                    <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                      <Check className="w-2.5 h-2.5" /> 已完成
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
+                      待收听
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  {isDialogueDone ? '✓ 课文对话已收听' : '点击【连读整篇】听完全文'}
+                </p>
+              </div>
+
+              {/* Task 2: Sentence Scaffolding */}
+              <div
+                onClick={() => {
+                  if (!isScaffoldDone) {
+                    scrollToSection('section-scaffold', '🧱 正在定位语法拼句：按正确语序点击散落单词方块！');
+                  }
+                }}
+                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
+                  isScaffoldDone
+                    ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <span>🧱 2. 方块拼句</span>
+                  </span>
+                  {isScaffoldDone ? (
+                    <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                      <Check className="w-2.5 h-2.5" /> 已完成
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
+                      待拼句
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  {isScaffoldDone ? '✓ 核心句型已正确合成' : '在工作台按语序拼句'}
+                </p>
+              </div>
+
+              {/* Task 3: Real-World Oral Bridge */}
+              <div
+                onClick={() => {
+                  if (!isRealWorldDone) {
+                    scrollToSection('section-realworld', '🎙️ 正在定位生活场景：任选 1 场景进行口语跟读打卡！');
+                  }
+                }}
+                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
+                  isRealWorldDone
+                    ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <span>🎙️ 3. 场景打卡</span>
+                  </span>
+                  {isRealWorldDone ? (
+                    <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                      <Check className="w-2.5 h-2.5" /> 已完成
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
+                      待打卡
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  {isRealWorldDone ? `✓ 已达成 (${completedQuests.size}/3 场景)` : '任选 1 场景口语打卡'}
+                </p>
+              </div>
+
+              {/* Task 4: Vocabulary Study */}
+              <div
+                onClick={() => {
+                  if (!isVocabDone) {
+                    scrollToSection('section-vocabulary', '📦 正在定位核心词汇：点击喇叭收听生词发音！');
+                  }
+                }}
+                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
+                  isVocabDone
+                    ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <span>📦 4. 词汇听读</span>
+                  </span>
+                  {isVocabDone ? (
+                    <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                      <Check className="w-2.5 h-2.5" /> 已完成
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
+                      待收听
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 font-mono">
+                  {isVocabDone ? '✓ 核心生词发音已收听' : '点击收听词汇示范朗读'}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Minecraft Scene Original Dialogue - WeChat Style */}
-          <div className="bg-[#EDEDED] p-3 sm:p-5 rounded-2xl border-2 border-[#DCDCDC] space-y-3 shadow-inner">
+          <div
+            id="section-dialogue"
+            className={`bg-[#EDEDED] p-3 sm:p-5 rounded-2xl border-2 border-[#DCDCDC] space-y-3 shadow-inner transition-all duration-300 ${
+              highlightedSection === 'section-dialogue' ? 'ring-4 ring-amber-400 animate-pulse' : ''
+            }`}
+          >
             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#CCCCCC]">
               <div className="flex items-center space-x-2">
                 <span className="text-lg">💬</span>
@@ -652,7 +904,12 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           </div>
 
           {/* 1. 句型脚手架：方块拼句工作台与语法拆解 (Scaffolding Sentence Crafting & Grammar Breakdown) */}
-          <div className="bg-emerald-950 text-white p-4 sm:p-5 rounded-2xl border-4 border-black shadow-[4px_4px_0_0_#000] space-y-3.5">
+          <div
+            id="section-scaffold"
+            className={`bg-emerald-950 text-white p-4 sm:p-5 rounded-2xl border-4 border-black shadow-[4px_4px_0_0_#000] space-y-3.5 transition-all duration-300 ${
+              highlightedSection === 'section-scaffold' ? 'ring-4 ring-amber-400 animate-pulse' : ''
+            }`}
+          >
             {/* Header & Reset */}
             <div className="flex items-center justify-between border-b border-emerald-800 pb-2.5 flex-wrap gap-2">
               <div className="flex items-center space-x-2">
@@ -790,7 +1047,12 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           )}
 
           {/* 4. 丰富生活场景迁移 (Real-World Bridge) - Dynamically tailored to current lesson theme */}
-          <div className="bg-amber-50 p-4 sm:p-5 rounded-2xl border-2 border-amber-300 space-y-4">
+          <div
+            id="section-realworld"
+            className={`bg-amber-50 p-4 sm:p-5 rounded-2xl border-2 border-amber-300 space-y-4 transition-all duration-300 ${
+              highlightedSection === 'section-realworld' ? 'ring-4 ring-amber-400 animate-pulse' : ''
+            }`}
+          >
             <div className="flex items-center justify-between border-b border-amber-200 pb-2">
               <div className="flex items-center space-x-2">
                 <span className="text-xl">🌍</span>
@@ -878,7 +1140,12 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           </div>
 
           {/* Target Vocabulary */}
-          <div className="space-y-3">
+          <div
+            id="section-vocabulary"
+            className={`space-y-3 transition-all duration-300 ${
+              highlightedSection === 'section-vocabulary' ? 'p-3 bg-amber-50/80 rounded-2xl ring-4 ring-amber-400 animate-pulse' : ''
+            }`}
+          >
             <h3 className="text-xs font-mono font-black text-[#487E2C] flex items-center space-x-2 uppercase tracking-wider">
               <span>📦 本课 Minecraft 核心词汇</span>
             </h3>
@@ -923,36 +1190,56 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
 
         {/* Action Footer */}
         <div className="p-4 sm:p-6 bg-slate-100 border-t-4 border-slate-200 shrink-0">
-          {!isAllPlayed ? (
-            <div className="flex flex-col items-center justify-center text-center space-y-2">
-              <div className="w-full bg-slate-300 rounded-full h-2.5 mb-1 overflow-hidden border border-slate-400">
-                <div className="bg-amber-400 h-2.5 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, Math.round((playedAudioIds.size / (totalAudioItems || 1)) * 100))}%` }}></div>
-              </div>
-              <p className="text-xs sm:text-sm font-bold text-slate-500 font-mono">
-                📝 任务要求: 请先收听并学习所有课文对话、句型与词汇 ({playedAudioIds.size}/{totalAudioItems})
-              </p>
-              <button disabled className="w-full py-3 sm:py-4 bg-slate-300 text-slate-500 font-black rounded-xl border-2 border-slate-400 text-sm sm:text-base cursor-not-allowed">
-                锁定的实战练习通道 🔒
-              </button>
-            </div>
-          ) : (() => {
+          {(() => {
             const currentVol = profile?.selectedVolumeId || 'vol1';
             const hasNextLessonAccess = profile ? hasLessonAccess(profile, currentVol, lesson.id + 1) : true;
             const isFinishingTrial = lesson.id === 10 && !hasNextLessonAccess;
 
             return (
-              <div className="flex flex-col items-center text-center space-y-3 animate-in slide-in-from-bottom-2">
-                <p className="text-xs sm:text-sm font-black text-[#487E2C] font-mono animate-pulse">
-                  {isAlreadyCompleted
-                    ? '🌟 本课已打卡通关！你可以随时重复收听与复习 🌟'
-                    : isFinishingTrial
-                    ? '🎉 恭喜完成前 10 课免费试学！激活 VIP 或第 1 册卡密即可畅享 11-144 课！'
-                    : '✨ 恭喜完成全课预习！点击下方按钮通关并同步进度到数据库 ✨'}
+              <div className="flex flex-col items-center text-center space-y-3">
+                {/* Audio study progress hint bar */}
+                <div className="w-full flex items-center justify-between gap-2 text-[11px] sm:text-xs font-mono font-bold text-slate-600 bg-white/80 border border-slate-300 px-3 py-1.5 rounded-xl">
+                  <div className="flex items-center gap-1.5 text-emerald-700">
+                    <Headphones className="w-3.5 h-3.5" />
+                    <span>学习达标度: {completedTaskCount}/4 项</span>
+                  </div>
+                  <div className="flex-1 max-w-[140px] sm:max-w-xs bg-slate-200 rounded-full h-2 overflow-hidden border border-slate-300">
+                    <div
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        isAllTasksCompleted ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.round((completedTaskCount / 4) * 100))}%` }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTogglePlayAllDialogue}
+                    className="text-[10px] sm:text-xs text-amber-700 hover:text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition-colors cursor-pointer"
+                  >
+                    {isPlayingAllDialogue ? '⏹️ 停止连播' : '▶️ 连播课文'}
+                  </button>
+                </div>
+
+                <p className="text-xs sm:text-sm font-black font-mono">
+                  {isAlreadyCompleted ? (
+                    <span className="text-[#487E2C]">🌟 本课已通关！你可以随时重复收听、巩固复习或重新对练 🌟</span>
+                  ) : isFinishingTrial ? (
+                    <span className="text-amber-800">🎉 完成前 10 课免费试学！激活 VIP 或第 1 册卡密即可畅享 11-144 课！</span>
+                  ) : isAllTasksCompleted ? (
+                    <span className="text-[#487E2C]">✨ 4 项学习任务均已达标！可点击下方打卡通关并解锁第 {lesson.id + 1} 课 ✨</span>
+                  ) : (
+                    <span className="text-amber-800">⚠️ 需完成上方学习任务 ({completedTaskCount}/4) 方可打卡通关解锁下一课</span>
+                  )}
                 </p>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
                   {isFinishingTrial ? (
                     <button
                       onClick={() => {
+                        if (!isAllTasksCompleted) {
+                          handleTriggerCompleteLesson();
+                          return;
+                        }
                         playEmeraldSound();
                         if (onCompleteLesson) {
                           onCompleteLesson(lesson.id);
@@ -962,23 +1249,35 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                           onOpenVipModal();
                         }
                       }}
-                      className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-amber-950 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer"
+                      className={`w-full py-3 sm:py-3.5 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer ${
+                        isAllTasksCompleted
+                          ? 'bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-amber-950'
+                          : 'bg-amber-200 text-amber-900 border-dashed border-amber-600'
+                      }`}
                     >
                       <Lock className="w-4 h-4" />
-                      <span>🎉 打卡通关 · 激活 VIP 解锁 11-144 课</span>
+                      <span>{isAllTasksCompleted ? '🎉 打卡通关 · 激活 VIP 解锁 11-144 课' : `🔒 请先完成学习任务 (${completedTaskCount}/4)`}</span>
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
-                        playEmeraldSound();
-                        if (onCompleteLesson) {
-                          onCompleteLesson(lesson.id);
-                        }
-                        onClose();
-                      }}
-                      className="w-full py-3 sm:py-3.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer"
+                      onClick={handleTriggerCompleteLesson}
+                      className={`w-full py-3 sm:py-3.5 font-black rounded-xl border-3 border-amber-950 shadow-[3px_3px_0_0_#451a03] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer ${
+                        isAllTasksCompleted
+                          ? 'bg-amber-400 hover:bg-amber-300 text-amber-950'
+                          : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-700'
+                      }`}
                     >
-                      <span>🏅 打卡通关并解锁第 {lesson.id + 1} 课</span>
+                      {isAllTasksCompleted ? (
+                        <>
+                          <ShieldCheck className="w-4 h-4 text-emerald-800" />
+                          <span>🏅 学习达标 · 打卡通关并解锁第 {lesson.id + 1} 课</span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4 text-amber-800" />
+                          <span>🔒 完成学习任务后打卡通关 ({completedTaskCount}/4)</span>
+                        </>
+                      )}
                     </button>
                   )}
                   <button

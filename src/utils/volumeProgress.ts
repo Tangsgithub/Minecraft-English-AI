@@ -42,9 +42,11 @@ export const FREE_TRIAL_LESSONS_LIMIT = 10;
  * Check if the user has full access to a specific volume.
  */
 export function isVolumeFullyUnlocked(profile: UserProfile, volumeId: CourseVolumeId = 'vol1'): boolean {
-  if (profile.isVip) return true;
+  if (!profile) return false;
+  if (profile.isVip === true || String(profile.isVip) === 'true') return true;
   if (profile.activatedVolumes && Array.isArray(profile.activatedVolumes)) {
-    if (profile.activatedVolumes.includes(volumeId) || profile.activatedVolumes.includes('all' as any)) {
+    const vols = profile.activatedVolumes.map(v => String(v).toLowerCase());
+    if (vols.includes(volumeId.toLowerCase()) || vols.includes('all') || vols.includes('*')) {
       return true;
     }
   }
@@ -59,6 +61,9 @@ export function hasLessonAccess(
   volumeId: CourseVolumeId = 'vol1',
   lessonId: number
 ): boolean {
+  if (!profile) {
+    return volumeId === 'vol1' && lessonId <= FREE_TRIAL_LESSONS_LIMIT;
+  }
   if (isVolumeFullyUnlocked(profile, volumeId)) {
     return true;
   }
@@ -81,6 +86,68 @@ export function isLessonPaywallLocked(
   return !hasLessonAccess(profile, volumeId, lessonId);
 }
 
+export interface LessonUnlockStatus {
+  isUnlocked: boolean;          // Can be clicked and studied
+  isCompleted: boolean;         // Has been passed/completed
+  isCurrent: boolean;           // Currently active node
+  hasAccess: boolean;           // Has VIP or trial access permission
+  isPaywallLocked: boolean;     // Blocked because lacking activation code / VIP
+  isProgressionLocked: boolean; // Blocked because previous lesson (N-1) is not completed yet
+  lockReasonMsg: string;        // Friendly explanation message
+}
+
+/**
+ * Determine full unlock status for a lesson:
+ * Rule 1: Must have activation code / VIP (or be within free trial lessons 1-10 in Volume 1).
+ * Rule 2: Must have completed the previous lesson (Lesson N - 1) before unlocking Lesson N.
+ */
+export function getLessonUnlockStatus(
+  profile: UserProfile,
+  volumeId: CourseVolumeId = 'vol1',
+  lessonId: number
+): LessonUnlockStatus {
+  const volProg = getVolumeProgress(profile, volumeId);
+  const completedList = Array.isArray(volProg.completedLessonIds) ? volProg.completedLessonIds : [];
+  const unlockedList = Array.isArray(volProg.unlockedLessonIds) ? volProg.unlockedLessonIds : [1];
+  const currentId = volProg.currentLessonId || 1;
+
+  const hasAccess = hasLessonAccess(profile, volumeId, lessonId);
+  const isPaywallLocked = !hasAccess;
+  const isCompleted = completedList.includes(lessonId);
+  const isCurrent = currentId === lessonId;
+
+  // Lesson 1 is always the start node.
+  // For lessonId > 1, previous lesson (lessonId - 1) must be completed.
+  // If this lesson is already completed or recorded in unlockedList, it is progression-unlocked.
+  const isPrevCompleted = lessonId === 1 || completedList.includes(lessonId - 1);
+  const isProgressionUnlocked = isPrevCompleted || isCompleted || unlockedList.includes(lessonId);
+  const isProgressionLocked = hasAccess && !isProgressionUnlocked;
+
+  const isUnlocked = hasAccess && isProgressionUnlocked;
+
+  let lockReasonMsg = '';
+  if (isPaywallLocked) {
+    if (volumeId === 'vol1') {
+      lockReasonMsg = `🔒 VIP 专享关卡：第 ${lessonId} 课需使用 16 位激活码解锁（前 10 课免费试学）`;
+    } else {
+      const volMap: Record<string, string> = { vol2: '第二册', vol3: '第三册', vol4: '第四册' };
+      lockReasonMsg = `🔒 需激活：${volMap[volumeId] || volumeId}第 ${lessonId} 课需使用激活码或开通 VIP 解锁`;
+    }
+  } else if (isProgressionLocked) {
+    lockReasonMsg = `🔒 关卡锁定：请先学习并完成第 ${lessonId - 1} 课（打卡或通关对练）才能解锁本课！`;
+  }
+
+  return {
+    isUnlocked,
+    isCompleted,
+    isCurrent,
+    hasAccess,
+    isPaywallLocked,
+    isProgressionLocked,
+    lockReasonMsg
+  };
+}
+
 /**
  * Get isolated progress for a specific volume
  */
@@ -88,78 +155,56 @@ export function getVolumeProgress(
   profile: UserProfile,
   volumeId: CourseVolumeId = 'vol1'
 ): VolumeProgress {
-  const isVolUnlocked = isVolumeFullyUnlocked(profile, volumeId);
   const totalCount = VOLUME_LESSON_COUNTS[volumeId] || 144;
-  const allLessonIds = Array.from({ length: totalCount }, (_, i) => i + 1);
 
   const existing = profile.volumeProgress?.[volumeId];
   if (existing) {
-    const unlockedSet = new Set<number>(existing.unlockedLessonIds || [1]);
+    const completedSet = new Set<number>(Array.isArray(existing.completedLessonIds) ? existing.completedLessonIds : []);
+    const unlockedSet = new Set<number>(Array.isArray(existing.unlockedLessonIds) ? existing.unlockedLessonIds : [1]);
+    
+    // Always unlock Lesson 1
     unlockedSet.add(1);
 
-    if (isVolUnlocked) {
-      allLessonIds.forEach(id => unlockedSet.add(id));
-    } else {
-      if (volumeId === 'vol1') {
-        for (let i = 1; i <= Math.min(10, totalCount); i++) {
-          unlockedSet.add(i);
-        }
+    // Any completed lesson and its immediate successor (lesson + 1) are unlocked
+    completedSet.forEach(id => {
+      unlockedSet.add(id);
+      if (id < totalCount) {
+        unlockedSet.add(id + 1);
       }
-      if (existing.currentLessonId) {
-        for (let i = 1; i <= existing.currentLessonId; i++) {
-          unlockedSet.add(i);
-        }
-      }
-      if (existing.completedLessonIds && existing.completedLessonIds.length > 0) {
-        existing.completedLessonIds.forEach(id => {
-          unlockedSet.add(id);
-          unlockedSet.add(id + 1);
-        });
-      }
+    });
+
+    if (existing.currentLessonId) {
+      unlockedSet.add(existing.currentLessonId);
     }
 
     return {
       currentLessonId: existing.currentLessonId || 1,
       unlockedLessonIds: Array.from(unlockedSet).sort((a, b) => a - b),
-      completedLessonIds: Array.isArray(existing.completedLessonIds) ? existing.completedLessonIds : []
+      completedLessonIds: Array.from(completedSet).sort((a, b) => a - b)
     };
   }
 
-  // Fallback for legacy profile that only had global progress on vol1
+  // Fallback for legacy profile
   if (volumeId === 'vol1' || !profile.selectedVolumeId || profile.selectedVolumeId === 'vol1') {
-    const unlockedSet = new Set<number>(profile.unlockedLessonIds || [1]);
+    const completedSet = new Set<number>(Array.isArray(profile.completedLessonIds) ? profile.completedLessonIds : []);
+    const unlockedSet = new Set<number>(Array.isArray(profile.unlockedLessonIds) ? profile.unlockedLessonIds : [1]);
     unlockedSet.add(1);
-    if (isVolUnlocked) {
-      allLessonIds.forEach(id => unlockedSet.add(id));
-    } else {
-      for (let i = 1; i <= Math.min(10, totalCount); i++) {
-        unlockedSet.add(i);
+
+    completedSet.forEach(id => {
+      unlockedSet.add(id);
+      if (id < totalCount) {
+        unlockedSet.add(id + 1);
       }
-      if (profile.currentLessonId) {
-        for (let i = 1; i <= profile.currentLessonId; i++) {
-          unlockedSet.add(i);
-        }
-      }
-      if (profile.completedLessonIds && profile.completedLessonIds.length > 0) {
-        profile.completedLessonIds.forEach(id => {
-          unlockedSet.add(id);
-          unlockedSet.add(id + 1);
-        });
-      }
+    });
+
+    if (profile.currentLessonId) {
+      unlockedSet.add(profile.currentLessonId);
     }
+
     return {
       currentLessonId: profile.currentLessonId || 1,
       unlockedLessonIds: Array.from(unlockedSet).sort((a, b) => a - b),
-      completedLessonIds: profile.completedLessonIds || []
-    };
-  }
-
-  // Brand new volume progress
-  if (isVolUnlocked) {
-    return {
-      currentLessonId: 1,
-      unlockedLessonIds: allLessonIds,
-      completedLessonIds: []
+      completedLessonIds: Array.from(completedSet).sort((a, b) => a - b)
     };
   }
 

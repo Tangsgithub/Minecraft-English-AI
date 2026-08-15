@@ -4,7 +4,7 @@ import { BIOME_CHAPTERS, BiomeChapter, getBiomeChapterByUnit } from '../data/sto
 import { LessonStudyModal } from './LessonStudyModal';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
-import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked } from '../utils/volumeProgress';
+import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked, getLessonUnlockStatus, LessonUnlockStatus } from '../utils/volumeProgress';
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
   Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X,
@@ -258,12 +258,25 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
     }
   };
 
-  const handleOpenLessonDetail = (lessonId: number, isUnlocked: boolean, isPaywallLocked: boolean) => {
-    if (isPaywallLocked) {
+  const handleOpenLessonDetail = (lessonId: number, status: LessonUnlockStatus) => {
+    if (status.isPaywallLocked) {
       playClickSound();
       if (onOpenVipModal) onOpenVipModal();
       return;
     }
+
+    if (status.isProgressionLocked) {
+      playAnvilSound();
+      setLockedNotice({
+        lessonId,
+        msg: status.lockReasonMsg
+      });
+      setTimeout(() => {
+        setLockedNotice(null);
+      }, 3500);
+      return;
+    }
+
     playBlockBreakSound();
     setBreakingLessonId(lessonId);
     setTimeout(() => setBreakingLessonId(null), 700);
@@ -639,17 +652,10 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 {/* 12 Lessons Grid Nodes inside this Biome */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 relative z-10">
                   {unitLessons.map((item) => {
-                    const hasAccess = hasLessonAccess(profile, selectedVolId, item.id);
-                    const isPaywallLocked = !hasAccess;
+                    const unlockStatus = getLessonUnlockStatus(profile, selectedVolId, item.id);
+                    const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
                     const isTrial = selectedVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
-
-                    const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
-                    const isVolUnlocked = isVolumeFullyUnlocked(profile, selectedVolId);
-                    const isProgressionUnlocked = isVolUnlocked || item.id <= 10 || item.id === 1 || unlockedLessonIds.includes(item.id) || item.id <= currentLessonId || completedLessonIds.includes(item.id - 1);
-                    const isUnlocked = hasAccess && isProgressionUnlocked;
-                    const isCurrent = currentLessonId === item.id;
                     const isBossNode = item.id % 12 === 0;
-
                     const isBreaking = breakingLessonId === item.id;
 
                     return (
@@ -693,7 +699,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         {/* Pixel Node Button */}
                         <button
                           type="button"
-                          onClick={() => handleOpenLessonDetail(item.id, isUnlocked, isPaywallLocked)}
+                          onClick={() => handleOpenLessonDetail(item.id, unlockStatus)}
                           className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                             isBreaking ? 'scale-125 rotate-6 brightness-150' : ''
                           } ${
@@ -730,6 +736,14 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                             <div className="absolute -top-2 -left-2 bg-amber-500 border border-black rounded-lg px-1 py-0.2 text-[8px] font-black text-black shadow-md flex items-center space-x-0.5">
                               <Lock className="w-2 h-2" />
                               <span>VIP</span>
+                            </div>
+                          )}
+
+                          {/* Progression Lock Badge */}
+                          {isProgressionLocked && !isPaywallLocked && (
+                            <div className="absolute -top-2 -left-2 bg-slate-800 border border-slate-600 rounded-lg px-1 py-0.2 text-[8px] font-mono font-bold text-slate-300 shadow-md flex items-center space-x-0.5">
+                              <Lock className="w-2 h-2" />
+                              <span>锁定</span>
                             </div>
                           )}
 

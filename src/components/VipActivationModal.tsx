@@ -59,12 +59,30 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
         setSuccessMsg(data.message || '🎉 注册码激活成功！VIP 畅学特权已开通');
 
         onUpdateProfile(prev => {
+          const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+          const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+          const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+          const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+
+          const updatedVolProgress = {
+            vol1: { currentLessonId: prev.volumeProgress?.vol1?.currentLessonId || 1, unlockedLessonIds: allVol1Ids, completedLessonIds: prev.volumeProgress?.vol1?.completedLessonIds || [] },
+            vol2: { currentLessonId: prev.volumeProgress?.vol2?.currentLessonId || 1, unlockedLessonIds: allVol2Ids, completedLessonIds: prev.volumeProgress?.vol2?.completedLessonIds || [] },
+            vol3: { currentLessonId: prev.volumeProgress?.vol3?.currentLessonId || 1, unlockedLessonIds: allVol3Ids, completedLessonIds: prev.volumeProgress?.vol3?.completedLessonIds || [] },
+            vol4: { currentLessonId: prev.volumeProgress?.vol4?.currentLessonId || 1, unlockedLessonIds: allVol4Ids, completedLessonIds: prev.volumeProgress?.vol4?.completedLessonIds || [] },
+            ...(prev.volumeProgress || {})
+          };
+
+          const activeVol = prev.selectedVolumeId || 'vol1';
+          const activeUnlocked = activeVol === 'vol1' ? allVol1Ids : activeVol === 'vol2' ? allVol2Ids : activeVol === 'vol3' ? allVol3Ids : allVol4Ids;
+
           const updated = {
             ...prev,
-            ...data.profile,
+            ...(data.profile || {}),
             isVip: true,
             vipActivatedAt: Date.now(),
-            activatedVolumes: Array.from(new Set([...(prev.activatedVolumes || []), ...(data.profile.activatedVolumes || []), 'vol1', 'vol2', 'vol3', 'vol4', 'all']))
+            activatedVolumes: Array.from(new Set([...(prev.activatedVolumes || []), ...(data.profile?.activatedVolumes || []), 'vol1', 'vol2', 'vol3', 'vol4', 'all'])),
+            unlockedLessonIds: activeUnlocked,
+            volumeProgress: updatedVolProgress
           };
           if (typeof window !== 'undefined') {
             try {
@@ -86,11 +104,29 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
         setSuccessMsg('🎉 注册码激活成功！VIP 畅学特权已开通');
 
         onUpdateProfile(prev => {
+          const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+          const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+          const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+          const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+
+          const updatedVolProgress = {
+            vol1: { currentLessonId: prev.volumeProgress?.vol1?.currentLessonId || 1, unlockedLessonIds: allVol1Ids, completedLessonIds: prev.volumeProgress?.vol1?.completedLessonIds || [] },
+            vol2: { currentLessonId: prev.volumeProgress?.vol2?.currentLessonId || 1, unlockedLessonIds: allVol2Ids, completedLessonIds: prev.volumeProgress?.vol2?.completedLessonIds || [] },
+            vol3: { currentLessonId: prev.volumeProgress?.vol3?.currentLessonId || 1, unlockedLessonIds: allVol3Ids, completedLessonIds: prev.volumeProgress?.vol3?.completedLessonIds || [] },
+            vol4: { currentLessonId: prev.volumeProgress?.vol4?.currentLessonId || 1, unlockedLessonIds: allVol4Ids, completedLessonIds: prev.volumeProgress?.vol4?.completedLessonIds || [] },
+            ...(prev.volumeProgress || {})
+          };
+
+          const activeVol = prev.selectedVolumeId || 'vol1';
+          const activeUnlocked = activeVol === 'vol1' ? allVol1Ids : activeVol === 'vol2' ? allVol2Ids : activeVol === 'vol3' ? allVol3Ids : allVol4Ids;
+
           const updated = {
             ...prev,
             isVip: true,
             vipActivatedAt: Date.now(),
-            activatedVolumes: Array.from(new Set([...(prev.activatedVolumes || []), 'vol1', 'vol2', 'vol3', 'vol4', 'all']))
+            activatedVolumes: Array.from(new Set([...(prev.activatedVolumes || []), 'vol1', 'vol2', 'vol3', 'vol4', 'all'])),
+            unlockedLessonIds: activeUnlocked,
+            volumeProgress: updatedVolProgress
           };
           if (typeof window !== 'undefined') {
             try {
@@ -112,11 +148,29 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
       setSuccessMsg('🎉 注册码激活成功！VIP 畅学特权已开通');
       
       onUpdateProfile(prev => {
+        const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+        const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+        const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+        const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+
+        const updatedVolProgress = {
+          vol1: { currentLessonId: prev.volumeProgress?.vol1?.currentLessonId || 1, unlockedLessonIds: allVol1Ids, completedLessonIds: prev.volumeProgress?.vol1?.completedLessonIds || [] },
+          vol2: { currentLessonId: prev.volumeProgress?.vol2?.currentLessonId || 1, unlockedLessonIds: allVol2Ids, completedLessonIds: prev.volumeProgress?.vol2?.completedLessonIds || [] },
+          vol3: { currentLessonId: prev.volumeProgress?.vol3?.currentLessonId || 1, unlockedLessonIds: allVol3Ids, completedLessonIds: prev.volumeProgress?.vol3?.completedLessonIds || [] },
+          vol4: { currentLessonId: prev.volumeProgress?.vol4?.currentLessonId || 1, unlockedLessonIds: allVol4Ids, completedLessonIds: prev.volumeProgress?.vol4?.completedLessonIds || [] },
+          ...(prev.volumeProgress || {})
+        };
+
+        const activeVol = prev.selectedVolumeId || 'vol1';
+        const activeUnlocked = activeVol === 'vol1' ? allVol1Ids : activeVol === 'vol2' ? allVol2Ids : activeVol === 'vol3' ? allVol3Ids : allVol4Ids;
+
         const newProfile = {
           ...prev,
           isVip: true,
           vipActivatedAt: Date.now(),
-          activatedVolumes: Array.from(new Set([...(prev.activatedVolumes || []), 'vol1', 'vol2', 'vol3', 'vol4', 'all']))
+          activatedVolumes: Array.from(new Set([...(prev.activatedVolumes || []), 'vol1', 'vol2', 'vol3', 'vol4', 'all'])),
+          unlockedLessonIds: activeUnlocked,
+          volumeProgress: updatedVolProgress
         };
 
         if (typeof window !== 'undefined') {

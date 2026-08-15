@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, Lesson } from '../types';
 import { BIOME_CHAPTERS, getBiomeChapterByUnit, getBiomeChapterByLesson, BiomeChapter } from '../data/storyData';
 import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
-import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked } from '../utils/volumeProgress';
+import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked, getLessonUnlockStatus, LessonUnlockStatus } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import {
   CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
@@ -280,12 +280,25 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
     return getLessonById(lessonId, currentVolId);
   };
 
-  const handleOpenNodeModal = (lessonId: number, isUnlocked: boolean, isPaywallLocked: boolean) => {
-    if (isPaywallLocked) {
+  const handleOpenNodeModal = (lessonId: number, status: LessonUnlockStatus) => {
+    if (status.isPaywallLocked) {
       playClickSound();
       if (onOpenVipModal) onOpenVipModal();
       return;
     }
+
+    if (status.isProgressionLocked) {
+      playAnvilSound();
+      setLockedNotice({
+        lessonId,
+        msg: status.lockReasonMsg
+      });
+      setTimeout(() => {
+        setLockedNotice(null);
+      }, 3500);
+      return;
+    }
+
     playBlockBreakSound();
     setBreakingNodeId(lessonId);
     setTimeout(() => setBreakingNodeId(null), 700);
@@ -404,15 +417,10 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const chapter = getBiomeChapterByUnit(unitNum);
             const storySnippet = chapter.lessonsStory[item.id] || `Steve 与 Alex 老师在 ${chapter.biomeNameZh} 展开第 ${item.id} 课对话。`;
 
-            const hasAccess = hasLessonAccess(profile, currentVolId, item.id);
-            const isPaywallLocked = !hasAccess;
+            const unlockStatus = getLessonUnlockStatus(profile, currentVolId, item.id);
+            const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
             const isTrial = currentVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
 
-            const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
-            const isVolUnlocked = isVolumeFullyUnlocked(profile, currentVolId);
-            const isProgressionUnlocked = isVolUnlocked || item.id <= 10 || item.id === 1 || unlockedLessonIds.includes(item.id) || item.id <= currentLessonId || completedLessonIds.includes(item.id - 1);
-            const isUnlocked = hasAccess && isProgressionUnlocked;
-            const isCurrent = currentLessonId === item.id;
             const isBossNode = item.id % 12 === 0;
             const isFirstInUnit = (item.id - 1) % 12 === 0;
 
@@ -475,9 +483,9 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                   {/* Animated Connecting Pathway Wire */}
                   {index < displayLessons.length - 1 && (() => {
                     const nextLesson = displayLessons[index + 1];
-                    const isNextCompleted = nextLesson && (nextLesson.id < profile.currentLessonId || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(nextLesson.id)));
+                    const isNextCompleted = nextLesson && (nextLesson.id < currentLessonId || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(nextLesson.id)));
                     const isSegmentCompleted = isCompleted && isNextCompleted;
-                    const isSegmentActive = isCompleted && nextLesson && nextLesson.id === profile.currentLessonId;
+                    const isSegmentActive = isCompleted && nextLesson && nextLesson.id === currentLessonId;
 
                     return (
                       <div className="absolute top-20 left-1/2 -translate-x-1/2 w-4 h-24 -z-10 pointer-events-none flex flex-col items-center justify-center">
@@ -564,7 +572,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                     {/* 3D Minecraft Pixel Block Button */}
                     <button
                       type="button"
-                      onClick={() => handleOpenNodeModal(item.id, isUnlocked, isPaywallLocked)}
+                      onClick={() => handleOpenNodeModal(item.id, unlockStatus)}
                       className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                         breakingNodeId === item.id ? 'scale-125 rotate-6 brightness-150' : ''
                       } ${
@@ -598,6 +606,14 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                         <div className="absolute -top-2.5 -left-2 bg-amber-500 border-2 border-black rounded-lg px-1 py-0.2 text-[9px] font-black text-black shadow-md flex items-center space-x-0.5">
                           <Lock className="w-2.5 h-2.5" />
                           <span>VIP</span>
+                        </div>
+                      )}
+
+                      {/* Progression Lock Badge */}
+                      {isProgressionLocked && !isPaywallLocked && (
+                        <div className="absolute -top-2.5 -left-2 bg-slate-800 border-2 border-slate-600 rounded-lg px-1 py-0.2 text-[8px] font-mono font-bold text-slate-300 shadow-md flex items-center space-x-0.5">
+                          <Lock className="w-2 h-2" />
+                          <span>锁定</span>
                         </div>
                       )}
 

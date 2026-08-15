@@ -81,33 +81,33 @@ const sanitizeProfile = (raw: any): UserProfile => {
   }
 
   // Sanitize each volume progress individually
-  const isVipUser = Boolean(raw.isVip);
-  const activatedVols: string[] = Array.isArray(raw.activatedVolumes) ? raw.activatedVolumes : [];
+  const isVipUser = raw.isVip === true || String(raw.isVip) === 'true';
+  const activatedVols: string[] = Array.isArray(raw.activatedVolumes)
+    ? raw.activatedVolumes.map((v: any) => String(v).toLowerCase())
+    : [];
 
   (['vol1', 'vol2', 'vol3', 'vol4'] as CourseVolumeId[]).forEach(vId => {
     const vp = volProgress[vId];
-    const isVolUnlocked = isVipUser || activatedVols.includes(vId) || activatedVols.includes('all');
     const totalCount = vId === 'vol1' ? 144 : vId === 'vol2' ? 96 : vId === 'vol3' ? 60 : 48;
 
     if (vp) {
+      const cSet = new Set<number>(Array.isArray(vp.completedLessonIds) ? vp.completedLessonIds : []);
       const uSet = new Set<number>(Array.isArray(vp.unlockedLessonIds) ? vp.unlockedLessonIds : [1]);
       uSet.add(1);
-      if (isVolUnlocked) {
-        for (let i = 1; i <= totalCount; i++) uSet.add(i);
-      } else if (vId === 'vol1') {
-        for (let i = 1; i <= 10; i++) uSet.add(i);
-      }
-      if (vp.currentLessonId) {
-        for (let i = 1; i <= vp.currentLessonId; i++) uSet.add(i);
-      }
-      if (vp.completedLessonIds && Array.isArray(vp.completedLessonIds)) {
-        vp.completedLessonIds.forEach(id => {
-          uSet.add(id);
+
+      cSet.forEach(id => {
+        uSet.add(id);
+        if (id < totalCount) {
           uSet.add(id + 1);
-        });
+        }
+      });
+
+      if (vp.currentLessonId) {
+        uSet.add(vp.currentLessonId);
       }
+
       vp.unlockedLessonIds = Array.from(uSet).sort((a, b) => a - b);
-      vp.completedLessonIds = Array.isArray(vp.completedLessonIds) ? vp.completedLessonIds : [];
+      vp.completedLessonIds = Array.from(cSet).sort((a, b) => a - b);
     }
   });
 
@@ -308,10 +308,18 @@ export default function App() {
     };
   }, []);
 
-  const handleUpdateProfile = (updated: Partial<UserProfile>) => {
+  const handleUpdateProfile = (updated: Partial<UserProfile> | ((prev: UserProfile) => UserProfile)) => {
     setProfile(prev => {
-      const next = { ...prev, ...updated };
+      const computed = typeof updated === 'function' ? updated(prev) : { ...prev, ...updated };
+      const next = sanitizeProfile(computed);
       next.level = getLevelFromXp(next.xp);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
+        } catch (e) {
+          console.warn("Storage save error", e);
+        }
+      }
       return next;
     });
   };
