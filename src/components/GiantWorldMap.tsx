@@ -264,21 +264,14 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
       if (onOpenVipModal) onOpenVipModal();
       return;
     }
-    if (!isUnlocked) {
-      playAnvilSound();
-      setLockedNotice({
-        lessonId,
-        msg: `🔒 关卡暂未解锁！请先按顺序完成第 ${Math.max(1, lessonId - 1)} 关，通关后即可解锁此关卡！`
-      });
-      setTimeout(() => setLockedNotice(null), 3500);
-      return;
-    }
     playBlockBreakSound();
     setBreakingLessonId(lessonId);
     setTimeout(() => setBreakingLessonId(null), 700);
 
     const lessonData = getLessonById(lessonId, selectedVolId);
-    setActiveLesson(lessonData);
+    if (lessonData) {
+      setActiveLesson(lessonData);
+    }
   };
 
   const handleInteractNPC = (npc: MapNPC) => {
@@ -651,8 +644,9 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                     const isTrial = selectedVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
 
                     const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
-                    const isProgressionUnlocked = item.id === 1 || unlockedLessonIds.includes(item.id) || item.id <= currentLessonId || completedLessonIds.includes(item.id - 1);
-                    const isUnlocked = isProgressionUnlocked && hasAccess;
+                    const isVolUnlocked = isVolumeFullyUnlocked(profile, selectedVolId);
+                    const isProgressionUnlocked = isVolUnlocked || item.id <= 10 || item.id === 1 || unlockedLessonIds.includes(item.id) || item.id <= currentLessonId || completedLessonIds.includes(item.id - 1);
+                    const isUnlocked = hasAccess && isProgressionUnlocked;
                     const isCurrent = currentLessonId === item.id;
                     const isBossNode = item.id % 12 === 0;
 

@@ -362,8 +362,9 @@ export const LessonMap: React.FC<LessonMapProps> = ({
               const isPaywallLocked = !hasAccess;
               const isTrial = selectedVolumeId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
               const isCompleted = item.id < currentLessonId || completedList.includes(item.id);
-              const isProgressionUnlocked = unlockedList.includes(item.id) || item.id === 1;
-              const isUnlocked = isProgressionUnlocked && hasAccess;
+              const isVolUnlocked = isVolumeFullyUnlocked(profile, selectedVolumeId);
+              const isProgressionUnlocked = isVolUnlocked || item.id <= 10 || unlockedList.includes(item.id) || item.id === 1;
+              const isUnlocked = hasAccess && isProgressionUnlocked;
               const isCurrent = currentLessonId === item.id;
 
               return (
@@ -375,9 +376,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                       if (onOpenVipModal) onOpenVipModal();
                       return;
                     }
-                    if (isUnlocked) {
-                      handleOpenLessonDetail(item.id);
-                    }
+                    handleOpenLessonDetail(item.id);
                   }}
                   className={`rounded-xl border-2 p-3 sm:p-3.5 transition-all flex flex-col justify-between cursor-pointer relative ${
                     isCurrent
