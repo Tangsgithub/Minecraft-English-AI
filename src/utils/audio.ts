@@ -216,6 +216,29 @@ export function playBlockBreakSound() {
   }
 }
 
+export function playAnvilSound() {
+  unlockAudio();
+  if (!getSoundEnabled()) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 export type TtsEngineType = 'edge' | 'kokoro' | 'webspeech';
 
 let currentTtsEngine: TtsEngineType = 'edge';

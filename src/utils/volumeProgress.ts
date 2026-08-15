@@ -88,29 +88,21 @@ export function getVolumeProgress(
   profile: UserProfile,
   volumeId: CourseVolumeId = 'vol1'
 ): VolumeProgress {
-  const isVolFullyUnlocked = isVolumeFullyUnlocked(profile, volumeId);
-  const totalLessons = VOLUME_LESSON_COUNTS[volumeId] || 144;
-  const allLessonIds = Array.from({ length: totalLessons }, (_, i) => i + 1);
-
   const existing = profile.volumeProgress?.[volumeId];
   if (existing) {
     const unlockedSet = new Set<number>(existing.unlockedLessonIds || [1]);
     unlockedSet.add(1);
 
-    if (isVolFullyUnlocked) {
-      allLessonIds.forEach(id => unlockedSet.add(id));
-    } else {
-      if (existing.currentLessonId) {
-        for (let i = 1; i <= existing.currentLessonId; i++) {
-          unlockedSet.add(i);
-        }
+    if (existing.currentLessonId) {
+      for (let i = 1; i <= existing.currentLessonId; i++) {
+        unlockedSet.add(i);
       }
-      if (existing.completedLessonIds && existing.completedLessonIds.length > 0) {
-        existing.completedLessonIds.forEach(id => {
-          unlockedSet.add(id);
-          unlockedSet.add(id + 1);
-        });
-      }
+    }
+    if (existing.completedLessonIds && existing.completedLessonIds.length > 0) {
+      existing.completedLessonIds.forEach(id => {
+        unlockedSet.add(id);
+        unlockedSet.add(id + 1);
+      });
     }
 
     return {
@@ -122,29 +114,27 @@ export function getVolumeProgress(
 
   // Fallback for legacy profile that only had global progress on vol1
   if (volumeId === 'vol1' || !profile.selectedVolumeId || profile.selectedVolumeId === 'vol1') {
-    if (isVolFullyUnlocked) {
-      return {
-        currentLessonId: profile.currentLessonId || 1,
-        unlockedLessonIds: allLessonIds,
-        completedLessonIds: profile.completedLessonIds || []
-      };
+    const unlockedSet = new Set<number>(profile.unlockedLessonIds || [1]);
+    unlockedSet.add(1);
+    if (profile.currentLessonId) {
+      for (let i = 1; i <= profile.currentLessonId; i++) {
+        unlockedSet.add(i);
+      }
+    }
+    if (profile.completedLessonIds && profile.completedLessonIds.length > 0) {
+      profile.completedLessonIds.forEach(id => {
+        unlockedSet.add(id);
+        unlockedSet.add(id + 1);
+      });
     }
     return {
       currentLessonId: profile.currentLessonId || 1,
-      unlockedLessonIds: profile.unlockedLessonIds?.length ? profile.unlockedLessonIds : [1],
+      unlockedLessonIds: Array.from(unlockedSet).sort((a, b) => a - b),
       completedLessonIds: profile.completedLessonIds || []
     };
   }
 
-  // Brand new volume progress
-  if (isVolFullyUnlocked) {
-    return {
-      currentLessonId: 1,
-      unlockedLessonIds: allLessonIds,
-      completedLessonIds: []
-    };
-  }
-
+  // Brand new volume progress (starts strictly at lesson 1)
   return DEFAULT_VOLUME_PROGRESS[volumeId] || {
     currentLessonId: 1,
     unlockedLessonIds: [1],

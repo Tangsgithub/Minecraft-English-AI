@@ -8,7 +8,7 @@ import {
   CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
   Award, Star, ChevronRight, BookOpen, Trophy, Flame, Shield, Flag, MapPin, Mic
 } from 'lucide-react';
-import { playClickSound, speakText, playBlockBreakSound } from '../utils/audio';
+import { playClickSound, speakText, playBlockBreakSound, playAnvilSound } from '../utils/audio';
 
 interface MinecraftAdventureMapProps {
   profile: UserProfile;
@@ -243,6 +243,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   // Active selected lesson object for FIXED OVERLAY MODAL
   const [modalLesson, setModalLesson] = useState<Lesson | null>(null);
   const [breakingNodeId, setBreakingNodeId] = useState<number | null>(null);
+  const [lockedNotice, setLockedNotice] = useState<{ lessonId: number; msg: string } | null>(null);
   
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const activeNodeRef = useRef<HTMLDivElement>(null);
@@ -285,7 +286,15 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
       if (onOpenVipModal) onOpenVipModal();
       return;
     }
-    if (!isUnlocked) return;
+    if (!isUnlocked) {
+      playAnvilSound();
+      setLockedNotice({
+        lessonId,
+        msg: `🔒 关卡暂未解锁！请先按顺序完成第 ${Math.max(1, lessonId - 1)} 关，通关后即可解锁此关卡！`
+      });
+      setTimeout(() => setLockedNotice(null), 3500);
+      return;
+    }
     playBlockBreakSound();
     setBreakingNodeId(lessonId);
     setTimeout(() => setBreakingNodeId(null), 700);
@@ -409,7 +418,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const isTrial = currentVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
 
             const isCompleted = item.id < currentLessonId || completedLessonIds.includes(item.id);
-            const isProgressionUnlocked = isVolumeFullyUnlocked(profile, currentVolId) || unlockedLessonIds.includes(item.id) || item.id === 1;
+            const isProgressionUnlocked = item.id === 1 || unlockedLessonIds.includes(item.id) || item.id <= currentLessonId || completedLessonIds.includes(item.id - 1);
             const isUnlocked = isProgressionUnlocked && hasAccess;
             const isCurrent = currentLessonId === item.id;
             const isBossNode = item.id % 12 === 0;
@@ -564,7 +573,6 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenNodeModal(item.id, isUnlocked, isPaywallLocked)}
-                      disabled={!isUnlocked && !isPaywallLocked}
                       className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                         breakingNodeId === item.id ? 'scale-125 rotate-6 brightness-150' : ''
                       } ${
@@ -576,7 +584,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                           ? `${theme.blockBg} ${theme.blockBorder} ${theme.blockShadow} text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(72,126,44,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30 cursor-pointer`
                           : isUnlocked
                           ? 'bg-amber-600 border-amber-900 shadow-[0_6px_0_0_#542803] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-300 group-hover:z-30 cursor-pointer'
-                          : 'bg-slate-900 border-slate-950 shadow-[0_4px_0_0_#020617] text-slate-600 cursor-not-allowed opacity-50'
+                          : 'bg-slate-900 border-slate-950 shadow-[0_4px_0_0_#020617] text-slate-500 hover:bg-slate-800 hover:border-slate-700 hover:text-slate-300 cursor-pointer opacity-75 active:scale-95'
                       }`}
                     >
                       {/* Boss Badge Crown */}
@@ -805,6 +813,23 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Locked Level Interactive Guidance Toast */}
+      {lockedNotice && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-slate-950/95 border-3 border-amber-500 text-amber-200 px-5 py-3 rounded-2xl shadow-[0_8px_25px_rgba(0,0,0,0.8)] font-mono text-xs sm:text-sm font-black flex items-center space-x-3">
+            <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+            <span>{lockedNotice.msg}</span>
+            <button
+              type="button"
+              onClick={() => setLockedNotice(null)}
+              className="ml-2 text-slate-400 hover:text-white text-xs bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700"
+            >
+              知道了
+            </button>
           </div>
         </div>
       )}

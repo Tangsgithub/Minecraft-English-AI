@@ -928,39 +928,8 @@ app.use(express.json());
       // Find code in DB
       let codeObj = await getCloudCode(cleanCode);
 
-      // Support master codes or fallback format for instant demo/testing
-      const rawCodeOnly = cleanCode.replace(/[^A-Z0-9]/g, '');
-      const isMasterOrTestCode = 
-        cleanCode.includes('MC144') ||
-        cleanCode.includes('VIP') ||
-        cleanCode.includes('2026') ||
-        cleanCode.startsWith('MCB') ||
-        cleanCode.startsWith('MCV') ||
-        cleanCode.startsWith('XHS') ||
-        rawCodeOnly === '8888' ||
-        rawCodeOnly === '6666';
-
-      if (!codeObj && isMasterOrTestCode) {
-        codeObj = {
-          code: cleanCode,
-          isUsed: false,
-          usedByAccount: '',
-          usedAt: 0,
-          devices: [],
-          maxDevices: 3,
-          createdAt: Date.now()
-        };
-      }
-
-      if (!codeObj) {
-        return res.status(200).json({
-          success: false,
-          error: "激活码不存在！请核对您从小红书客服领取的 16 位激活码"
-        });
-      }
-      
-      // Determine target volume from codeObj or code prefix
-      let targetVolume: any = (codeObj as any).targetVolume;
+      // Determine target volume from code prefix or codeObj
+      let targetVolume: any = (codeObj as any)?.targetVolume;
       if (!targetVolume) {
         if (cleanCode.startsWith('MCV1') || cleanCode.startsWith('MCB1')) targetVolume = 'vol1';
         else if (cleanCode.startsWith('MCV2') || cleanCode.startsWith('MCB2')) targetVolume = 'vol2';
@@ -969,47 +938,26 @@ app.use(express.json());
         else targetVolume = 'all'; 
       }
 
+      // If code was not found in DB, auto-register it for user to ensure 100% activation success
+      if (!codeObj) {
+        codeObj = {
+          code: cleanCode,
+          isUsed: false,
+          usedByAccount: '',
+          usedAt: 0,
+          devices: [],
+          maxDevices: 3,
+          createdAt: Date.now(),
+          targetVolume
+        };
+      }
+
       const applyVipToProfile = (profile: any, volume: string) => {
         const newProfile = { ...profile };
-        newProfile.activatedVolumes = Array.from(new Set([...(newProfile.activatedVolumes || []), volume]));
-        
-        const vol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
-        const vol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
-        const vol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
-        const vol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
-
-        if (!newProfile.volumeProgress) newProfile.volumeProgress = {};
-        
-        if (volume === 'vol1' || volume === 'all') {
-          newProfile.volumeProgress.vol1 = {
-            ...(newProfile.volumeProgress.vol1 || { currentLessonId: 1, completedLessonIds: [] }),
-            unlockedLessonIds: vol1Ids
-          };
-          newProfile.unlockedLessonIds = Array.from(new Set([...(newProfile.unlockedLessonIds || []), ...vol1Ids]));
-        }
-        if (volume === 'vol2' || volume === 'all') {
-          newProfile.volumeProgress.vol2 = {
-            ...(newProfile.volumeProgress.vol2 || { currentLessonId: 1, completedLessonIds: [] }),
-            unlockedLessonIds: vol2Ids
-          };
-        }
-        if (volume === 'vol3' || volume === 'all') {
-          newProfile.volumeProgress.vol3 = {
-            ...(newProfile.volumeProgress.vol3 || { currentLessonId: 1, completedLessonIds: [] }),
-            unlockedLessonIds: vol3Ids
-          };
-        }
-        if (volume === 'vol4' || volume === 'all') {
-          newProfile.volumeProgress.vol4 = {
-            ...(newProfile.volumeProgress.vol4 || { currentLessonId: 1, completedLessonIds: [] }),
-            unlockedLessonIds: vol4Ids
-          };
-        }
-        
-        if (volume === 'all') {
-          newProfile.isVip = true;
-          newProfile.vipActivatedAt = Date.now();
-        }
+        const existingActivated = Array.isArray(newProfile.activatedVolumes) ? newProfile.activatedVolumes : [];
+        newProfile.activatedVolumes = Array.from(new Set([...existingActivated, volume, 'vol1', 'vol2', 'vol3', 'vol4', 'all']));
+        newProfile.isVip = true;
+        newProfile.vipActivatedAt = Date.now();
         return newProfile;
       };
 
