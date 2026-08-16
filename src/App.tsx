@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId, VolumeProgress } from './types';
-import { getLevelFromXp } from './data/gamificationData';
+import { getLevelFromXp, evaluateMissionsForProfile } from './data/gamificationData';
 import { getVolumeProgress, updateVolumeProgress, switchActiveVolume, DEFAULT_VOLUME_PROGRESS, hasLessonAccess } from './utils/volumeProgress';
 import { HeaderBar } from './components/HeaderBar';
 import { FirstLaunchModal } from './components/FirstLaunchModal';
@@ -27,6 +27,11 @@ import { unlockMobileAudio } from './services/edgeTtsService';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+const getTodayDateString = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
 const DEFAULT_PROFILE: UserProfile = {
   id: 'user_001',
   nickname: 'Olaf',
@@ -35,8 +40,11 @@ const DEFAULT_PROFILE: UserProfile = {
   xp: 40,
   emeralds: 15,
   streakDays: 1,
-  lastActiveDate: new Date().toISOString().split('T')[0],
-  selectedAvatar: '👦',
+  totalStudyDays: 1,
+  activeDates: [getTodayDateString()],
+  lastActiveDate: getTodayDateString(),
+  selectedAvatar: 'steve',
+  avatar: 'steve',
   selectedVolumeId: 'vol1',
   currentLessonId: 1,
   unlockedLessonIds: [1],
@@ -48,8 +56,8 @@ const DEFAULT_PROFILE: UserProfile = {
     vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
   },
   completedMissionIds: [],
-  unlockedBadgeIds: ['badge_first_words'],
-  masteredWords: ['block', 'craft', 'house'],
+  unlockedBadgeIds: [],
+  masteredWords: [],
   apiKeyConfig: {
     provider: 'deepseek',
     apiKey: '',
@@ -61,6 +69,45 @@ const DEFAULT_PROFILE: UserProfile = {
 
 const sanitizeProfile = (raw: any): UserProfile => {
   if (!raw || typeof raw !== 'object') return DEFAULT_PROFILE;
+
+  const todayStr = getTodayDateString();
+  const rawLastActive = raw.lastActiveDate || todayStr;
+  let streakDays = typeof raw.streakDays === 'number' && raw.streakDays > 0 ? raw.streakDays : 1;
+  let totalStudyDays = typeof raw.totalStudyDays === 'number' && raw.totalStudyDays > 0 
+    ? raw.totalStudyDays 
+    : (typeof raw.studyDays === 'number' && raw.studyDays > 0 ? raw.studyDays : streakDays);
+
+  const activeDatesSet = new Set<string>(Array.isArray(raw.activeDates) ? raw.activeDates : [rawLastActive]);
+  activeDatesSet.add(todayStr);
+  totalStudyDays = Math.max(totalStudyDays, activeDatesSet.size);
+
+  let todayStudyMinutes = typeof raw.todayStudyMinutes === 'number' ? raw.todayStudyMinutes : 0;
+
+  if (rawLastActive !== todayStr) {
+    try {
+      const [lY, lM, lD] = rawLastActive.split('-').map(Number);
+      const [cY, cM, cD] = todayStr.split('-').map(Number);
+      if (lY && lM && lD && cY && cM && cD) {
+        const lastDate = new Date(lY, lM - 1, lD);
+        const currDate = new Date(cY, cM - 1, cD);
+        const diffDays = Math.round((currDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+          // Logged in on consecutive day
+          streakDays = streakDays + 1;
+          totalStudyDays = totalStudyDays + 1;
+        } else if (diffDays > 1) {
+          // Missed one or more days: reset streak to 1, increment total study days
+          streakDays = 1;
+          totalStudyDays = totalStudyDays + 1;
+        }
+      }
+    } catch (e) {
+      console.warn("Date parse error", e);
+    }
+    // New day: reset today's study minutes
+    todayStudyMinutes = 0;
+  }
 
   const rawVolProgress = raw.volumeProgress && typeof raw.volumeProgress === 'object' ? raw.volumeProgress : {};
   const volProgress: Record<CourseVolumeId, VolumeProgress> = {
@@ -117,6 +164,13 @@ const sanitizeProfile = (raw: any): UserProfile => {
   const merged: UserProfile = {
     ...DEFAULT_PROFILE,
     ...raw,
+    streakDays,
+    totalStudyDays,
+    activeDates: Array.from(activeDatesSet),
+    lastActiveDate: todayStr,
+    todayStudyMinutes,
+    selectedAvatar: raw.selectedAvatar || raw.avatar || 'steve',
+    avatar: raw.avatar || raw.selectedAvatar || 'steve',
     selectedVolumeId: activeVolId,
     volumeProgress: volProgress,
     currentLessonId: activeProg.currentLessonId,
@@ -125,12 +179,21 @@ const sanitizeProfile = (raw: any): UserProfile => {
     completedMissionIds: Array.isArray(raw.completedMissionIds)
       ? raw.completedMissionIds
       : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []),
+    readyToClaimMissionIds: Array.isArray(raw.readyToClaimMissionIds) ? raw.readyToClaimMissionIds : [],
     unlockedBadgeIds: Array.isArray(raw.unlockedBadgeIds) ? raw.unlockedBadgeIds : ['badge_first_words'],
     masteredWords: Array.isArray(raw.masteredWords) ? raw.masteredWords : []
   };
 
   if (merged.nickname === 'Tom') merged.nickname = 'Olaf';
   merged.level = getLevelFromXp(merged.xp || 40);
+
+  // Automatically evaluate and populate readyToClaimMissionIds based on existing completed lessons & words
+  const evaluatedReady = evaluateMissionsForProfile(merged);
+  merged.readyToClaimMissionIds = Array.from(new Set([
+    ...(merged.readyToClaimMissionIds || []),
+    ...evaluatedReady
+  ])).filter(id => !merged.completedMissionIds.includes(id));
+
   return merged;
 };
 
@@ -397,6 +460,13 @@ export default function App() {
         completedLessonIds: nextCompleted
       });
 
+      // Automatically evaluate missions for newly completed lesson
+      const newlyReadyMissions = evaluateMissionsForProfile(nextProfile);
+      nextProfile.readyToClaimMissionIds = Array.from(new Set([
+        ...(nextProfile.readyToClaimMissionIds || []),
+        ...newlyReadyMissions
+      ])).filter(id => !(nextProfile.completedMissionIds || []).includes(id));
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(nextProfile));
       }
@@ -410,7 +480,8 @@ export default function App() {
     handleAwardEmeralds(emeraldReward, xpReward);
     setProfile(prev => ({
       ...prev,
-      completedMissionIds: Array.from(new Set([...prev.completedMissionIds, missionId]))
+      completedMissionIds: Array.from(new Set([...prev.completedMissionIds, missionId])),
+      readyToClaimMissionIds: (prev.readyToClaimMissionIds || []).filter(id => id !== missionId)
     }));
   };
 
@@ -426,10 +497,18 @@ export default function App() {
         handleAwardEmeralds(5, 10);
       }
 
-      return {
+      const next: UserProfile = {
         ...prev,
         masteredWords: nextMastered
       };
+
+      const newlyReadyMissions = evaluateMissionsForProfile(next);
+      next.readyToClaimMissionIds = Array.from(new Set([
+        ...(next.readyToClaimMissionIds || []),
+        ...newlyReadyMissions
+      ])).filter(id => !(next.completedMissionIds || []).includes(id));
+
+      return next;
     });
   };
 
@@ -626,7 +705,7 @@ export default function App() {
               playClickSound();
               setActiveTab('missions');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 relative ${
               activeTab === 'missions'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
@@ -634,6 +713,11 @@ export default function App() {
           >
             <Scroll className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span className="whitespace-nowrap">📜 任务告示</span>
+            {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 bg-[#FF6321] text-white text-[9px] font-black rounded-full animate-pulse">
+                {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length}
+              </span>
+            )}
           </button>
 
           <button
@@ -741,6 +825,9 @@ export default function App() {
               profile={profile}
               onCompleteMission={handleCompleteMission}
               onNavigateToChat={() => setActiveTab('chat')}
+              onNavigateToMap={() => setActiveTab('map')}
+              onNavigateToVocab={() => setActiveTab('vocab')}
+              onNavigateToCrafting={() => setActiveTab('crafting')}
               onUpdateProfile={handleUpdateProfile}
             />
           )}

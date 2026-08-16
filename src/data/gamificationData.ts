@@ -1,4 +1,4 @@
-import { Badge, Mission } from '../types';
+import { Badge, Mission, UserProfile } from '../types';
 
 export interface LevelTier {
   level: number;
@@ -180,13 +180,68 @@ export const BADGES_DATA: Badge[] = [
 ];
 
 export const INITIAL_MISSIONS: Mission[] = [
+  // --- 每日必做 (Daily) ---
+  {
+    id: 'daily_001',
+    title: '每日晨光探险',
+    titleZh: '每日晨光探险',
+    description: '今日登录并进行英语学习，保持连续探索热情！',
+    mcChallenge: 'Log in and explore today',
+    englishChallenge: 'Start today\'s English adventure with Alex',
+    xpReward: 25,
+    emeraldReward: 8,
+    category: 'daily',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'daily_002',
+    title: '每日关卡攻坚',
+    titleZh: '每日关卡攻坚',
+    description: '在地图中通关至少 1 节新概念英语关卡（完成听读、拼句与场景打卡）。',
+    mcChallenge: 'Clear 1 Lesson on Map',
+    englishChallenge: 'Complete listening, crafting & oral check-in',
+    xpReward: 35,
+    emeraldReward: 12,
+    category: 'daily',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'daily_003',
+    title: '每日词汇采掘',
+    titleZh: '每日词汇采掘',
+    description: '在词汇宝典中掌握或复习至少 3 个核心单词。',
+    mcChallenge: 'Master 3 Minecraft Vocab Words',
+    englishChallenge: 'Listen and master 3 authentic words',
+    xpReward: 25,
+    emeraldReward: 10,
+    category: 'daily',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'daily_004',
+    title: '问候 Alex 老师',
+    titleZh: '问候 Alex 老师',
+    description: '在 1V1 对话中对 Alex 使用英语道声“Excuse me!”、“Good morning!”或进行语音对话。',
+    mcChallenge: 'Greet Alex NPC in Chat',
+    englishChallenge: 'Say: "Excuse me! Are you a teacher?" or "Hello!"',
+    xpReward: 30,
+    emeraldReward: 10,
+    category: 'daily',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+
+  // --- 关卡探险 (Adventure) ---
   {
     id: 'mission_001',
     title: '搭建你的第一个木屋',
     titleZh: '搭建你的第一个木屋',
-    description: '在村庄里选定一片场地，用英文向 Alex 介绍你的小屋。',
-    mcChallenge: 'Build a Wooden House',
-    englishChallenge: 'Say: "This is my house. It has a wooden door."',
+    description: '通关 Lesson 1《Excuse me!》，掌握礼貌问候与认领核心表达。',
+    mcChallenge: 'Clear Lesson 1: Build a Wooden House',
+    englishChallenge: 'Master: "Excuse me! Is this your...?"',
     xpReward: 30,
     emeraldReward: 10,
     category: 'adventure',
@@ -195,44 +250,408 @@ export const INITIAL_MISSIONS: Mission[] = [
   },
   {
     id: 'mission_002',
-    title: '问候 Alex 老师',
-    titleZh: '问候 Alex 老师',
-    description: '在对话中对 Alex 使用英语道声“Excuse me!”或“Good morning!”',
-    mcChallenge: 'Greet Alex NPC',
-    englishChallenge: 'Say: "Excuse me! Are you a teacher?"',
-    xpReward: 20,
-    emeraldReward: 5,
-    category: 'daily',
-    requiredLessonId: 1,
+    title: '找回丢失的铁剑与文具',
+    titleZh: '找回丢失的铁剑与文具',
+    description: '通关 Lesson 2《Is this your...?》，学会使用形容词性物主代词确认物品归属。',
+    mcChallenge: 'Clear Lesson 2: Claim Items',
+    englishChallenge: 'Master: "Is this your handbag / pen / book?"',
+    xpReward: 35,
+    emeraldReward: 12,
+    category: 'adventure',
+    requiredLessonId: 2,
     isCompleted: false
   },
   {
     id: 'mission_003',
-    title: '下矿寻找钻石矿脉',
-    titleZh: '下矿寻找钻石矿脉',
-    description: '学习挖矿词汇（mine, diamond, pickaxe），并向 Alex 发送一个问句。',
-    mcChallenge: 'Explore Diamond Cave',
-    englishChallenge: 'Ask: "Where can I find diamonds?"',
+    title: '寄存处的羊毛外套与长袍',
+    titleZh: '寄存处的羊毛外套与长袍',
+    description: '通关 Lesson 3《Sorry, sir.》，学习寄存处号码牌领物与礼貌道歉句型。',
+    mcChallenge: 'Clear Lesson 3: Coatroom Claim',
+    englishChallenge: 'Master: "Here is your umbrella and your coat."',
     xpReward: 40,
     emeraldReward: 15,
-    category: 'challenge',
+    category: 'adventure',
     requiredLessonId: 3,
+    isCompleted: false
+  },
+  {
+    id: 'adv_004',
+    title: '认识村庄新伙伴',
+    titleZh: '认识村庄新伙伴',
+    description: '通关 Lesson 5《Nice to meet you.》，掌握介绍他人与国籍地道表达。',
+    mcChallenge: 'Clear Lesson 5: Meet New Friends',
+    englishChallenge: 'Say: "This is Miss Sophie Dupont. Nice to meet you."',
+    xpReward: 40,
+    emeraldReward: 15,
+    category: 'adventure',
+    requiredLessonId: 5,
+    isCompleted: false
+  },
+  {
+    id: 'adv_005',
+    title: '村民职业大考察',
+    titleZh: '村民职业大考察',
+    description: '通关 Lesson 7《Are you a teacher?》，掌握 a/an 冠词与各种职业询问表达。',
+    mcChallenge: 'Clear Lesson 7: Inspect Villager Jobs',
+    englishChallenge: 'Ask: "Are you a teacher? No, I am an engineer."',
+    xpReward: 45,
+    emeraldReward: 16,
+    category: 'adventure',
+    requiredLessonId: 7,
+    isCompleted: false
+  },
+  {
+    id: 'adv_006',
+    title: '橡木平原初级学者 (完成 5 关)',
+    titleZh: '橡木平原初级学者',
+    description: '在地图中累计完成 5 个新概念英语关卡，扎实打好基础语法。',
+    mcChallenge: 'Clear Any 5 Map Lessons',
+    englishChallenge: 'Complete 5 Core Lessons & Quests',
+    xpReward: 60,
+    emeraldReward: 20,
+    category: 'adventure',
+    requiredLessonId: 5,
+    isCompleted: false
+  },
+  {
+    id: 'adv_007',
+    title: '第一单元大满贯 (完成 10 关)',
+    titleZh: '第一单元大满贯',
+    description: '通关前 10 课免费试学全量内容，迈入进阶英语探险世界！',
+    mcChallenge: 'Clear 10 Lessons & Unlock Full Chapter',
+    englishChallenge: 'Master 10 Lessons Foundation',
+    xpReward: 90,
+    emeraldReward: 30,
+    category: 'adventure',
+    requiredLessonId: 10,
     isCompleted: false
   },
   {
     id: 'mission_004',
     title: '在村庄集市交易',
     titleZh: '在村庄集市交易',
-    description: '用英文询问物品价格或询问村民的职业。',
-    mcChallenge: 'Trade with Villagers',
+    description: '通关 Lesson 17《How much is the bread?》，用英文询问物品价格与以物易物。',
+    mcChallenge: 'Clear Lesson 17: Trade with Villagers',
     englishChallenge: 'Ask: "How much is the bread? It is one emerald."',
-    xpReward: 35,
-    emeraldReward: 12,
+    xpReward: 45,
+    emeraldReward: 18,
     category: 'adventure',
     requiredLessonId: 17,
     isCompleted: false
+  },
+  {
+    id: 'adv_009',
+    title: '沙漠神殿远征学者 (完成 20 关)',
+    titleZh: '沙漠神殿远征学者',
+    description: '在地图中累计通关 20 个关卡，解锁更多高阶生物群系！',
+    mcChallenge: 'Clear 20 Map Lessons',
+    englishChallenge: 'Expand Vocabulary & Sentence Skills',
+    xpReward: 120,
+    emeraldReward: 40,
+    category: 'adventure',
+    requiredLessonId: 20,
+    isCompleted: false
+  },
+  {
+    id: 'adv_010',
+    title: '下界要塞征服者 (完成 50 关)',
+    titleZh: '下界要塞征服者',
+    description: '累计通关 50 个关卡，攻克复杂时态与长难句。',
+    mcChallenge: 'Clear 50 Lessons Master Milestone',
+    englishChallenge: 'Conquer Past Tense & Complex Structures',
+    xpReward: 200,
+    emeraldReward: 60,
+    category: 'adventure',
+    requiredLessonId: 50,
+    isCompleted: false
+  },
+  {
+    id: 'adv_011',
+    title: '第 1 册全通关大宗师 (完成 144 关)',
+    titleZh: '第 1 册全通关大宗师',
+    description: '通关新概念英语第 1 册全部 144 关，荣登英语创世神殿！',
+    mcChallenge: '100% Clear Book 1 (144 Lessons)',
+    englishChallenge: 'Achieve Complete Fluency in Book 1',
+    xpReward: 500,
+    emeraldReward: 150,
+    category: 'adventure',
+    requiredLessonId: 144,
+    isCompleted: false
+  },
+
+  // --- 传奇挑战 (Challenge) ---
+  {
+    id: 'chal_001',
+    title: '单词开采小能手',
+    titleZh: '单词开采小能手',
+    description: '在词汇宝典中累计掌握 5 个 Minecraft 核心英语生词。',
+    mcChallenge: 'Master 5 Core Vocabulary Words',
+    englishChallenge: 'Click and mark 5 words as Mastered',
+    xpReward: 30,
+    emeraldReward: 10,
+    category: 'challenge',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'chal_002',
+    title: '词汇黄金大矿工',
+    titleZh: '词汇黄金大矿工',
+    description: '在词汇宝典中累计掌握 20 个 Minecraft 核心英语生词。',
+    mcChallenge: 'Master 20 Vocabulary Words',
+    englishChallenge: 'Expand vocabulary into daily conversation',
+    xpReward: 60,
+    emeraldReward: 25,
+    category: 'challenge',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'chal_003',
+    title: '钻石词汇百科全书',
+    titleZh: '钻石词汇百科全书',
+    description: '累计掌握 50 个核心单词，成为行走的 Minecraft 双语词典！',
+    mcChallenge: 'Master 50 Core Vocabulary Words',
+    englishChallenge: 'Build a giant vocabulary repertoire',
+    xpReward: 120,
+    emeraldReward: 50,
+    category: 'challenge',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'chal_004',
+    title: '方块拼句语法大师',
+    titleZh: '方块拼句语法大师',
+    description: '在课程合成台或合成实验室中成功拼装出正确的语法句子。',
+    mcChallenge: 'Craft 3 Sentences in Crafting Table',
+    englishChallenge: 'Master subject-verb-object block order',
+    xpReward: 40,
+    emeraldReward: 15,
+    category: 'challenge',
+    requiredLessonId: 1,
+    isCompleted: false
+  },
+  {
+    id: 'chal_005',
+    title: '生活场景口语达人',
+    titleZh: '生活场景口语达人',
+    description: '在课程的 3 大生活场景迁移中完成至少 3 次口语跟读打卡。',
+    mcChallenge: 'Complete 3 Real-World Oral Check-ins',
+    englishChallenge: 'Practice speaking in real-life contexts',
+    xpReward: 50,
+    emeraldReward: 20,
+    category: 'challenge',
+    requiredLessonId: 1,
+    isCompleted: false
   }
 ];
+
+/**
+ * Evaluates all missions against user progress and returns the list of mission IDs that are fulfilled
+ * and ready to be claimed.
+ */
+export function evaluateMissionsForProfile(profile: Partial<UserProfile>): string[] {
+  const completedLessonIds = profile.completedLessonIds || [];
+  const completedCount = completedLessonIds.length;
+  const masteredWordsCount = (profile.masteredWords || []).length;
+  const unlockedCraftingCount = (profile.unlockedCraftingIds || []).length;
+  const alreadyClaimed = new Set(profile.completedMissionIds || []);
+  const readyIds: string[] = [];
+
+  INITIAL_MISSIONS.forEach(mission => {
+    if (alreadyClaimed.has(mission.id)) return;
+
+    let isMet = false;
+    switch (mission.id) {
+      // Dailies
+      case 'daily_001':
+        // Must have completed at least 5 minutes of study or completed 1 lesson today
+        isMet = (profile.todayStudyMinutes || 0) >= 5 || completedCount >= 1;
+        break;
+      case 'daily_002':
+        // Must have completed at least 1 lesson
+        isMet = completedCount >= 1;
+        break;
+      case 'daily_003':
+        // Must have genuinely mastered at least 3 vocabulary words
+        isMet = masteredWordsCount >= 3;
+        break;
+      case 'daily_004':
+        // Only ready if specifically triggered via Alex conversation
+        isMet = false;
+        break;
+
+      // Adventures (Must strictly complete the exact lesson)
+      case 'mission_001':
+        isMet = completedLessonIds.includes(1);
+        break;
+      case 'mission_002':
+        isMet = completedLessonIds.includes(2);
+        break;
+      case 'mission_003':
+        isMet = completedLessonIds.includes(3);
+        break;
+      case 'adv_004':
+        isMet = completedLessonIds.includes(5);
+        break;
+      case 'adv_005':
+        isMet = completedLessonIds.includes(7);
+        break;
+      case 'adv_006':
+        isMet = completedCount >= 5;
+        break;
+      case 'adv_007':
+        isMet = completedCount >= 10;
+        break;
+      case 'mission_004':
+        isMet = completedLessonIds.includes(17);
+        break;
+      case 'adv_009':
+        isMet = completedCount >= 20;
+        break;
+      case 'adv_010':
+        isMet = completedCount >= 50;
+        break;
+      case 'adv_011':
+        isMet = completedCount >= 144;
+        break;
+
+      // Challenges (Strictly require real vocabulary & crafting milestones)
+      case 'chal_001':
+        isMet = masteredWordsCount >= 5;
+        break;
+      case 'chal_002':
+        isMet = masteredWordsCount >= 20;
+        break;
+      case 'chal_003':
+        isMet = masteredWordsCount >= 50;
+        break;
+      case 'chal_004':
+        isMet = unlockedCraftingCount >= 1;
+        break;
+      case 'chal_005':
+        isMet = completedCount >= 3;
+        break;
+      default:
+        if (mission.requiredLessonId && completedLessonIds.includes(mission.requiredLessonId)) {
+          isMet = true;
+        }
+        break;
+    }
+
+    if (isMet) {
+      readyIds.push(mission.id);
+    }
+  });
+
+  return readyIds;
+}
+
+/**
+ * Calculates current numeric progress for a mission to display in progress bars.
+ */
+export function getMissionProgress(mission: Mission, profile: Partial<UserProfile>): { current: number; target: number; percent: number; isReady: boolean } {
+  const completedLessonIds = profile.completedLessonIds || [];
+  const completedCount = completedLessonIds.length;
+  const masteredWordsCount = (profile.masteredWords || []).length;
+  const alreadyClaimed = (profile.completedMissionIds || []).includes(mission.id);
+  const readyList = (profile.readyToClaimMissionIds || []);
+  const isReady = readyList.includes(mission.id);
+
+  let current = 0;
+  let target = 1;
+
+  switch (mission.id) {
+    case 'daily_001':
+      target = 1;
+      current = ((profile.todayStudyMinutes || 0) >= 1 || completedCount >= 1) ? 1 : 0;
+      break;
+    case 'daily_002':
+      target = 1;
+      current = completedCount >= 1 ? 1 : 0;
+      break;
+    case 'daily_003':
+      target = 3;
+      current = Math.min(3, masteredWordsCount);
+      break;
+    case 'daily_004':
+      target = 1;
+      current = (completedCount >= 1 || isReady || alreadyClaimed) ? 1 : 0;
+      break;
+    case 'mission_001':
+      target = 1;
+      current = completedLessonIds.includes(1) ? 1 : 0;
+      break;
+    case 'mission_002':
+      target = 1;
+      current = completedLessonIds.includes(2) ? 1 : 0;
+      break;
+    case 'mission_003':
+      target = 1;
+      current = completedLessonIds.includes(3) ? 1 : 0;
+      break;
+    case 'adv_004':
+      target = 1;
+      current = completedLessonIds.includes(5) ? 1 : 0;
+      break;
+    case 'adv_005':
+      target = 1;
+      current = completedLessonIds.includes(7) ? 1 : 0;
+      break;
+    case 'adv_006':
+      target = 5;
+      current = Math.min(5, completedCount);
+      break;
+    case 'adv_007':
+      target = 10;
+      current = Math.min(10, completedCount);
+      break;
+    case 'mission_004':
+      target = 1;
+      current = completedLessonIds.includes(17) ? 1 : 0;
+      break;
+    case 'adv_009':
+      target = 20;
+      current = Math.min(20, completedCount);
+      break;
+    case 'adv_010':
+      target = 50;
+      current = Math.min(50, completedCount);
+      break;
+    case 'adv_011':
+      target = 144;
+      current = Math.min(144, completedCount);
+      break;
+    case 'chal_001':
+      target = 5;
+      current = Math.min(5, masteredWordsCount);
+      break;
+    case 'chal_002':
+      target = 20;
+      current = Math.min(20, masteredWordsCount);
+      break;
+    case 'chal_003':
+      target = 50;
+      current = Math.min(50, masteredWordsCount);
+      break;
+    case 'chal_004':
+      target = 1;
+      current = (profile.unlockedCraftingIds || []).length >= 1 ? 1 : 0;
+      break;
+    case 'chal_005':
+      target = 3;
+      current = Math.min(3, completedCount);
+      break;
+    default:
+      target = 1;
+      current = (mission.requiredLessonId && completedLessonIds.includes(mission.requiredLessonId)) ? 1 : 0;
+      break;
+  }
+
+  const percent = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : (current >= 1 ? 100 : 0);
+  return { current, target, percent, isReady: isReady || percent >= 100 };
+}
 
 export function getTierForLevel(level: number): LevelTier {
   let currentTier = LEVEL_TIERS[0];

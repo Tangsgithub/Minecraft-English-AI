@@ -4,6 +4,7 @@ import { testApiKeyConnection } from '../services/aiService';
 import { ApiSecurityNotice } from './ApiSecurityNotice';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowRight, Key, Shield, User, Compass, Eye, EyeOff } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface FirstLaunchModalProps {
   profile: UserProfile;
@@ -21,7 +22,7 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
   const [step, setStep] = useState<number>(1);
   const [nickname, setNickname] = useState<string>(profile.nickname === 'Tom' ? 'Olaf' : (profile.nickname || 'Olaf'));
   const [age, setAge] = useState<number>(profile.age || 8);
-  const [avatar, setAvatar] = useState<string>(profile.selectedAvatar || '👦');
+  const [avatar, setAvatar] = useState<string>(profile.selectedAvatar || profile.avatar || 'steve');
 
   // API Config State
   const [provider, setProvider] = useState<'deepseek' | 'gemini' | 'custom'>(profile.apiKeyConfig.provider || 'deepseek');
@@ -35,7 +36,11 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; latencyMs?: number } | null>(null);
 
-  const avatars = ['👦 Steve', '👩 Alex', '👳 Villager', '🤖 Iron Golem', '🏹 Archer'];
+  const avatarOptions = [
+    { id: 'steve', name: 'Steve 史蒂夫' },
+    { id: 'alex', name: 'Alex 爱丽克丝' },
+    { id: 'villager', name: 'Villager 村民' }
+  ];
 
   const handleTestConnection = async () => {
     setIsTesting(true);
@@ -175,19 +180,19 @@ export const FirstLaunchModal: React.FC<FirstLaunchModalProps> = ({
                     选择你的冒险角色形象 (Avatar):
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {avatars.map((item) => (
+                    {avatarOptions.map((item) => (
                       <button
-                        key={item}
+                        key={item.id}
                         type="button"
-                        onClick={() => setAvatar(item.split(' ')[0])}
-                        className={`p-2.5 rounded-2xl border-2 text-xs font-mono font-bold flex items-center space-x-2 transition-all ${
-                          avatar === item.split(' ')[0]
-                            ? 'bg-[#EEDDCC] border-[#C89D7C] text-[#2D2D2D] shadow-sm'
+                        onClick={() => { playClickSound(); setAvatar(item.id); }}
+                        className={`p-2.5 rounded-2xl border-2 text-xs font-mono font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+                          avatar === item.id
+                            ? 'bg-[#EEDDCC] border-[#C89D7C] text-[#2D2D2D] shadow-sm ring-2 ring-[#C89D7C]/30'
                             : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
-                        <span className="text-lg">{item.split(' ')[0]}</span>
-                        <span>{item.split(' ')[1]}</span>
+                        <MinecraftAvatar speaker={item.id} size={24} />
+                        <span className="truncate">{item.name.split(' ')[0]}</span>
                       </button>
                     ))}
                   </div>

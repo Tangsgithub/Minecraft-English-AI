@@ -216,8 +216,10 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
                 </div>
 
                 <div className="bg-white p-3 rounded-2xl border-2 border-slate-200 text-center space-y-1">
-                  <span className="text-[10px] text-slate-500 font-bold block">累计专注天数</span>
-                  <span className="text-lg font-black text-amber-600">{profile.streakDays} 天连续</span>
+                  <span className="text-[10px] text-slate-500 font-bold block">连续打卡 / 累计天数</span>
+                  <span className="text-lg font-black text-amber-600">
+                    {profile.streakDays || 1}d <span className="text-xs text-slate-400 font-normal">/ {profile.totalStudyDays || (profile.activeDates?.length || profile.streakDays || 1)}天</span>
+                  </span>
                 </div>
               </div>
 

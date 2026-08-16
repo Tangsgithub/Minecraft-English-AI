@@ -4,10 +4,11 @@ import { User, saveUserProfileToCloud, fetchUserProfileFromCloud } from '../lib/
 import {
   User as UserIcon, Shield, Medal, Sword, Flame, Star, X, LogOut,
   RefreshCw, CheckCircle2, Lock, Key, Clock, Eye, Sparkles, ChevronRight,
-  Award, Headphones, Cloud, CloudCheck, Loader2
+  Award, Headphones, Cloud, CloudCheck, Loader2, Calendar
 } from 'lucide-react';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
 import { playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface UserProfileModalProps {
   profile: UserProfile;
@@ -432,30 +433,30 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
             {/* Avatar Selector */}
             <div>
-              <label className="block text-xs font-bold text-slate-600 mb-1.5">选择初始外观 (Avatar):</label>
+              <label className="block text-xs font-bold text-slate-600 mb-1.5">选择学员外观形象 (Avatar):</label>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => { playClickSound(); setSelectedAvatar('steve'); }}
-                  className={`p-2.5 rounded-xl border-2 flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border-2 flex items-center justify-center space-x-2.5 transition-all cursor-pointer ${
                     selectedAvatar === 'steve'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-sm ring-2 ring-emerald-500/20'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <span className="text-2xl">🟩</span>
+                  <MinecraftAvatar speaker="Steve" size={28} />
                   <span className="text-xs font-bold">史蒂夫 (Steve)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => { playClickSound(); setSelectedAvatar('alex'); }}
-                  className={`p-2.5 rounded-xl border-2 flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border-2 flex items-center justify-center space-x-2.5 transition-all cursor-pointer ${
                     selectedAvatar === 'alex'
-                      ? 'border-amber-500 bg-amber-50 text-amber-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                      ? 'border-amber-600 bg-amber-50 text-amber-800 shadow-sm ring-2 ring-amber-500/20'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <span className="text-2xl">👩‍🦰</span>
+                  <MinecraftAvatar speaker="Alex" size={28} />
                   <span className="text-xs font-bold">爱丽克丝 (Alex)</span>
                 </button>
               </div>
@@ -491,27 +492,49 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <div className="bg-slate-900 border-2 border-slate-950 rounded-2xl p-4 text-white space-y-3">
             <h3 className="font-black text-amber-400 text-xs sm:text-sm flex items-center space-x-1.5 border-b border-slate-800 pb-1.5">
               <Sword className="w-4 h-4 text-amber-400" />
-              <span>冒险家等级与进度</span>
+              <span>冒险家等级与学习天数统计</span>
             </h3>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {/* Level & Title */}
               <div className="bg-slate-800/80 rounded-xl p-2.5 border border-slate-700/50">
-                <div className="text-[10px] text-slate-400 font-bold">当前等级 (Level)</div>
-                <div className="text-lg font-black text-emerald-400 mt-0.5">Lv.{profile.level}</div>
-                <div className="text-[10px] bg-slate-950 text-amber-400 px-1.5 py-0.5 rounded font-mono inline-block mt-0.5">
+                <div className="text-[10px] text-slate-400 font-bold">等级 (Level)</div>
+                <div className="text-base font-black text-emerald-400 mt-0.5">Lv.{profile.level}</div>
+                <div className="text-[9px] bg-slate-950 text-amber-400 px-1.5 py-0.2 rounded font-mono inline-block mt-0.5 truncate max-w-full">
                   {tier.title}
                 </div>
               </div>
 
               {/* Wealth */}
               <div className="bg-slate-800/80 rounded-xl p-2.5 border border-slate-700/50">
-                <div className="text-[10px] text-slate-400 font-bold">拥有绿宝石 (Wealth)</div>
-                <div className="text-lg font-black text-emerald-400 mt-0.5 flex items-center">
+                <div className="text-[10px] text-slate-400 font-bold">绿宝石 (Wealth)</div>
+                <div className="text-base font-black text-emerald-400 mt-0.5 flex items-center">
                   <span>{profile.emeralds}</span>
                   <span className="text-xs ml-1">❇️</span>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5 truncate">可用于兑换商人宝库</div>
+                <div className="text-[9px] text-slate-500 mt-0.5 truncate">宝库兑换道具</div>
+              </div>
+
+              {/* Streak Days */}
+              <div className="bg-slate-800/80 rounded-xl p-2.5 border border-slate-700/50">
+                <div className="text-[10px] text-slate-400 font-bold flex items-center space-x-0.5">
+                  <Flame className="w-2.5 h-2.5 text-[#FF6321]" />
+                  <span>连续打卡</span>
+                </div>
+                <div className="text-base font-black text-amber-400 mt-0.5">{profile.streakDays || 1} 天</div>
+                <div className="text-[9px] text-slate-500 mt-0.5">连胜不中断</div>
+              </div>
+
+              {/* Total Study Days */}
+              <div className="bg-slate-800/80 rounded-xl p-2.5 border border-slate-700/50">
+                <div className="text-[10px] text-slate-400 font-bold flex items-center space-x-0.5">
+                  <Calendar className="w-2.5 h-2.5 text-blue-400" />
+                  <span>累计天数</span>
+                </div>
+                <div className="text-base font-black text-blue-400 mt-0.5">
+                  {profile.totalStudyDays || (profile.activeDates ? profile.activeDates.length : Math.max(1, profile.streakDays || 1))} 天
+                </div>
+                <div className="text-[9px] text-slate-500 mt-0.5">总学习历程</div>
               </div>
             </div>
 

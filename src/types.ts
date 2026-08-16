@@ -114,6 +114,7 @@ export interface UserProfile {
   streakDays: number;
   lastActiveDate: string;
   selectedAvatar: string;
+  avatar?: string;
   customAvatarUrl?: string;
   learningGoal?: number;
   todayMinutes?: number;
@@ -135,6 +136,8 @@ export interface UserProfile {
   isInitialSetupDone: boolean;
   todayStudyMinutes?: number;
   totalStudyMinutes?: number;
+  totalStudyDays?: number;
+  activeDates?: string[];
   parentSettings?: ParentSettings;
   isVip?: boolean;
   vipActivatedAt?: number;

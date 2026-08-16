@@ -4,6 +4,7 @@ import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificat
 import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic, Headphones, ChevronDown, LogOut } from 'lucide-react';
 import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio } from '../utils/audio';
 import { User } from '../lib/firebase';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface HeaderBarProps {
   selectedVolumeId: CourseVolumeId;
@@ -223,8 +224,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               className="px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-900/90 hover:bg-slate-800 border-2 border-black rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black font-mono shadow-[0_2px_0_0_#000] active:translate-y-0.5 cursor-pointer"
               title="查看个人档案、VIP特权与家长控制"
             >
-              <div className="w-5 h-5 rounded-lg bg-black/30 border border-white/20 flex items-center justify-center text-xs relative shrink-0">
-                <span>{profile.avatar === 'alex' ? '👩‍🦰' : '🟩'}</span>
+              <div className="w-5 h-5 rounded-md overflow-hidden bg-black/30 border border-white/20 flex items-center justify-center relative shrink-0">
+                <MinecraftAvatar speaker={profile.avatar === 'alex' || profile.selectedAvatar === 'alex' ? 'Alex' : 'Steve'} size={18} />
               </div>
               <span className="max-w-[55px] sm:max-w-[80px] truncate text-white font-extrabold text-[11px] sm:text-xs">
                 {currentUser?.nickname || profile.nickname || '档案'}
