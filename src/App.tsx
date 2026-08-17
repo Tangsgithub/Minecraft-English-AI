@@ -187,12 +187,9 @@ const sanitizeProfile = (raw: any): UserProfile => {
   if (merged.nickname === 'Tom') merged.nickname = 'Olaf';
   merged.level = getLevelFromXp(merged.xp || 40);
 
-  // Automatically evaluate and populate readyToClaimMissionIds based on existing completed lessons & words
+  // Strictly evaluate and populate readyToClaimMissionIds based on existing real completed lessons & achievements
   const evaluatedReady = evaluateMissionsForProfile(merged);
-  merged.readyToClaimMissionIds = Array.from(new Set([
-    ...(merged.readyToClaimMissionIds || []),
-    ...evaluatedReady
-  ])).filter(id => !merged.completedMissionIds.includes(id));
+  merged.readyToClaimMissionIds = evaluatedReady.filter(id => !(merged.completedMissionIds || []).includes(id));
 
   return merged;
 };

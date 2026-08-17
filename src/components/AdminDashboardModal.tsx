@@ -486,6 +486,25 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }));
   };
 
+  // Adjust Study Streak / Total Days
+  const handleSetStudyDays = (days: number) => {
+    playClickSound();
+    onUpdateProfile(prev => {
+      const activeDates = new Set(prev.activeDates || []);
+      for (let i = 0; i < days; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        activeDates.add(d.toISOString().slice(0, 10));
+      }
+      return {
+        ...prev,
+        streakDays: days,
+        totalStudyDays: Math.max(prev.totalStudyDays || 0, days),
+        activeDates: Array.from(activeDates)
+      };
+    });
+  };
+
   // Reset Progress
   const handleResetProgress = () => {
     setConfirmDialog({
@@ -498,6 +517,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           emeralds: 100,
           unlockedLessonIds: [1],
           completedLessonIds: [],
+          completedMissionIds: [],
+          readyToClaimMissionIds: [],
+          masteredWords: [],
+          todayStudyMinutes: 0,
+          unlockedCraftingIds: [],
           isVip: false,
           vipActivatedAt: 0,
           activatedVolumes: [],
@@ -1253,6 +1277,29 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           }`}
                         >
                           设置 Lv.{lvl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Study Streak & Days Setter */}
+                  <div className="bg-stone-900 border border-stone-800 p-4 rounded-2xl space-y-3">
+                    <div className="text-emerald-400 font-bold text-sm flex items-center justify-between">
+                      <span>🔥 快捷测试学习天数与连续打卡 (Current: {profile.streakDays || 1}天)</span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {[1, 3, 7, 14, 30, 100].map(days => (
+                        <button
+                          key={days}
+                          onClick={() => handleSetStudyDays(days)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                            profile.streakDays === days
+                              ? 'bg-emerald-500 text-black'
+                              : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+                          }`}
+                        >
+                          模拟连续打卡 {days} 天
                         </button>
                       ))}
                     </div>

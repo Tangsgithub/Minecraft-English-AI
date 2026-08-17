@@ -147,6 +147,71 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         {/* Modal Scrollable Body */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
 
+          {/* 0. Student Profile Hero Overview Card */}
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 rounded-2xl p-4 text-white border-2 border-emerald-500/50 shadow-md">
+            <div className="flex items-center space-x-3.5">
+              <div className="relative shrink-0">
+                <MinecraftAvatar
+                  speaker={selectedAvatar === 'alex' ? 'Alex' : 'Steve'}
+                  size={52}
+                  className="rounded-xl border-2 border-amber-400 shadow-md"
+                />
+                <span className="absolute -bottom-1 -right-1 bg-amber-400 text-black text-[9px] font-mono font-black px-1 rounded border border-black">
+                  Lv.{profile.level}
+                </span>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base font-black font-mono text-white truncate">
+                    {nickname || '小探险家'}
+                  </h3>
+                  <span className="text-xs text-emerald-300 font-mono">
+                    {selectedAvatar === 'alex' ? '爱丽克丝 (Alex)' : '史蒂夫 (Steve)'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs font-mono text-slate-300 mt-1">
+                  <span>{tier.icon} {tier.title}</span>
+                  <span className="text-slate-500">•</span>
+                  <span>{age} 岁</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-white/10 text-center font-mono">
+              <div className="bg-black/30 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center justify-center space-x-1">
+                  <span>🔥</span>
+                  <span>连续打卡</span>
+                </div>
+                <div className="text-sm font-black text-amber-300 mt-0.5">
+                  {profile.streakDays || 1} 天
+                </div>
+              </div>
+
+              <div className="bg-black/30 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center justify-center space-x-1">
+                  <span>📅</span>
+                  <span>累计学习</span>
+                </div>
+                <div className="text-sm font-black text-emerald-300 mt-0.5">
+                  {profile.totalStudyDays || profile.streakDays || 1} 天
+                </div>
+              </div>
+
+              <div className="bg-black/30 rounded-xl p-2 border border-white/5">
+                <div className="text-[10px] text-slate-400 flex items-center justify-center space-x-1">
+                  <span>❇️</span>
+                  <span>绿宝石</span>
+                </div>
+                <div className="text-sm font-black text-green-400 mt-0.5">
+                  {profile.emeralds || 0}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* 1. VIP Membership Status Card */}
           {profile.isVip || (profile.activatedVolumes && profile.activatedVolumes.length > 0) ? (
             <div className="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 rounded-2xl p-4 text-amber-950 border-2 border-black shadow-sm">

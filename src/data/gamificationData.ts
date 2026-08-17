@@ -565,7 +565,7 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
   switch (mission.id) {
     case 'daily_001':
       target = 1;
-      current = ((profile.todayStudyMinutes || 0) >= 1 || completedCount >= 1) ? 1 : 0;
+      current = ((profile.todayStudyMinutes || 0) >= 5 || completedCount >= 1) ? 1 : 0;
       break;
     case 'daily_002':
       target = 1;
@@ -577,7 +577,7 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
       break;
     case 'daily_004':
       target = 1;
-      current = (completedCount >= 1 || isReady || alreadyClaimed) ? 1 : 0;
+      current = (isReady || alreadyClaimed) ? 1 : 0;
       break;
     case 'mission_001':
       target = 1;
