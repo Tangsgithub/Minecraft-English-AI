@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
-import { LESSONS_DATA } from '../data/lessonsData';
+import { LESSONS_DATA, getLessonById } from '../data/lessonsData';
 import { getFullBook1VocabList } from '../data/book1VocabManager';
 import { VocabItem, UserProfile, CourseVolumeId } from '../types';
 import { Volume2, Search, CheckCircle, Sparkles, BookOpen, Layers, Play, Award, RotateCcw, HelpCircle, CheckCircle2, XCircle, Lock, Unlock, Filter, ArrowRight, Crown, MapPin } from 'lucide-react';
@@ -44,6 +44,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   const [unlockFilter, setUnlockFilter] = useState<'all' | 'unlocked' | 'locked'>('unlocked');
   const [lessonRangeFilter, setLessonRangeFilter] = useState<string>('all');
   const [selectedSpecificLesson, setSelectedSpecificLesson] = useState<number | null>(null);
+  const [reviewScope, setReviewScope] = useState<'all_unlocked' | 'latest_lesson' | 'hard_only' | 'range_trial'>('all_unlocked');
 
   // Determine user's volume progress and highest unlocked lesson
   const currentVolId: CourseVolumeId = profile.selectedVolumeId || 'vol1';
@@ -61,7 +62,8 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   if (currentVolId === 'vol1') {
     combinedList = getFullBook1VocabList();
   } else {
-    const currentVolumeLessons = LESSONS_DATA;
+    const totalLessonCount = currentVolId === 'vol2' ? 96 : 60;
+    const currentVolumeLessons = Array.from({ length: totalLessonCount }, (_, i) => getLessonById(i + 1, currentVolId));
     const allLessonVocab: VocabItem[] = currentVolumeLessons.flatMap(l =>
       l.vocabulary.map(v => ({
         ...v,
@@ -147,10 +149,10 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
 
     // Lesson Range Filter
     if (lessonRangeFilter === 'current' && reqLesson > maxUnlockedLesson) return false;
-    if (lessonRangeFilter === '1-10' && (reqLesson < 1 || reqLesson > 10)) return false;
-    if (lessonRangeFilter === '11-30' && (reqLesson < 11 || reqLesson > 30)) return false;
-    if (lessonRangeFilter === '31-70' && (reqLesson < 31 || reqLesson > 70)) return false;
-    if (lessonRangeFilter === '71-144' && (reqLesson < 71 || reqLesson > 144)) return false;
+    if (lessonRangeFilter === '1-20' && (reqLesson < 1 || reqLesson > 20)) return false;
+    if (lessonRangeFilter === '21-50' && (reqLesson < 21 || reqLesson > 50)) return false;
+    if (lessonRangeFilter === '51-100' && (reqLesson < 51 || reqLesson > 100)) return false;
+    if (lessonRangeFilter === '101-144' && (reqLesson < 101 || reqLesson > 144)) return false;
 
     // Unlock Status Filter
     if (unlockFilter === 'unlocked' && !isUnlocked) return false;
@@ -171,18 +173,38 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
     return matchesCategory && matchesSearch;
   });
 
+  // Helper to retrieve lesson title for exact provenance display
+  const getLessonTitle = (lessonId?: number): string => {
+    if (!lessonId) return '';
+    const l = getLessonById(lessonId, currentVolId);
+    return l?.titleZh || l?.title || `Lesson ${lessonId}`;
+  };
+
   // Interactive Review/Quiz pool MUST strictly use unlocked words so student isn't tested on unlearned content!
-  const reviewPool = unlockedVocabList.length > 0 ? unlockedVocabList : combinedList.slice(0, 5);
+  // Filter further according to user's chosen reviewScope
+  let reviewPoolCandidates = unlockedVocabList;
+  if (reviewScope === 'latest_lesson') {
+    const latestItems = unlockedVocabList.filter(v => (v.requiredLessonId || 1) === maxUnlockedLesson);
+    if (latestItems.length > 0) reviewPoolCandidates = latestItems;
+  } else if (reviewScope === 'hard_only') {
+    const hardItems = unlockedVocabList.filter(v => !masteredSet.has(v.word.toLowerCase()));
+    if (hardItems.length > 0) reviewPoolCandidates = hardItems;
+  } else if (reviewScope === 'range_trial') {
+    const trialItems = unlockedVocabList.filter(v => (v.requiredLessonId || 1) <= 20);
+    if (trialItems.length > 0) reviewPoolCandidates = trialItems;
+  }
+
+  const reviewPool = reviewPoolCandidates.length > 0 ? reviewPoolCandidates : (unlockedVocabList.length > 0 ? unlockedVocabList : combinedList.slice(0, 5));
 
   // Current Quiz Question item
   const currentQuizItem = reviewPool[quizIndex % Math.max(1, reviewPool.length)];
 
-  // Generate 4 options for quiz from unlocked words (or easy fallback)
+  // Generate 4 options for quiz from unlocked words (strict progress-bound candidates)
   const getQuizOptions = (correctItem: VocabItem) => {
     if (!correctItem) return [];
-    const others = reviewPool.filter(v => v.word.toLowerCase() !== correctItem.word.toLowerCase());
+    const unlockedOthers = unlockedVocabList.filter(v => v.word.toLowerCase() !== correctItem.word.toLowerCase());
     const fallbackOthers = combinedList.filter(v => v.word.toLowerCase() !== correctItem.word.toLowerCase());
-    const candidateList = others.length >= 3 ? others : fallbackOthers;
+    const candidateList = unlockedOthers.length >= 3 ? unlockedOthers : fallbackOthers;
 
     const shuffledOthers = [...candidateList];
     for (let i = shuffledOthers.length - 1; i > 0; i--) {
@@ -198,6 +220,13 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   };
 
   const [currentOptions, setCurrentOptions] = useState<VocabItem[]>(() => getQuizOptions(currentQuizItem));
+
+  // Keep options synced if scope or quizItem changes
+  React.useEffect(() => {
+    if (currentQuizItem) {
+      setCurrentOptions(getQuizOptions(currentQuizItem));
+    }
+  }, [currentQuizItem?.word, reviewScope]);
 
   const handleNextQuizQuestion = () => {
     const nextIdx = (quizIndex + 1) % reviewPool.length;
@@ -403,10 +432,10 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                 {[
                   { id: 'all', label: '全部关卡' },
                   { id: 'current', label: `🎯 学习进度 (1~${maxUnlockedLesson}课)` },
-                  { id: '1-10', label: '1~10 课 (免费试学)' },
-                  { id: '11-30', label: '11~30 课' },
-                  { id: '31-70', label: '31~70 课' },
-                  { id: '71-144', label: '71~144 课' },
+                  { id: '1-20', label: '1~20 课 (免费试学)' },
+                  { id: '21-50', label: '21~50 课' },
+                  { id: '51-100', label: '51~100 课' },
+                  { id: '101-144', label: '101~144 课' },
                 ].map(r => (
                   <button
                     key={r.id}
@@ -740,11 +769,11 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
 
       {/* Mode 2: Ebbinghaus Spaced Repetition Flashcards Review */}
       {viewMode === 'ebbinghaus' && (
-        <div className="max-w-xl mx-auto bg-white border-4 border-purple-600 rounded-[2.5rem] p-6 text-center space-y-5 shadow-[10px_10px_0px_0px_rgba(147,51,234,0.15)] animate-in zoom-in-95">
-          <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3 font-mono flex-wrap gap-2">
+        <div className="max-w-xl mx-auto bg-white border-4 border-purple-600 rounded-[2.5rem] p-5 sm:p-6 text-center space-y-4 shadow-[10px_10px_0px_0px_rgba(147,51,234,0.15)] animate-in zoom-in-95 font-mono">
+          <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3 flex-wrap gap-2">
             <span className="text-xs font-black text-purple-700 flex items-center space-x-1">
               <Sparkles className="w-4 h-4 text-purple-500" />
-              <span>🧠 艾宾浩斯智能复习 (当前已开放库 {ebbinghausIndex + 1}/{reviewPool.length})</span>
+              <span>🧠 艾宾浩斯智能复习 ({reviewPool.length > 0 ? ebbinghausIndex + 1 : 0}/{reviewPool.length})</span>
             </span>
 
             <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
@@ -752,8 +781,63 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
             </span>
           </div>
 
+          {/* Review Scope Filter Toolbar */}
+          <div className="bg-purple-50/70 p-2.5 rounded-2xl border border-purple-200 space-y-1.5 text-left">
+            <div className="flex items-center justify-between text-[11px] font-bold text-purple-900">
+              <span>🎯 复习关卡范围 (严格按进度已学关卡)：</span>
+              <span className="text-purple-600 font-black">{reviewPool.length} 词在库</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-xs font-bold">
+              <button
+                onClick={() => { playClickSound(); setReviewScope('all_unlocked'); setEbbinghausIndex(0); }}
+                className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                  reviewScope === 'all_unlocked'
+                    ? 'bg-purple-600 text-white border-purple-800 shadow-sm'
+                    : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100'
+                }`}
+              >
+                🌐 全部已学 (L1~{maxUnlockedLesson})
+              </button>
+
+              <button
+                onClick={() => { playClickSound(); setReviewScope('latest_lesson'); setEbbinghausIndex(0); }}
+                className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                  reviewScope === 'latest_lesson'
+                    ? 'bg-purple-600 text-white border-purple-800 shadow-sm'
+                    : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100'
+                }`}
+              >
+                📍 仅最新关卡 (L{maxUnlockedLesson})
+              </button>
+
+              <button
+                onClick={() => { playClickSound(); setReviewScope('hard_only'); setEbbinghausIndex(0); }}
+                className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                  reviewScope === 'hard_only'
+                    ? 'bg-purple-600 text-white border-purple-800 shadow-sm'
+                    : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100'
+                }`}
+              >
+                ⚠️ 生词弱项优先
+              </button>
+
+              {maxUnlockedLesson > 20 && (
+                <button
+                  onClick={() => { playClickSound(); setReviewScope('range_trial'); setEbbinghausIndex(0); }}
+                  className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                    reviewScope === 'range_trial'
+                      ? 'bg-purple-600 text-white border-purple-800 shadow-sm'
+                      : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100'
+                  }`}
+                >
+                  🌱 1-20课基础期
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* 5-Stage Ebbinghaus Memory Cycle Bar */}
-          <div className="bg-purple-50 p-3 rounded-2xl border border-purple-200 space-y-1.5 font-mono text-[10px]">
+          <div className="bg-purple-50 p-3 rounded-2xl border border-purple-200 space-y-1.5 text-[10px]">
             <div className="flex items-center justify-between font-bold text-purple-900">
               <span>艾宾浩斯 5 阶段记忆周期：</span>
               <span className="text-purple-600">阶段 3/5 (第1天记忆巩固期)</span>
@@ -770,7 +854,22 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
           {/* Flashcard Body */}
           {(() => {
             const currentItem = reviewPool[ebbinghausIndex % Math.max(1, reviewPool.length)];
-            if (!currentItem) return null;
+            if (!currentItem) {
+              return (
+                <div className="p-8 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 space-y-2">
+                  <p className="text-sm font-bold text-slate-600">当前分类范围暂无待复习词汇</p>
+                  <button
+                    onClick={() => setReviewScope('all_unlocked')}
+                    className="px-4 py-1.5 bg-purple-600 text-white rounded-xl text-xs font-bold"
+                  >
+                    查看全部已学词库
+                  </button>
+                </div>
+              );
+            }
+
+            const reqLesson = currentItem.requiredLessonId || 1;
+            const lessonTitle = getLessonTitle(reqLesson);
 
             return (
               <div className="space-y-4">
@@ -781,16 +880,34 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                   }}
                   className="bg-gradient-to-b from-purple-50 via-white to-slate-50 border-4 border-purple-300 hover:border-purple-500 rounded-3xl p-6 sm:p-8 cursor-pointer transition-all shadow-inner space-y-3 relative min-h-[220px] flex flex-col items-center justify-center"
                 >
+                  {/* Lesson Provenance Badge */}
+                  <div className="inline-flex items-center space-x-1.5 bg-purple-100 text-purple-900 border border-purple-300 px-3 py-1 rounded-full text-[11px] font-black">
+                    <MapPin className="w-3.5 h-3.5 text-purple-600" />
+                    <span>来源：第 {reqLesson} 课 {lessonTitle ? `《${lessonTitle}》` : ''}</span>
+                    {onNavigateToLesson && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigateToLesson(reqLesson);
+                        }}
+                        className="underline text-purple-700 hover:text-purple-950 ml-1 cursor-pointer"
+                        title="直达本课地图与对话"
+                      >
+                        [直达本课]
+                      </span>
+                    )}
+                  </div>
+
                   <div className="w-20 h-20 bg-white border-4 border-black rounded-3xl flex items-center justify-center text-4xl shadow-md">
                     {currentItem.mcItemIcon || '🧠'}
                   </div>
 
                   <div>
-                    <h3 className="text-2xl font-black font-mono text-purple-950 tracking-wide">
+                    <h3 className="text-2xl font-black text-purple-950 tracking-wide">
                       {currentItem.word}
                     </h3>
                     {currentItem.phonetic && (
-                      <p className="text-xs font-mono font-bold text-purple-600 mt-1">
+                      <p className="text-xs font-bold text-purple-600 mt-1">
                         [{currentItem.phonetic}]
                       </p>
                     )}
@@ -799,34 +916,46 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                   {/* Flipped Content */}
                   {isCardFlipped ? (
                     <div className="pt-2 border-t border-purple-200 text-center space-y-2 animate-in fade-in">
-                      <p className="text-base font-black text-amber-900 font-mono">
+                      <p className="text-base font-black text-amber-900">
                         中文释义：{currentItem.meaning}
                       </p>
-                      <p className="text-xs font-mono text-slate-600 italic">
+                      <p className="text-xs text-slate-600 italic">
                         "{currentItem.sampleSentence}"
                       </p>
                     </div>
                   ) : (
-                    <p className="text-xs font-mono font-bold text-slate-400 animate-pulse">
+                    <p className="text-xs font-bold text-slate-400 animate-pulse">
                       👆 点击卡片翻面查看释义与例句
                     </p>
                   )}
                 </div>
 
-                {/* Single Word TTS Voice */}
-                <button
-                  onClick={() => {
-                    speakText(currentItem.word);
-                  }}
-                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl font-mono font-black text-xs text-slate-700 flex items-center justify-center space-x-1.5"
-                >
-                  <Volume2 className="w-4 h-4 text-purple-600" />
-                  <span>朗读示范发音</span>
-                </button>
+                {/* Voice and AI Speech Evaluation Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      speakText(currentItem.word);
+                    }}
+                    className="py-2.5 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl font-black text-xs text-slate-700 flex items-center justify-center space-x-1.5 transition-all shadow-sm"
+                  >
+                    <Volume2 className="w-4 h-4 text-purple-600" />
+                    <span>示范朗读</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      setOralTarget(currentItem);
+                    }}
+                    className="py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 border-2 border-black text-slate-950 rounded-xl font-black text-xs flex items-center justify-center space-x-1.5 transition-all shadow-sm active:scale-95"
+                  >
+                    <span>🎙️ AI 发音打分</span>
+                  </button>
+                </div>
 
                 {/* 3-Tier Ebbinghaus Rating Buttons */}
                 <div className="space-y-1.5 pt-1">
-                  <p className="text-[10px] font-mono font-bold text-slate-500">评估当前掌握度（自动排列下次复习时间）：</p>
+                  <p className="text-[10px] font-bold text-slate-500">评估当前掌握度（自动排列下次复习时间）：</p>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => {
@@ -836,7 +965,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                         setIsCardFlipped(false);
                         setEbbinghausIndex(prev => (prev + 1) % reviewPool.length);
                       }}
-                      className="py-2.5 bg-rose-100 hover:bg-rose-200 border-2 border-rose-300 text-rose-900 rounded-xl font-mono font-black text-xs space-y-0.5 active:scale-95 transition-all"
+                      className="py-2.5 bg-rose-100 hover:bg-rose-200 border-2 border-rose-300 text-rose-900 rounded-xl font-black text-xs space-y-0.5 active:scale-95 transition-all"
                     >
                       <div className="flex items-center justify-center space-x-1">
                         <span>😖 较难</span>
@@ -852,7 +981,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                         setIsCardFlipped(false);
                         setEbbinghausIndex(prev => (prev + 1) % reviewPool.length);
                       }}
-                      className="py-2.5 bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 rounded-xl font-mono font-black text-xs space-y-0.5 active:scale-95 transition-all"
+                      className="py-2.5 bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 rounded-xl font-black text-xs space-y-0.5 active:scale-95 transition-all"
                     >
                       <div className="flex items-center justify-center space-x-1">
                         <span>😐 尚可</span>
@@ -868,7 +997,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                         setIsCardFlipped(false);
                         setEbbinghausIndex(prev => (prev + 1) % reviewPool.length);
                       }}
-                      className="py-2.5 bg-emerald-500 hover:bg-emerald-400 border-2 border-black text-slate-950 rounded-xl font-mono font-black text-xs space-y-0.5 shadow-sm active:scale-95 transition-all"
+                      className="py-2.5 bg-emerald-500 hover:bg-emerald-400 border-2 border-black text-slate-950 rounded-xl font-black text-xs space-y-0.5 shadow-sm active:scale-95 transition-all"
                     >
                       <div className="flex items-center justify-center space-x-1">
                         <span>😃 熟练</span>
@@ -884,13 +1013,13 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
       )}
 
       {/* Mode 3: Interactive Flashcard Quiz Game Mode */}
-      {viewMode === 'quiz' && currentQuizItem && (
-        <div className="max-w-xl mx-auto bg-white border-4 border-[#FF6321] rounded-[2.5rem] p-6 text-center space-y-6 shadow-[10px_10px_0px_0px_rgba(255,99,33,0.15)] animate-in zoom-in-95">
+      {viewMode === 'quiz' && (
+        <div className="max-w-xl mx-auto bg-white border-4 border-[#FF6321] rounded-[2.5rem] p-5 sm:p-6 text-center space-y-5 shadow-[10px_10px_0px_0px_rgba(255,99,33,0.15)] animate-in zoom-in-95 font-mono">
           
-          <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3 font-mono">
+          <div className="flex items-center justify-between border-b-2 border-slate-200 pb-3">
             <span className="text-xs font-black text-[#FF6321] flex items-center space-x-1">
               <Sparkles className="w-4 h-4" />
-              <span>智能闪卡挑战 (第 {quizIndex + 1}/{reviewPool.length} 题)</span>
+              <span>智能闪卡挑战 ({reviewPool.length > 0 ? quizIndex + 1 : 0}/{reviewPool.length} 题)</span>
             </span>
 
             <div className="flex items-center space-x-2">
@@ -900,85 +1029,153 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
             </div>
           </div>
 
-          {/* Question Display */}
-          <div className="bg-slate-50 border-4 border-slate-200 rounded-3xl p-6 space-y-3 relative shadow-inner">
-            <div className="w-20 h-20 bg-white border-4 border-black rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-md">
-              {currentQuizItem.mcItemIcon || '🧱'}
+          {/* Quiz Scope Filter Toolbar */}
+          <div className="bg-orange-50/70 p-2.5 rounded-2xl border border-orange-200 space-y-1.5 text-left">
+            <div className="flex items-center justify-between text-[11px] font-bold text-orange-950">
+              <span>🎯 闪卡出题范围 (严格按进度已学关卡)：</span>
+              <span className="text-[#FF6321] font-black">{reviewPool.length} 题就绪</span>
             </div>
-
-            <div className="space-y-1">
+            <div className="flex flex-wrap gap-1.5 text-xs font-bold">
               <button
-                onClick={() => speakText(currentQuizItem.word)}
-                className="inline-flex items-center space-x-2 px-4 py-1.5 bg-[#487E2C] hover:bg-[#355E20] text-white rounded-full font-mono font-black text-xs shadow-sm"
+                onClick={() => { playClickSound(); setReviewScope('all_unlocked'); setQuizIndex(0); setSelectedAnswer(null); setIsAnswerCorrect(null); }}
+                className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                  reviewScope === 'all_unlocked'
+                    ? 'bg-[#FF6321] text-white border-orange-800 shadow-sm'
+                    : 'bg-white text-orange-900 border-orange-200 hover:bg-orange-100'
+                }`}
               >
-                <Volume2 className="w-4 h-4 text-[#FFD700]" />
-                <span>点击听英语发音示范 🔊</span>
+                🌐 全部已学 (L1~{maxUnlockedLesson})
               </button>
-              <p className="text-sm font-black font-mono text-slate-600">
-                请选出对应这个 Minecraft 道具/核心单词的正确英文：
-              </p>
+
+              <button
+                onClick={() => { playClickSound(); setReviewScope('latest_lesson'); setQuizIndex(0); setSelectedAnswer(null); setIsAnswerCorrect(null); }}
+                className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                  reviewScope === 'latest_lesson'
+                    ? 'bg-[#FF6321] text-white border-orange-800 shadow-sm'
+                    : 'bg-white text-orange-900 border-orange-200 hover:bg-orange-100'
+                }`}
+              >
+                📍 仅最新关卡 (L{maxUnlockedLesson})
+              </button>
+
+              <button
+                onClick={() => { playClickSound(); setReviewScope('hard_only'); setQuizIndex(0); setSelectedAnswer(null); setIsAnswerCorrect(null); }}
+                className={`px-2.5 py-1 rounded-lg border transition-all text-[11px] ${
+                  reviewScope === 'hard_only'
+                    ? 'bg-[#FF6321] text-white border-orange-800 shadow-sm'
+                    : 'bg-white text-orange-900 border-orange-200 hover:bg-orange-100'
+                }`}
+              >
+                ⚠️ 攻克生词题
+              </button>
             </div>
           </div>
 
-          {/* 4 Answer Options */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {currentOptions.map((opt) => {
-              const isSelected = selectedAnswer === opt.word;
-              const isCorrectOpt = opt.word.toLowerCase() === currentQuizItem.word.toLowerCase();
-
-              let btnStyle = 'bg-white border-slate-300 hover:border-[#FF6321] text-slate-800';
-              if (selectedAnswer !== null) {
-                if (isCorrectOpt) {
-                  btnStyle = 'bg-[#487E2C] border-black text-white shadow-md';
-                } else if (isSelected && !isCorrectOpt) {
-                  btnStyle = 'bg-rose-500 border-black text-white shadow-md';
-                }
-              }
-
-              return (
-                <button
-                  key={opt.word}
-                  onClick={() => handleSelectQuizOption(opt)}
-                  disabled={selectedAnswer !== null}
-                  className={`p-4 rounded-2xl border-4 font-mono font-black text-base transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-left flex items-center justify-between ${btnStyle}`}
-                >
-                  <div className="space-y-0.5">
-                    <span className="block">{opt.word}</span>
-                    <span className="text-xs opacity-80 block font-normal">{opt.meaning}</span>
-                  </div>
-
-                  {selectedAnswer !== null && (
-                    <div>
-                      {isCorrectOpt && <CheckCircle2 className="w-6 h-6 text-[#7CFC00]" />}
-                      {isSelected && !isCorrectOpt && <XCircle className="w-6 h-6 text-white" />}
+          {currentQuizItem ? (
+            <>
+              {/* Question Display */}
+              <div className="bg-slate-50 border-4 border-slate-200 rounded-3xl p-5 sm:p-6 space-y-3 relative shadow-inner">
+                {/* Lesson Provenance Badge */}
+                {(() => {
+                  const reqLesson = currentQuizItem.requiredLessonId || 1;
+                  const lessonTitle = getLessonTitle(reqLesson);
+                  return (
+                    <div className="inline-flex items-center space-x-1.5 bg-orange-100 text-orange-900 border border-orange-300 px-3 py-1 rounded-full text-[11px] font-black">
+                      <MapPin className="w-3.5 h-3.5 text-[#FF6321]" />
+                      <span>来源：第 {reqLesson} 课 {lessonTitle ? `《${lessonTitle}》` : ''}</span>
                     </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                  );
+                })()}
 
-          {/* Feedback & Next Question */}
-          {selectedAnswer !== null && (
-            <div className="pt-2 space-y-3">
-              <p className={`font-mono font-black text-sm flex items-center justify-center space-x-1 ${
-                isAnswerCorrect ? 'text-[#487E2C]' : 'text-rose-600'
-              }`}>
-                {isAnswerCorrect ? (
-                  <>
-                    <Award className="w-5 h-5 text-[#FFD700]" />
-                    <span>回答完全正确！获得 +3 绿宝石 ❇️ +10 XP！</span>
-                  </>
-                ) : (
-                  <span>非常接近啦！正确答案是："{currentQuizItem.word}" ({currentQuizItem.meaning})</span>
-                )}
-              </p>
+                <div className="w-20 h-20 bg-white border-4 border-black rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-md">
+                  {currentQuizItem.mcItemIcon || '🧱'}
+                </div>
 
+                <div className="space-y-1">
+                  <button
+                    onClick={() => speakText(currentQuizItem.word)}
+                    className="inline-flex items-center space-x-2 px-4 py-1.5 bg-[#487E2C] hover:bg-[#355E20] text-white rounded-full font-black text-xs shadow-sm active:scale-95 transition-transform"
+                  >
+                    <Volume2 className="w-4 h-4 text-[#FFD700]" />
+                    <span>点击听英语发音示范 🔊</span>
+                  </button>
+                  <p className="text-sm font-black text-slate-600">
+                    请选出对应这个 Minecraft 道具/核心单词的正确英文：
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Answer Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {currentOptions.map((opt) => {
+                  const isSelected = selectedAnswer === opt.word;
+                  const isCorrectOpt = opt.word.toLowerCase() === currentQuizItem.word.toLowerCase();
+
+                  let btnStyle = 'bg-white border-slate-300 hover:border-[#FF6321] text-slate-800';
+                  if (selectedAnswer !== null) {
+                    if (isCorrectOpt) {
+                      btnStyle = 'bg-[#487E2C] border-black text-white shadow-md';
+                    } else if (isSelected && !isCorrectOpt) {
+                      btnStyle = 'bg-rose-500 border-black text-white shadow-md';
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={opt.word}
+                      onClick={() => handleSelectQuizOption(opt)}
+                      disabled={selectedAnswer !== null}
+                      className={`p-4 rounded-2xl border-4 font-black text-base transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-left flex items-center justify-between ${btnStyle}`}
+                    >
+                      <div className="space-y-0.5">
+                        <span className="block">{opt.word}</span>
+                        <span className="text-xs opacity-80 block font-normal">{opt.meaning}</span>
+                      </div>
+
+                      {selectedAnswer !== null && (
+                        <div>
+                          {isCorrectOpt && <CheckCircle2 className="w-6 h-6 text-[#7CFC00]" />}
+                          {isSelected && !isCorrectOpt && <XCircle className="w-6 h-6 text-white" />}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Feedback & Next Question */}
+              {selectedAnswer !== null && (
+                <div className="pt-2 space-y-3">
+                  <p className={`font-black text-sm flex items-center justify-center space-x-1 ${
+                    isAnswerCorrect ? 'text-[#487E2C]' : 'text-rose-600'
+                  }`}>
+                    {isAnswerCorrect ? (
+                      <>
+                        <Award className="w-5 h-5 text-[#FFD700]" />
+                        <span>回答完全正确！获得 +3 绿宝石 ❇️ +10 XP！</span>
+                      </>
+                    ) : (
+                      <span>非常接近啦！正确答案是："{currentQuizItem.word}" ({currentQuizItem.meaning})</span>
+                    )}
+                  </p>
+
+                  <button
+                    onClick={handleNextQuizQuestion}
+                    className="w-full bg-[#FF6321] hover:bg-[#e05316] border-2 border-black text-white py-3 rounded-2xl font-black text-sm shadow-[0_4px_0_0_#993300] flex items-center justify-center space-x-2"
+                  >
+                    <span>下一题 ➡️</span>
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-8 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-300 space-y-2">
+              <p className="text-sm font-bold text-slate-600">当前范围暂无可挑战词汇题目</p>
               <button
-                onClick={handleNextQuizQuestion}
-                className="w-full bg-[#FF6321] hover:bg-[#e05316] border-2 border-black text-white py-3 rounded-2xl font-mono font-black text-sm shadow-[0_4px_0_0_#993300] flex items-center justify-center space-x-2"
+                onClick={() => setReviewScope('all_unlocked')}
+                className="px-4 py-1.5 bg-[#FF6321] text-white rounded-xl text-xs font-bold"
               >
-                <span>下一题 ➡️</span>
+                开启全部已学关卡挑战
               </button>
             </div>
           )}

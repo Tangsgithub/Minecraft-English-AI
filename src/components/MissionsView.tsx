@@ -12,6 +12,7 @@ interface MissionsViewProps {
   onNavigateToMap?: () => void;
   onNavigateToVocab?: () => void;
   onNavigateToCrafting?: () => void;
+  onDailyCheckIn?: () => void;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
 }
 
@@ -22,6 +23,7 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   onNavigateToMap,
   onNavigateToVocab,
   onNavigateToCrafting,
+  onDailyCheckIn,
   onUpdateProfile
 }) => {
   const [activeCategory, setActiveCategory] = useState<'all' | 'daily' | 'adventure' | 'challenge'>('all');
@@ -30,15 +32,28 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   const todayStr = new Date().toISOString().split('T')[0];
   const chestOpened = profile.lastEnderChestClaimDate === todayStr;
 
-  const completedMissionIds = profile.completedMissionIds || [];
+  const completedDailyIds = profile.completedDailyMissionIds || [];
+  const completedPermanentIds = profile.completedMissionIds || [];
   const readyToClaimMissionIds = profile.readyToClaimMissionIds || [];
 
-  const completedCount = INITIAL_MISSIONS.filter(m => completedMissionIds.includes(m.id)).length;
-  const readyCount = INITIAL_MISSIONS.filter(m => readyToClaimMissionIds.includes(m.id) && !completedMissionIds.includes(m.id)).length;
-  const isChestReady = (completedCount + readyCount) >= 2;
+  const isMissionCompleted = (mission: Mission) => {
+    return mission.category === 'daily'
+      ? completedDailyIds.includes(mission.id)
+      : completedPermanentIds.includes(mission.id);
+  };
+
+  const isMissionReady = (mission: Mission) => {
+    return readyToClaimMissionIds.includes(mission.id) && !isMissionCompleted(mission);
+  };
+
+  const completedCount = INITIAL_MISSIONS.filter(m => isMissionCompleted(m)).length;
+  const readyCount = INITIAL_MISSIONS.filter(m => isMissionReady(m)).length;
+
+  const dailyDoneCount = INITIAL_MISSIONS.filter(m => m.category === 'daily' && isMissionCompleted(m)).length;
+  const dailyReadyCount = INITIAL_MISSIONS.filter(m => m.category === 'daily' && isMissionReady(m)).length;
+  const isChestReady = (dailyDoneCount + dailyReadyCount) >= 2;
 
   const handleClaimReward = (mission: Mission) => {
-    // Fire confetti celebration
     confetti({
       particleCount: 70,
       spread: 70,
@@ -49,7 +64,6 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
     playEmeraldSound();
 
     onCompleteMission(mission.id, mission.xpReward, mission.emeraldReward);
-    // Remove from readyToClaim
     const nextReady = readyToClaimMissionIds.filter(id => id !== mission.id);
     onUpdateProfile({
       readyToClaimMissionIds: nextReady
@@ -57,18 +71,8 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   };
 
   const handleClaimAllReady = () => {
-    const readyMissions = INITIAL_MISSIONS.filter(m => readyToClaimMissionIds.includes(m.id) && !completedMissionIds.includes(m.id));
+    const readyMissions = INITIAL_MISSIONS.filter(m => isMissionReady(m));
     if (readyMissions.length === 0) return;
-
-    let totalXp = 0;
-    let totalEmeralds = 0;
-    const missionIds: string[] = [];
-
-    readyMissions.forEach(m => {
-      totalXp += m.xpReward;
-      totalEmeralds += m.emeraldReward;
-      missionIds.push(m.id);
-    });
 
     confetti({
       particleCount: 120,
@@ -79,11 +83,8 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
     playLevelUpSound();
     playEmeraldSound();
 
-    missionIds.forEach(id => {
-      const target = readyMissions.find(m => m.id === id);
-      if (target) {
-        onCompleteMission(target.id, target.xpReward, target.emeraldReward);
-      }
+    readyMissions.forEach(target => {
+      onCompleteMission(target.id, target.xpReward, target.emeraldReward);
     });
 
     onUpdateProfile({
@@ -102,7 +103,6 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
       origin: { y: 0.5 }
     });
 
-    // Award +50 emeralds & +100 XP
     onCompleteMission('daily_ender_chest', 100, 50);
     onUpdateProfile({ lastEnderChestClaimDate: todayStr });
   };
@@ -112,8 +112,8 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
     if (activeCategory !== 'all' && mission.category !== activeCategory) {
       return false;
     }
-    const isCompleted = completedMissionIds.includes(mission.id);
-    const isReady = readyToClaimMissionIds.includes(mission.id) && !isCompleted;
+    const isCompleted = isMissionCompleted(mission);
+    const isReady = isMissionReady(mission);
     
     if (filterStatus === 'ready' && !isReady) return false;
     if (filterStatus === 'completed' && !isCompleted) return false;
@@ -123,7 +123,16 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   });
 
   const getActionForMission = (mission: Mission) => {
-    if (mission.id === 'daily_003' || mission.id.startsWith('chal_vocab')) {
+    if (mission.id === 'daily_001' && onDailyCheckIn && !profile.todayCheckedIn) {
+      return {
+        label: '今日签到打卡',
+        icon: '📍',
+        onClick: () => {
+          onDailyCheckIn();
+        }
+      };
+    }
+    if (mission.id === 'daily_003' || mission.id.startsWith('chal_vocab') || mission.id.startsWith('chal_001') || mission.id.startsWith('chal_002') || mission.id.startsWith('chal_003')) {
       return { label: '去词汇宝典', icon: '📖', onClick: onNavigateToVocab || onNavigateToChat };
     }
     if (mission.id === 'chal_004') {
@@ -211,10 +220,10 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
             </div>
             <p className="text-xs font-mono font-semibold opacity-90">
               {chestOpened
-                ? '已成功领取今日末影龙宝箱奖励 (+50 ❇️ 绿宝石 +100 XP)！明日继续加油！'
+                ? '已成功领取今日末影龙宝箱奖励 (+50 ❇️ 绿宝石 +100 XP)！明日 00:00 刷新后继续加油！'
                 : isChestReady
-                ? '解锁条件已达成！点击开启获取 50 ❇️ 绿宝石大奖与 100 XP！'
-                : `再完成 ${Math.max(0, 2 - (completedCount + readyCount))} 个探险任务即可解锁末影龙探险大宝箱！`}
+                ? '今日日常达标！点击开启获取 50 ❇️ 绿宝石大奖与 100 XP！'
+                : `今日再完成 ${Math.max(0, 2 - (dailyDoneCount + dailyReadyCount))} 个每日任务即可开启今日末影龙宝箱！`}
             </p>
           </div>
         </div>
@@ -235,7 +244,7 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
               }`}
             >
               <Gift className="w-4 h-4" />
-              <span>{isChestReady ? '开启神秘宝箱 🎁' : '需达成 2 个任务'}</span>
+              <span>{isChestReady ? '开启每日宝箱 🎁' : '需达成 2 个每日任务'}</span>
             </button>
           )}
         </div>
@@ -327,8 +336,8 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
       {/* Mission Cards */}
       <div className="space-y-4">
         {filteredMissions.map(mission => {
-          const isCompleted = completedMissionIds.includes(mission.id);
-          const isReadyToClaim = readyToClaimMissionIds.includes(mission.id) && !isCompleted;
+          const isCompleted = isMissionCompleted(mission);
+          const isReadyToClaim = isMissionReady(mission);
           const maxUnlocked = Math.max(...(profile.unlockedLessonIds || [1]), 1);
           const isUnlockedByLesson = !mission.requiredLessonId || mission.requiredLessonId <= maxUnlocked;
           const progress = getMissionProgress(mission, profile);

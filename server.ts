@@ -1268,6 +1268,152 @@ app.use(express.json());
     }
   });
 
+  // Admin Modify User (e.g. adjust to regular user, grant VIP, reset progress)
+  app.post("/api/admin/modify-user", async (req, res) => {
+    try {
+      const { account, action } = req.body || {};
+      if (!account) {
+        return res.status(200).json({ success: false, error: "缺少目标账号参数" });
+      }
+
+      const cleanAccount = String(account).trim().toLowerCase();
+      let userObj = await getCloudUser(cleanAccount);
+
+      if (!userObj) {
+        // If user not yet in DB, create initial entry for it
+        userObj = {
+          uid: 'user_' + Date.now(),
+          account: cleanAccount,
+          nickname: cleanAccount,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          profile: {
+            account: cleanAccount,
+            nickname: cleanAccount,
+            isVip: false,
+            vipActivatedAt: 0,
+            activatedVolumes: [],
+            unlockedLessonIds: [1],
+            completedLessonIds: [],
+            level: 1,
+            emeralds: 100,
+            xp: 0
+          }
+        };
+      }
+
+      const p = userObj.profile || {};
+
+      if (action === 'set_regular') {
+        // Downgrade / set to regular user (普通用户)
+        p.isVip = false;
+        p.vipActivatedAt = 0;
+        p.activatedVolumes = [];
+        p.isAdmin = false;
+        p.role = 'user';
+        
+        // Reset unlocked lessons to standard free range (if > 20, lock back to 20 or current progress)
+        const currentUnlocked: number[] = Array.isArray(p.unlockedLessonIds) ? p.unlockedLessonIds : [1];
+        p.unlockedLessonIds = currentUnlocked.filter((id: number) => id <= 20);
+        if (p.unlockedLessonIds.length === 0) p.unlockedLessonIds = [1];
+        
+        p.volumeProgress = {
+          vol1: {
+            currentLessonId: Math.min(p.volumeProgress?.vol1?.currentLessonId || 1, 20),
+            unlockedLessonIds: (p.volumeProgress?.vol1?.unlockedLessonIds || [1]).filter((id: number) => id <= 20),
+            completedLessonIds: (p.volumeProgress?.vol1?.completedLessonIds || []).filter((id: number) => id <= 20)
+          },
+          vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+          vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+          vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+        };
+        if (p.volumeProgress.vol1.unlockedLessonIds.length === 0) {
+          p.volumeProgress.vol1.unlockedLessonIds = [1];
+        }
+
+        // Unbind any activation code currently bound to this account
+        const codes = await getAllCloudCodes();
+        for (const c of codes) {
+          if (c.usedByAccount && c.usedByAccount.toLowerCase() === cleanAccount) {
+            c.isUsed = false;
+            c.usedByAccount = '';
+            c.usedAt = 0;
+            c.devices = [];
+            await saveCloudCode(c);
+          }
+        }
+
+        userObj.profile = p;
+        userObj.updatedAt = Date.now();
+        await saveCloudUser(cleanAccount, userObj);
+
+        return res.json({
+          success: true,
+          message: `已成功将用户【${userObj.account}】调整为普通用户（已移除 VIP 权限并解除卡密绑定）`,
+          user: userObj
+        });
+      }
+
+      if (action === 'set_vip') {
+        // Upgrade to VIP
+        p.isVip = true;
+        p.vipActivatedAt = Date.now();
+        p.activatedVolumes = ['vol1', 'vol2', 'vol3', 'vol4', 'all'];
+        const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+        const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+        const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+        const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+        p.unlockedLessonIds = allVol1Ids;
+        p.volumeProgress = {
+          vol1: { currentLessonId: 1, unlockedLessonIds: allVol1Ids, completedLessonIds: p.volumeProgress?.vol1?.completedLessonIds || [] },
+          vol2: { currentLessonId: 1, unlockedLessonIds: allVol2Ids, completedLessonIds: p.volumeProgress?.vol2?.completedLessonIds || [] },
+          vol3: { currentLessonId: 1, unlockedLessonIds: allVol3Ids, completedLessonIds: p.volumeProgress?.vol3?.completedLessonIds || [] },
+          vol4: { currentLessonId: 1, unlockedLessonIds: allVol4Ids, completedLessonIds: p.volumeProgress?.vol4?.completedLessonIds || [] }
+        };
+        userObj.profile = p;
+        userObj.updatedAt = Date.now();
+        await saveCloudUser(cleanAccount, userObj);
+
+        return res.json({
+          success: true,
+          message: `已成功将用户【${userObj.account}】设为 VIP 用户（已解锁全套关卡）`,
+          user: userObj
+        });
+      }
+
+      if (action === 'reset_progress') {
+        // Reset progress
+        p.level = 1;
+        p.xp = 0;
+        p.emeralds = 100;
+        p.unlockedLessonIds = [1];
+        p.completedLessonIds = [];
+        p.completedMissionIds = [];
+        p.masteredWords = [];
+        p.volumeProgress = {
+          vol1: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+          vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+          vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+          vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+        };
+        userObj.profile = p;
+        userObj.updatedAt = Date.now();
+        await saveCloudUser(cleanAccount, userObj);
+
+        return res.json({
+          success: true,
+          message: `已成功重置用户【${userObj.account}】的学习进度`,
+          user: userObj
+        });
+      }
+
+      return res.status(200).json({ success: false, error: "未知的操作指令" });
+    } catch (err: any) {
+      console.error("Modify user error:", err);
+      return res.status(200).json({ success: false, error: "修改用户权限失败" });
+    }
+  });
+
   // Admin Users Data Endpoint
   app.get("/api/admin/users", async (_req, res) => {
     try {
@@ -1284,6 +1430,7 @@ app.use(express.json());
           level: p.level || 1,
           emeralds: p.emeralds || 0,
           xp: p.xp || 0,
+          isVip: Boolean(p.isVip),
           streakDays: p.streakDays || 1,
           lastActiveDate: p.lastActiveDate || '',
           unlockedLessonsCount: p.unlockedLessonIds?.length || 0,
@@ -1337,6 +1484,49 @@ async function startServer() {
       console.log("[Neon Postgres] Server ready with Neon PostgreSQL database.");
     } else {
       console.log("[Neon Postgres] DATABASE_URL not set yet. Waiting for Neon database connection.");
+    }
+
+    // Ensure user '测试001' and 'test001' are configured as regular users (普通用户)
+    try {
+      const testAccounts = ['测试001', 'test001', 'user_001'];
+      for (const acc of testAccounts) {
+        const existing = await getCloudUser(acc);
+        const regularProfile = {
+          ...(existing?.profile || {}),
+          account: acc,
+          nickname: acc === 'user_001' ? 'Olaf' : acc,
+          isVip: false,
+          vipActivatedAt: 0,
+          activatedVolumes: [],
+          isAdmin: false,
+          role: 'user',
+          unlockedLessonIds: [1],
+          completedLessonIds: [],
+          volumeProgress: {
+            vol1: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+            vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+            vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+            vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+          }
+        };
+
+        const userObj = {
+          uid: existing?.uid || `user_${acc}_${Date.now()}`,
+          account: acc,
+          nickname: regularProfile.nickname,
+          salt: existing?.salt || '',
+          hash: existing?.hash || '',
+          password: existing?.password || '123456',
+          createdAt: existing?.createdAt || Date.now(),
+          updatedAt: Date.now(),
+          profile: regularProfile
+        };
+
+        await saveCloudUser(acc, userObj);
+      }
+      console.log("[User Management] User '测试001' and test users successfully configured as regular users (普通用户)!");
+    } catch (e) {
+      console.warn("Test user initialization notice:", e);
     }
   });
 }

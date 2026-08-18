@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Mic, Volume2, CheckCircle2, RotateCcw, Sparkles, BookOpen, ChevronRight } from 'lucide-react';
+import { Mic, Volume2, CheckCircle2, RotateCcw, Sparkles, BookOpen, ChevronRight, Zap, Star } from 'lucide-react';
 import { Lesson } from '../types';
 import { speakText, playClickSound, playEmeraldSound } from '../utils/audio';
+import { OralEvaluationModal } from './OralEvaluationModal';
 
 interface StoryRetellingDeckProps {
   lesson: Lesson;
@@ -111,19 +112,27 @@ export const StoryRetellingDeck: React.FC<StoryRetellingDeckProps> = ({
   const [activeStepIdx, setActiveStepIdx] = useState<number>(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showHint, setShowHint] = useState<boolean>(false);
+  const [evaluatingText, setEvaluatingText] = useState<string | null>(null);
+  const [evaluatingPrompt, setEvaluatingPrompt] = useState<string>('');
 
   const currentStep = steps[activeStepIdx] || steps[0];
 
-  const handleCompleteStep = () => {
+  const handleCompleteStep = (emeralds = 8, xp = 15) => {
     playEmeraldSound();
     setCompletedSteps(prev => new Set(prev).add(activeStepIdx));
     if (onSuccessReward) {
-      onSuccessReward(8, 15);
+      onSuccessReward(emeralds, xp);
     }
     if (activeStepIdx < steps.length - 1) {
       setActiveStepIdx(prev => prev + 1);
       setShowHint(false);
     }
+  };
+
+  const handleStartAiEvaluation = () => {
+    playClickSound();
+    setEvaluatingText(currentStep.hintEn);
+    setEvaluatingPrompt(`第 ${activeStepIdx + 1} 幕 · ${currentStep.mcStage}`);
   };
 
   return (
@@ -238,18 +247,43 @@ export const StoryRetellingDeck: React.FC<StoryRetellingDeckProps> = ({
         {/* Oral Retelling Action Bar */}
         <div className="pt-2 border-t border-amber-800 flex items-center justify-between gap-2 flex-wrap">
           <p className="text-[11px] font-mono text-amber-200/90">
-            🎙️ 大声朗读或用线索词复述 1~2 句话，然后点击打卡：
+            🎙️ 大声朗读或用线索词复述 1~2 句话，支持 AI 实时评分：
           </p>
 
-          <button
-            onClick={handleCompleteStep}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black font-mono text-xs rounded-xl border-2 border-black shadow-[2px_2px_0_0_#000] active:translate-y-0.5 active:shadow-none flex items-center gap-1.5 transition-all"
-          >
-            <Mic className="w-4 h-4" />
-            <span>达成第 {activeStepIdx + 1} 幕复述 (+8 ❇️ 绿宝石)</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* AI Speech Evaluation Button */}
+            <button
+              onClick={handleStartAiEvaluation}
+              className="px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black font-mono text-xs rounded-xl border-2 border-black shadow-[2px_2px_0_0_#000] active:translate-y-0.5 flex items-center gap-1.5 transition-all"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-300" />
+              <span>AI 语音复述评测</span>
+            </button>
+
+            {/* Quick Claim Button */}
+            <button
+              onClick={() => handleCompleteStep(8, 15)}
+              className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black font-mono text-xs rounded-xl border-2 border-black shadow-[2px_2px_0_0_#000] active:translate-y-0.5 flex items-center gap-1.5 transition-all"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>达成复述 (+8 ❇️)</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* AI Oral Assessment Modal */}
+      {evaluatingText && (
+        <OralEvaluationModal
+          targetText={evaluatingText}
+          promptTitle={evaluatingPrompt}
+          onClose={() => setEvaluatingText(null)}
+          onAwardReward={(emeralds, xp) => {
+            handleCompleteStep(emeralds, xp);
+            setEvaluatingText(null);
+          }}
+        />
+      )}
     </div>
   );
 };

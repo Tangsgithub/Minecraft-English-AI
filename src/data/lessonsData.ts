@@ -1,5 +1,6 @@
 import { Lesson, CourseVolumeId } from '../types';
 import { getAuthenticVocabForLesson } from './authenticLessonVocab';
+import { getVocabForLessonFromManager } from './book1VocabManager';
 import { AUTHENTIC_LESSON_DIALOGUES } from './authenticLessonDialogues';
 import { NCE_BOOK2_UNIT1_DATA } from './nceBook2Unit1Data';
 import { NCE_BOOK2_UNIT2_DATA } from './nceBook2Unit2Data';
@@ -347,7 +348,7 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
 // 辅助函数：根据真实标题生成精准匹配的词汇
 function generateVocabForLesson(lessonId: number, title: string, titleZh: string, volumeId: CourseVolumeId) {
   if (volumeId === 'vol1') {
-    return getAuthenticVocabForLesson(lessonId);
+    return getVocabForLessonFromManager(lessonId);
   }
 
   if (volumeId === 'vol2') {

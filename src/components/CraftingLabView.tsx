@@ -1,39 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import { UserProfile, VocabItem, Lesson, CourseVolumeId } from '../types';
+import { UserProfile, VocabItem, Lesson } from '../types';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA } from '../data/lessonsData';
-import { EXTRA_CRAFTING_RECIPES } from '../data/craftingRecipesData';
+import { EXTRA_CRAFTING_RECIPES, CraftingRecipe } from '../data/craftingRecipesData';
 import {
   Hammer, Sparkles, Volume2, Trophy, Shield, Flame, CheckCircle, RefreshCw,
-  Zap, ArrowRight, Sword, Lock, Unlock, Star, ChevronRight, Play, Heart, Award, AlertCircle, Crown, MapPin
+  Zap, ArrowRight, Sword, Lock, Unlock, Star, ChevronRight, Play, Heart, Award,
+  AlertCircle, Crown, MapPin, BookOpen, Layers, Target, Compass, Sparkle,
+  Check, Info, HelpCircle
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playBlockBreakSound, speakText, playLevelUpSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
-import { getVolumeProgress, hasLessonAccess, isLessonPaywallLocked } from '../utils/volumeProgress';
+import { hasLessonAccess, isLessonPaywallLocked } from '../utils/volumeProgress';
 import confetti from 'canvas-confetti';
 
 interface CraftingLabViewProps {
   profile: UserProfile;
-  onAwardEmeralds: (emeralds: number, xp: number) => void;
+  onAwardEmeralds: (emeralds: number, xp?: number, reason?: string) => void;
   onMasterWord?: (word: string) => void;
   onOpenVipModal?: () => void;
   onNavigateToLesson?: (lessonId: number) => void;
+  onUpdateProfile?: (updatedProfile: UserProfile) => void;
 }
 
-export interface CraftingRecipe {
+// 物品材料调色板库定义
+interface PaletteItem {
   id: string;
+  name: string;
   nameEn: string;
-  nameZh: string;
-  phonetic: string;
-  mcIcon: string;
-  category: string;
-  requiredIngredients: { name: string; icon: string }[];
-  gridPattern: (string | null)[]; // 9 slots
-  sampleSentence: string;
-  sampleTranslation: string;
-  unlockedLevel?: number;
-  requiredLessonId?: number;
+  icon: string;
+  category: 'wood_stone' | 'minerals' | 'mobs' | 'food_farm';
 }
+
+const PALETTE_MATERIALS: PaletteItem[] = [
+  // 基础木石
+  { id: 'log', name: '橡木原木', nameEn: 'Oak Log', icon: '🪵', category: 'wood_stone' },
+  { id: 'plank', name: '橡木木板', nameEn: 'Oak Plank', icon: '🪵', category: 'wood_stone' },
+  { id: 'stick', name: '木棍', nameEn: 'Stick', icon: '🥢', category: 'wood_stone' },
+  { id: 'cobblestone', name: '圆石', nameEn: 'Cobblestone', icon: '🪨', category: 'wood_stone' },
+  { id: 'sand', name: '沙子', nameEn: 'Sand', icon: '⏳', category: 'wood_stone' },
+  { id: 'glass', name: '玻璃', nameEn: 'Glass', icon: '🔲', category: 'wood_stone' },
+  
+  // 矿物金属
+  { id: 'coal', name: '煤炭', nameEn: 'Coal', icon: '⬛', category: 'minerals' },
+  { id: 'iron_ingot', name: '铁锭', nameEn: 'Iron Ingot', icon: '🪙', category: 'minerals' },
+  { id: 'gold_ingot', name: '金锭', nameEn: 'Gold Ingot', icon: '🌟', category: 'minerals' },
+  { id: 'diamond', name: '钻石', nameEn: 'Diamond', icon: '💎', category: 'minerals' },
+  { id: 'redstone', name: '红石粉', nameEn: 'Redstone', icon: '🔴', category: 'minerals' },
+  { id: 'obsidian', name: '黑曜石', nameEn: 'Obsidian', icon: '⬛', category: 'minerals' },
+  
+  // 怪物与稀有掉落
+  { id: 'string', name: '蜘蛛丝', nameEn: 'String', icon: '🧵', category: 'mobs' },
+  { id: 'feather', name: '羽毛', nameEn: 'Feather', icon: '🪶', category: 'mobs' },
+  { id: 'gunpowder', name: '火药', nameEn: 'Gunpowder', icon: '💥', category: 'mobs' },
+  { id: 'slimeball', name: '粘液球', nameEn: 'Slimeball', icon: '🟢', category: 'mobs' },
+  { id: 'blaze_rod', name: '烈焰棒', nameEn: 'Blaze Rod', icon: '🔥', category: 'mobs' },
+  { id: 'nether_star', name: '下界之星', nameEn: 'Nether Star', icon: '⭐', category: 'mobs' },
+
+  // 农牧与生活食材
+  { id: 'wool', name: '羊毛', nameEn: 'Wool', icon: '🧶', category: 'food_farm' },
+  { id: 'wheat', name: '小麦', nameEn: 'Wheat', icon: '🌾', category: 'food_farm' },
+  { id: 'sugar', name: '白糖', nameEn: 'Sugar', icon: '🍬', category: 'food_farm' },
+  { id: 'egg', name: '鸡蛋', nameEn: 'Egg', icon: '🥚', category: 'food_farm' },
+  { id: 'milk_bucket', name: '牛奶桶', nameEn: 'Milk Bucket', icon: '🥛', category: 'food_farm' },
+  { id: 'apple', name: '苹果', nameEn: 'Apple', icon: '🍎', category: 'food_farm' },
+  { id: 'book', name: '书本', nameEn: 'Book', icon: '📖', category: 'food_farm' },
+];
 
 const RECIPES: CraftingRecipe[] = EXTRA_CRAFTING_RECIPES;
 
@@ -43,1128 +75,1478 @@ interface SentencePattern {
   title: string;
   targetSentence: string;
   translation: string;
-  blocks: string[];
-  distractors: string[];
+  blocks: { text: string; role: 'subject' | 'verb' | 'object' | 'modifier' }[];
+  distractors: { text: string; role: 'subject' | 'verb' | 'object' | 'modifier' }[];
+  grammarBlueprint: string;
+  explanation: string;
 }
 
+// 智能生成符合课程进度的语法重组句型库
 function getDynamicSentencePatterns(unlockedLessonIds: number[], completedLessonIds: number[]): SentencePattern[] {
   const patterns: SentencePattern[] = [];
-  const combinedIds = Array.from(new Set([...(unlockedLessonIds || [1]), ...(completedLessonIds || [])])).sort((a, b) => a - b);
+  const combinedIds = Array.from(new Set([...(unlockedLessonIds || [1]), ...(completedLessonIds || [1])])).sort((a, b) => a - b);
   const lessonsToUse = LESSONS_DATA.filter(l => combinedIds.includes(l.id));
+  const effectiveLessons = lessonsToUse.length > 0 ? lessonsToUse : LESSONS_DATA.slice(0, 5);
 
-  const fallbackLessons = lessonsToUse.length > 0 ? lessonsToUse : LESSONS_DATA.slice(0, 3);
-
-  fallbackLessons.forEach((lesson) => {
+  effectiveLessons.forEach((lesson) => {
     if (lesson.targetSentences && lesson.targetSentences.length > 0) {
       const sentence = lesson.targetSentences[0];
-      const translation = lesson.targetSentenceTranslations ? lesson.targetSentenceTranslations[0] : '课文核心句型';
+      const translation = lesson.targetSentenceTranslations ? lesson.targetSentenceTranslations[0] : '课文核心重点句型';
 
-      const words = sentence.split(' ');
-      let blocks: string[] = [];
-      if (words.length <= 4) {
-        blocks = words;
+      // 提取语法积木
+      const words = sentence.trim().split(/\s+/);
+      const blocks: { text: string; role: 'subject' | 'verb' | 'object' | 'modifier' }[] = [];
+
+      if (words.length <= 3) {
+        words.forEach((w, idx) => {
+          blocks.push({
+            text: w,
+            role: idx === 0 ? 'subject' : idx === 1 ? 'verb' : 'object'
+          });
+        });
+      } else if (words.length === 4) {
+        blocks.push({ text: words[0], role: 'subject' });
+        blocks.push({ text: words[1], role: 'verb' });
+        blocks.push({ text: words.slice(2).join(' '), role: 'object' });
       } else {
-        const mid = Math.floor(words.length / 2);
-        blocks = [
-          words.slice(0, mid).join(' '),
-          words.slice(mid).join(' ')
-        ];
+        const p1 = words.slice(0, Math.ceil(words.length / 3)).join(' ');
+        const p2 = words.slice(Math.ceil(words.length / 3), Math.ceil((words.length * 2) / 3)).join(' ');
+        const p3 = words.slice(Math.ceil((words.length * 2) / 3)).join(' ');
+        blocks.push({ text: p1, role: 'subject' });
+        blocks.push({ text: p2, role: 'verb' });
+        blocks.push({ text: p3, role: 'modifier' });
       }
 
-      const distractors = ['not', 'my', 'the house', 'a diamond'].filter(d => !sentence.includes(d)).slice(0, 2);
+      const distractors: { text: string; role: 'subject' | 'verb' | 'object' | 'modifier' }[] = [
+        { text: 'is not', role: 'verb' },
+        { text: 'in the cave', role: 'modifier' }
+      ];
 
       patterns.push({
-        id: `s_lesson_${lesson.id}`,
+        id: `sent_lesson_${lesson.id}`,
         lessonId: lesson.id,
-        title: `第 ${lesson.id} 课 • ${lesson.title}`,
+        title: `第 ${lesson.id} 课 · ${lesson.title}`,
         targetSentence: sentence,
         translation: translation,
         blocks: blocks,
-        distractors: distractors
+        distractors: distractors,
+        grammarBlueprint: `[ 主谓宾标准句式 / ${lesson.grammarNote || '核心句型'} ]`,
+        explanation: lesson.sceneDescription || `本句出自第 ${lesson.id} 课，注意主谓一致与语序排列。`
       });
     }
   });
 
-  return patterns.length > 0 ? patterns : [
-    {
-      id: 's_01',
-      lessonId: 1,
-      title: '第 1 课 • Excuse me!',
-      targetSentence: 'Excuse me, is this your handbag?',
-      translation: '请问，这是你的手提包吗？',
-      blocks: ['Excuse me,', 'is this', 'your', 'handbag?'],
-      distractors: ['my', 'that', 'pencil']
-    }
-  ];
+  return patterns;
 }
 
-interface BossQuestion {
-  question: string;
-  options: string[];
-  answer: string;
-  explanation: string;
-}
-
-interface Boss {
+// 5大阶梯式怪物擂台设计
+interface MobBoss {
   id: string;
   name: string;
-  nameZh: string;
-  avatar: string;
+  title: string;
+  icon: string;
+  requiredLessonId: number;
   maxHp: number;
   currentHp: number;
   rewardEmeralds: number;
   rewardXp: number;
-  difficulty: string;
-  requiredLessonId: number;
-  questions: BossQuestion[];
+  theme: string;
+  questions: {
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+    grammarNote: string;
+  }[];
 }
+
+const INITIAL_BOSSES: MobBoss[] = [
+  {
+    id: 'boss_zombie',
+    name: '夜袭先锋 · 僵尸 (Zombie)',
+    title: '入门阶梯：基础发音与主谓代词',
+    icon: '🧟',
+    requiredLessonId: 1,
+    maxHp: 3,
+    currentHp: 3,
+    rewardEmeralds: 15,
+    rewardXp: 40,
+    theme: 'green',
+    questions: [
+      {
+        question: '“Excuse me!” 在遇到同伴或向史蒂夫打招呼时，通常表达什么意思？',
+        options: ['抱歉 / 打扰一下', '再见', '谢谢你', '不客气'],
+        correctIndex: 0,
+        explanation: '“Excuse me!” 是最礼貌的搭话与引起对方注意的句式。',
+        grammarNote: '口语高频交际用语，适用于引起注意或表示歉意。'
+      },
+      {
+        question: '句型 “Is this your handbag?” 中，be动词为什么用 “is” 而不用 “are”？',
+        options: ['因为主语 handbag 是单数名词', '因为这是过去时', '因为省略了主语', '没有原因，随意使用'],
+        correctIndex: 0,
+        explanation: '主语 handbag 是单数第三人称，因此对应的 be 动词是 is。',
+        grammarNote: '一般疑问句中的主谓一致原则：单数名词搭配 is，复数搭配 are。'
+      },
+      {
+        question: '我的世界中将 4 块木板合成什么基础方块？',
+        options: ['Crafting Table (工作台)', 'Furnace (熔炉)', 'Chest (木箱)', 'Bed (床)'],
+        correctIndex: 0,
+        explanation: 'Four wood planks craft a crafting table!',
+        grammarNote: 'craft 为动词，意为“手工制作/合成”。'
+      }
+    ]
+  },
+  {
+    id: 'boss_skeleton',
+    name: '精准神射手 · 骷髅 (Skeleton)',
+    title: '初级阶梯：疑问句、指示代词与道具工具',
+    icon: '🏹',
+    requiredLessonId: 5,
+    maxHp: 4,
+    currentHp: 4,
+    rewardEmeralds: 25,
+    rewardXp: 60,
+    theme: 'slate',
+    questions: [
+      {
+        question: '回答 “Is that your pickaxe?” 的否定简略回答是？',
+        options: ['No, it isn’t.', 'No, it not.', 'No, that isn’t.', 'No, I am not.'],
+        correctIndex: 0,
+        explanation: '问句以 Is that... 开头，答句代词统一用 it 代替指示代词 that。',
+        grammarNote: '指示代词 that/this 在简短回答中必须用人称代词 it 回答。'
+      },
+      {
+        question: '在合成表里，制作一把铁镐 (Iron Pickaxe) 需要哪些材料？',
+        options: ['3 Iron Ingots + 2 Sticks', '2 Iron Ingots + 3 Sticks', '3 Cobblestones + 2 Sticks', '1 Diamond + 2 Sticks'],
+        correctIndex: 0,
+        explanation: '铁镐合成格式：顶部 3 块铁锭，中间坚排 2 根木棍。',
+        grammarNote: '复合名词：Pickaxe (Pick 尖镐 + Axe 斧子)。'
+      },
+      {
+        question: '“Where is my torch?” 句中的 “Where” 是什么词性？',
+        options: ['特殊疑问代词/副词 (询问地点)', '连词', '冠词', '动词'],
+        correctIndex: 0,
+        explanation: 'Where 引导特殊疑问句，用于对地点进行提问。',
+        grammarNote: '特殊疑问句结构：特殊疑问词 + be动词/助动词 + 主语？'
+      },
+      {
+        question: '单数名词 sword 的复数形式是？',
+        options: ['swords', 'swordes', 'swordies', 'sword'],
+        correctIndex: 0,
+        explanation: '普通名词直接加 -s 构成复数：sword -> swords。',
+        grammarNote: '名词复数变化规则：大多数普通可数名词直接加 s。'
+      }
+    ]
+  },
+  {
+    id: 'boss_creeper',
+    name: '潜行爆破手 · 苦力怕 (Creeper)',
+    title: '中级阶梯：方位介词、所有格与矿物词汇',
+    icon: '🟢',
+    requiredLessonId: 11,
+    maxHp: 4,
+    currentHp: 4,
+    rewardEmeralds: 35,
+    rewardXp: 80,
+    theme: 'emerald',
+    questions: [
+      {
+        question: '“The diamond is inside the chest.” 句中介词 “inside” 表示什么？',
+        options: ['在...里面', '在...上面', '在...下方', '在...旁边'],
+        correctIndex: 0,
+        explanation: 'inside 表示“在某物的内部/里面”，与 outside 相对。',
+        grammarNote: '方位介词：inside (在内部), on (在表面), under (在下方)。'
+      },
+      {
+        question: '名词所有格：“Alex 的铁剑” 用英文表达是？',
+        options: ['Alex’s iron sword', 'Alex iron sword', 'The iron sword of Alex’s', 'Alexs iron sword'],
+        correctIndex: 0,
+        explanation: '单数有生命的名词所有格在词尾加 ’s。',
+        grammarNote: '名词所有格：名词 + ’s 表示“...的”。'
+      },
+      {
+        question: '点燃 TNT 炸药需要用到什么工具？',
+        options: ['Flint and Steel (打火石)', 'Fishing Rod (钓鱼竿)', 'Compass (指南针)', 'Shears (剪刀)'],
+        correctIndex: 0,
+        explanation: 'Flint and Steel 用于点火引爆 TNT。',
+        grammarNote: 'flint (燧石) + steel (铁锭/钢)，并列结构。'
+      },
+      {
+        question: '“These are your emeralds.” 如果变成单数句，应该是？',
+        options: ['This is your emerald.', 'That is your emeralds.', 'This are your emerald.', 'It is your emeralds.'],
+        correctIndex: 0,
+        explanation: 'These 变 This，are 变 is，emeralds 变单数 emerald。',
+        grammarNote: '单复数句子转换时，代词、be动词、名词必须保持数的一致性。'
+      }
+    ]
+  },
+  {
+    id: 'boss_enderman',
+    name: '虚空瞬移者 · 末影人 (Enderman)',
+    title: '高级阶梯：情态动词、过去时与生存词汇',
+    icon: '🟣',
+    requiredLessonId: 21,
+    maxHp: 5,
+    currentHp: 5,
+    rewardEmeralds: 50,
+    rewardXp: 120,
+    theme: 'purple',
+    questions: [
+      {
+        question: '“You must not look directly into an Enderman’s eyes.” 句中 must not 表示？',
+        options: ['严禁 / 绝不可以', '不必', '可能不', '不喜欢'],
+        correctIndex: 0,
+        explanation: 'must not (或 mustn’t) 表示强烈的禁止，直视末影人会激怒它。',
+        grammarNote: '情态动词：must (必须), must not (严禁/千万不可), needn’t (不必)。'
+      },
+      {
+        question: '“Yesterday, Steve _____ (find) five diamonds underground.” 括号内动词应填？',
+        options: ['found', 'finded', 'finds', 'finding'],
+        correctIndex: 0,
+        explanation: 'Yesterday 标志过去时，find 的不规则过去式是 found。',
+        grammarNote: '一般过去时不规则动词：find -> found -> found。'
+      },
+      {
+        question: '合成粘性活塞 (Sticky Piston) 需要什么材料与普通活塞合成？',
+        options: ['Slimeball (粘液球)', 'Gunpowder (火药)', 'Redstone (红石粉)', 'Blaze Rod (烈焰棒)'],
+        correctIndex: 0,
+        explanation: 'Slimeball + Piston = Sticky Piston。',
+        grammarNote: '形容词后缀 -y：slime (粘液) -> sticky (粘性的)。'
+      },
+      {
+        question: '“He can teleport across long distances.” 句中 “can” 是什么词？',
+        options: ['情态动词 (表示能力)', '实义动词', '助动词 do', '介词'],
+        correctIndex: 0,
+        explanation: 'can 是情态动词，后接动词原形 teleport。',
+        grammarNote: '情态动词后面必须紧跟动词原形 (Base form)。'
+      },
+      {
+        question: '“If it rains, the Enderman will take damage.” 这是一个什么句型？',
+        options: ['条件状语从句 (主将从现)', '时间状语从句', '宾语从句', '定语从句'],
+        correctIndex: 0,
+        explanation: 'If 引导真实条件句，主句用一般将来时 will，从句用一般现在时 rains。',
+        grammarNote: '条件从句经典考点：主将从现 (Main Clause: will + do, If Clause: simple present)。'
+      }
+    ]
+  },
+  {
+    id: 'boss_ender_dragon',
+    name: '末地维度主宰 · 末影龙 (Ender Dragon)',
+    title: '终极史诗考验：综合从句、MC全真语法与VIP终极大擂台',
+    icon: '🐉',
+    requiredLessonId: 31,
+    maxHp: 5,
+    currentHp: 5,
+    rewardEmeralds: 100,
+    rewardXp: 300,
+    theme: 'amber',
+    questions: [
+      {
+        question: '“Destroy the End Crystals which heal the Dragon!” 句中 “which” 引导什么从句？',
+        options: ['定语从句 (修饰 End Crystals)', '名词性从句', '状语从句', '感叹句'],
+        correctIndex: 0,
+        explanation: 'which 指代先行词 End Crystals，在定语从句中作主语。',
+        grammarNote: '关系代词 which 用于修饰物，引导定语从句。'
+      },
+      {
+        question: '信标 (Beacon) 的合成配方中，正中心放置的关键材料是？',
+        options: ['Nether Star (下界之星)', 'Diamond (钻石)', 'Obsidian (黑曜石)', 'Heart of the Sea (海洋之心)'],
+        correctIndex: 0,
+        explanation: '信标的核心合成材料是击败凋灵掉落的 Nether Star！',
+        grammarNote: 'Nether (下界的) + Star (星星) ➔ 专有合成素材。'
+      },
+      {
+        question: '“Although the Dragon was powerful, Steve defeated it bravely.” 句中 although 表示？',
+        options: ['尽管 / 虽然 (引导让步状语从句)', '因为', '如果', '除非'],
+        correctIndex: 0,
+        explanation: 'although 引导让步状语从句，注意不能与 but 连用。',
+        grammarNote: '让步状语从句：although / though 与 but 互斥，不可同时出现。'
+      },
+      {
+        question: '“The enchanted diamond sword is _____ (strong) than the iron sword.” 括号内填？',
+        options: ['stronger', 'more strong', 'strongest', 'most strong'],
+        correctIndex: 0,
+        explanation: 'than 标志比较级，单音节形容词 strong 直接加 -er -> stronger。',
+        grammarNote: '形容词比较级变化规则：单音节词通常直接加 -er。'
+      },
+      {
+        question: '完成击杀末影龙后，玩家跳入传送门看到的终末之诗 (End Poem) 讲述了什么核心理念？',
+        options: ['爱、成长、勇气与对世界的深刻理解', '如何挖掘更多钻石', '红石电路的教程', '怪物的掉落概率'],
+        correctIndex: 0,
+        explanation: 'End Poem 充满哲学与诗意，强调 “You are the player, waking up from a dream.”',
+        grammarNote: 'Minecraft 人文与哲学背景，鼓励勇于探索与拥抱现实生活。'
+      }
+    ]
+  }
+];
 
 export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   profile,
   onAwardEmeralds,
   onMasterWord,
   onOpenVipModal,
-  onNavigateToLesson
+  onNavigateToLesson,
+  onUpdateProfile
 }) => {
-  const [activeTab, setActiveTab] = useState<'recipes' | 'sentence' | 'boss'>('recipes');
+  const [activeSubTab, setActiveSubTab] = useState<'bench' | 'sentences' | 'boss'>('bench');
 
-  // Progress logic
-  const currentVolId: CourseVolumeId = profile.selectedVolumeId || 'vol1';
-  const volumeProgress = getVolumeProgress(profile, currentVolId);
-  const unlockedLessonSet = new Set(volumeProgress.unlockedLessonIds);
-  const completedLessonSet = new Set(volumeProgress.completedLessonIds);
-  const maxUnlockedLesson = Math.max(...volumeProgress.unlockedLessonIds, 1);
+  // ========== 1. 合成台 (Bench) 状态 ==========
+  const [gridSlots, setGridSlots] = useState<(string | null)[]>(Array(9).fill(null));
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(0);
+  const [paletteCategory, setPaletteCategory] = useState<'all' | 'wood_stone' | 'minerals' | 'mobs' | 'food_farm'>('all');
+  const [recipeCategoryFilter, setRecipeCategoryFilter] = useState<string>('all');
+  const [recipeSearch, setRecipeSearch] = useState<string>('');
+  const [matchedRecipe, setMatchedRecipe] = useState<CraftingRecipe | null>(null);
+  const [craftSuccessEffect, setCraftSuccessEffect] = useState<boolean>(false);
+  const [selectedInspectRecipe, setSelectedInspectRecipe] = useState<CraftingRecipe | null>(RECIPES[0]);
 
+  // ========== 2. 句子工坊 (Sentence Synthesizer) 状态 ==========
+  const dynamicSentencePatterns = React.useMemo(() => {
+    return getDynamicSentencePatterns(profile.unlockedLessons || [1], profile.completedLessons || [1]);
+  }, [profile.unlockedLessons, profile.completedLessons]);
+
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState<number>(0);
+  const [userSentenceSlots, setUserSentenceSlots] = useState<{ text: string; role: string }[]>([]);
+  const [sentenceCandidatePool, setSentenceCandidatePool] = useState<{ id: string; text: string; role: string; used: boolean }[]>([]);
+  const [sentenceCheckedState, setSentenceCheckedState] = useState<'idle' | 'correct' | 'wrong'>('idle');
+
+  // 初始化当前句子工坊题目
+  useEffect(() => {
+    if (dynamicSentencePatterns.length > 0) {
+      const currentPattern = dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length];
+      if (currentPattern) {
+        setUserSentenceSlots([]);
+        setSentenceCheckedState('idle');
+        const rawPool = [
+          ...currentPattern.blocks.map((b, idx) => ({ id: `blk_${idx}`, text: b.text, role: b.role, used: false })),
+          ...currentPattern.distractors.map((d, idx) => ({ id: `dis_${idx}`, text: d.text, role: d.role, used: false }))
+        ];
+        // 随机打乱
+        setSentenceCandidatePool(rawPool.sort(() => Math.random() - 0.5));
+      }
+    }
+  }, [currentSentenceIndex, dynamicSentencePatterns]);
+
+  // ========== 3. 怪物擂台 (Mob Arena) 状态 ==========
+  const [bossList, setBossList] = useState<MobBoss[]>(INITIAL_BOSSES);
+  const [activeBossIndex, setActiveBossIndex] = useState<number>(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [battleFeedback, setBattleFeedback] = useState<{ isCorrect: boolean; show: boolean; msg: string } | null>(null);
+  const [isBossDefeated, setIsBossDefeated] = useState<boolean>(false);
+  const [attackAnimation, setAttackAnimation] = useState<boolean>(false);
+
+  // 实时检测 3x3 物品网格是否匹配任何配方
+  useEffect(() => {
+    let match: CraftingRecipe | null = null;
+    for (const r of RECIPES) {
+      const isMatch = r.gridPattern.every((item, idx) => {
+        if (item === null) return gridSlots[idx] === null;
+        return gridSlots[idx] === item;
+      });
+      if (isMatch) {
+        match = r;
+        break;
+      }
+    }
+    setMatchedRecipe(match);
+    if (match) {
+      setSelectedInspectRecipe(match);
+    }
+  }, [gridSlots]);
+
+  // 检查配方是否由于关卡或VIP解锁
   const isRecipeUnlocked = (recipe: CraftingRecipe): boolean => {
     const reqLesson = recipe.requiredLessonId || 1;
-    const isAccessibleViaPaywall = hasLessonAccess(profile, currentVolId, reqLesson);
-    const isReachedOnMap = unlockedLessonSet.has(reqLesson) || completedLessonSet.has(reqLesson) || reqLesson <= maxUnlockedLesson;
-    return isAccessibleViaPaywall && isReachedOnMap;
+    return hasLessonAccess(profile, 'vol1', reqLesson);
   };
 
-  const isRecipePaywallLocked = (recipe: CraftingRecipe): boolean => {
+  const isRecipePaywall = (recipe: CraftingRecipe): boolean => {
     const reqLesson = recipe.requiredLessonId || 1;
-    return isLessonPaywallLocked(profile, currentVolId, reqLesson);
+    return isLessonPaywallLocked(profile, 'vol1', reqLesson);
   };
 
-  // Recipe Crafting State
-  const unlockedRecipes = RECIPES.filter(isRecipeUnlocked);
-  const [selectedRecipe, setSelectedRecipe] = useState<CraftingRecipe>(() => unlockedRecipes[0] || RECIPES[0]);
-  const [gridSlots, setGridSlots] = useState<(string | null)[]>(Array(9).fill(null));
-  const [craftedHistory, setCraftedHistory] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mc_crafted_items');
-      return saved ? JSON.parse(saved) : ['recipe_crafting_table'];
+  // 点击调色板物品，放入当前选中的网格槽（或首个空槽）
+  const handleSelectPaletteItem = (item: PaletteItem) => {
+    playClickSound();
+    unlockMobileAudio();
+
+    let targetIdx = selectedSlotIndex;
+    if (targetIdx === null || gridSlots[targetIdx] !== null) {
+      // 找第一个空位
+      const firstEmpty = gridSlots.findIndex(s => s === null);
+      targetIdx = firstEmpty !== -1 ? firstEmpty : 0;
     }
-    return ['recipe_crafting_table'];
-  });
-  const [isCraftingAnimation, setIsCraftingAnimation] = useState<boolean>(false);
-  const [lastCraftedRecipe, setLastCraftedRecipe] = useState<CraftingRecipe | null>(null);
-  const [recipeFilter, setRecipeFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
 
-  // Sentence Synthesizer State
-  const sentencePatterns = getDynamicSentencePatterns(volumeProgress.unlockedLessonIds, volumeProgress.completedLessonIds);
-  const [selectedSentencePattern, setSelectedSentencePattern] = useState<SentencePattern>(sentencePatterns[0]);
-  const [placedSentenceBlocks, setPlacedSentenceBlocks] = useState<string[]>([]);
-  const [availableSentencePool, setAvailableSentencePool] = useState<string[]>([]);
-  const [sentenceSuccess, setSentenceSuccess] = useState<boolean>(false);
+    const newGrid = [...gridSlots];
+    newGrid[targetIdx] = item.icon;
+    setGridSlots(newGrid);
 
-  // Boss Battle State
-  const [activeBossIndex, setActiveBossIndex] = useState<number>(0);
-  const [bosses, setBosses] = useState<Boss[]>([
-    {
-      id: 'zombie',
-      name: 'Zombie',
-      nameZh: '夜袭先锋 · 僵尸',
-      avatar: '🧟',
-      maxHp: 100,
-      currentHp: 100,
-      rewardEmeralds: 15,
-      rewardXp: 30,
-      difficulty: '初级探险',
-      requiredLessonId: 1,
-      questions: [
-        {
-          question: '僵尸（Zombie）在清晨最害怕什么？',
-          options: ['Lava (岩浆)', 'Sunlight (阳光)', 'Water (水)', 'Shadow (阴影)'],
-          answer: 'Sunlight (阳光)',
-          explanation: 'Zombies burn in the morning sunlight!'
-        },
-        {
-          question: '“合成台”对应的正确英文是？',
-          options: ['Furnace Block', 'Chest Box', 'Crafting Table', 'Redstone Wire'],
-          answer: 'Crafting Table',
-          explanation: 'Crafting Table 是 Minecraft 里的核心合成工具！'
-        },
-        {
-          question: '请补全对话：“Excuse me, is this your handbag?” - “Yes, ____.”',
-          options: ['it isn\'t', 'he is', 'they are', 'it is'],
-          answer: 'it is',
-          explanation: '肯定的简短回答是：Yes, it is.'
-        }
-      ]
-    },
-    {
-      id: 'creeper',
-      name: 'Creeper',
-      nameZh: '绿皮潜行者 · 苦力怕',
-      avatar: '🟢',
-      maxHp: 120,
-      currentHp: 120,
-      rewardEmeralds: 20,
-      rewardXp: 40,
-      difficulty: '中级警惕',
-      requiredLessonId: 6,
-      questions: [
-        {
-          question: '苦力怕靠近玩家时会发出什么特有的声音？',
-          options: ['Roar! (咆哮)', 'Meow! (喵喵)', 'Ssssss! (嘶嘶)', 'Bzzzz! (蜂鸣)'],
-          answer: 'Ssssss! (嘶嘶)',
-          explanation: 'Creeper is famous for its "Ssssss!" fuse sound!'
-        },
-        {
-          question: '“这是一块钻石”用英语怎么说？',
-          options: ['That are a diamond.', 'This is a diamond.', 'This is an emerald.', 'Is this diamond.'],
-          answer: 'This is a diamond.',
-          explanation: 'This is + a/an + 单数名词：表示“这是一...”'
-        },
-        {
-          question: '在我的世界中，“Inventory”的意思是？',
-          options: ['地图导航', '下界传送门', '附魔台', '物品栏 / 背包'],
-          answer: '物品栏 / 背包',
-          explanation: 'Press "E" key to open your inventory!'
-        }
-      ]
-    },
-    {
-      id: 'skeleton',
-      name: 'Skeleton',
-      nameZh: '精准狙击手 · 骷髅弓箭手',
-      avatar: '🏹',
-      maxHp: 150,
-      currentHp: 150,
-      rewardEmeralds: 30,
-      rewardXp: 60,
-      difficulty: '高级挑战',
-      requiredLessonId: 10,
-      questions: [
-        {
-          question: '请翻译句子：“Where is my bow and arrow?”',
-          options: ['我的弓箭在哪里？', '你的木剑掉了吗？', '这是弓箭吗？', '我要怎么制造弓箭？'],
-          answer: '我的弓箭在哪里？',
-          explanation: 'Where is... 询问地点；bow and arrow 表示弓箭。'
-        },
-        {
-          question: '击败骷髅弓箭手后，通常会掉落什么道具？',
-          options: ['Rotten Flesh (腐肉)', 'Bones (骨头) & Arrows (箭)', 'Gunpowder (火药)', 'Ender Pearl (末影珍珠)'],
-          answer: 'Bones (骨头) & Arrows (箭)',
-          explanation: 'Skeletons drop bones and arrows!'
-        },
-        {
-          question: '名词复数变换：“knife (小刀)”的正确复数形式是？',
-          options: ['knifes', 'knives', 'knifees', 'knifis'],
-          answer: 'knives',
-          explanation: '以 fe 结尾的名词变复数通常变 fe 为 ves，如 knife -> knives.'
-        }
-      ]
-    },
-    {
-      id: 'dragon',
-      name: 'Ender Dragon',
-      nameZh: '末地维度 · 末影龙',
-      avatar: '🐉',
-      maxHp: 200,
-      currentHp: 200,
-      rewardEmeralds: 50,
-      rewardXp: 100,
-      difficulty: '终极 VIP BOSS',
-      requiredLessonId: 20,
-      questions: [
-        {
-          question: '末影龙守护在哪个维度（Dimension）中？',
-          options: ['The Nether (下界)', 'Overworld (主世界)', 'The End (末地)', 'Deep Dark (深暗之域)'],
-          answer: 'The End (末地)',
-          explanation: 'The Ender Dragon resides in The End realm!'
-        },
-        {
-          question: '词汇辨析：下面哪个单词表示“绿宝石”？',
-          options: ['Diamond', 'Emerald', 'Obsidian', 'Gold Ingot'],
-          answer: 'Emerald',
-          explanation: 'Emerald 即绿宝石，是村庄交易的核心货币！'
-        },
-        {
-          question: '请选出正确的过去式：“Yesterday, Alex ____ a diamond sword.”',
-          options: ['crafts', 'crafted', 'crafting', 'craft'],
-          answer: 'crafted',
-          explanation: 'Yesterday 提示一般过去时，规则动词加 -ed 变为 crafted。'
-        }
-      ]
+    // 自动移到下一个槽位
+    setSelectedSlotIndex((targetIdx + 1) % 9);
+  };
+
+  // 点击网格槽
+  const handleGridSlotClick = (index: number) => {
+    unlockMobileAudio();
+    if (gridSlots[index] !== null) {
+      // 如果有物品，点击移除
+      playBlockBreakSound();
+      const newGrid = [...gridSlots];
+      newGrid[index] = null;
+      setGridSlots(newGrid);
+    } else {
+      playClickSound();
     }
-  ]);
+    setSelectedSlotIndex(index);
+  };
 
-  const [currentBossQIndex, setCurrentBossQIndex] = useState<number>(0);
-  const [bossQuizSelected, setBossQuizSelected] = useState<string | null>(null);
-  const [bossQuizFeedback, setBossQuizFeedback] = useState<{ isCorrect: boolean; text: string } | null>(null);
+  // 清空网格
+  const handleClearGrid = () => {
+    playBlockBreakSound();
+    setGridSlots(Array(9).fill(null));
+    setSelectedSlotIndex(0);
+  };
 
-  // Initialize Available Sentence Pool when pattern changes
-  useEffect(() => {
-    if (!selectedSentencePattern) return;
-    const combined = [...selectedSentencePattern.blocks, ...selectedSentencePattern.distractors];
-    // Fisher-Yates Shuffle
-    for (let i = combined.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [combined[i], combined[j]] = [combined[j], combined[i]];
-    }
-    setAvailableSentencePool(combined);
-    setPlacedSentenceBlocks([]);
-    setSentenceSuccess(false);
-  }, [selectedSentencePattern]);
-
-  // Quick fill recipe grid
+  // 一键装填已知配方
   const handleQuickFillRecipe = (recipe: CraftingRecipe) => {
     playClickSound();
-    setSelectedRecipe(recipe);
+    unlockMobileAudio();
     setGridSlots([...recipe.gridPattern]);
+    setSelectedInspectRecipe(recipe);
   };
 
-  const handleAddIngredientToGrid = (icon: string) => {
-    playClickSound();
-    const newGrid = [...gridSlots];
-    const emptyIndex = newGrid.indexOf(null);
-    if (emptyIndex !== -1) {
-      newGrid[emptyIndex] = icon;
-      setGridSlots(newGrid);
-    }
-  };
-
-  const handleRemoveFromGrid = (index: number) => {
-    if (!gridSlots[index]) return;
-    playClickSound();
-    const newGrid = [...gridSlots];
-    newGrid[index] = null;
-    setGridSlots(newGrid);
-  };
-
-  const handleClearGrid = () => {
-    playClickSound();
-    setGridSlots(Array(9).fill(null));
-    setLastCraftedRecipe(null);
-  };
-
-  // Check if grid matches current or any recipe
-  const checkGridMatch = (): CraftingRecipe | null => {
-    for (const recipe of RECIPES) {
-      let isMatch = true;
-      for (let i = 0; i < 9; i++) {
-        if (gridSlots[i] !== recipe.gridPattern[i]) {
-          isMatch = false;
-          break;
-        }
-      }
-      if (isMatch) return recipe;
-    }
-    return null;
-  };
-
-  const matchedRecipe = checkGridMatch();
-
-  // Execute Crafting Action
-  const handleCraft = () => {
+  // 执行合成操作
+  const handleCraftItem = () => {
     if (!matchedRecipe) return;
 
-    // Check if the recipe is unlocked based on lesson progression
-    if (!isRecipeUnlocked(matchedRecipe)) {
-      const isPaywall = isRecipePaywallLocked(matchedRecipe);
-      if (isPaywall) {
-        if (onOpenVipModal) onOpenVipModal();
-      } else {
-        alert(`该配方需要先通关地图第 ${matchedRecipe.requiredLessonId || 1} 课才能解封！`);
+    unlockMobileAudio();
+    const isUnlocked = isRecipeUnlocked(matchedRecipe);
+    if (!isUnlocked) {
+      if (isRecipePaywall(matchedRecipe) && onOpenVipModal) {
+        onOpenVipModal();
       }
       return;
     }
 
-    playBlockBreakSound();
-    setIsCraftingAnimation(true);
+    // 触发特效
+    playEmeraldSound();
+    playLevelUpSound();
+    setCraftSuccessEffect(true);
+    setTimeout(() => setCraftSuccessEffect(false), 2000);
 
-    setTimeout(() => {
-      setIsCraftingAnimation(false);
-      playLevelUpSound();
-      playEmeraldSound();
+    // 朗读英文
+    speakText(matchedRecipe.nameEn, { lang: 'en-US' });
 
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
+    confetti({
+      particleCount: 80,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+
+    // 奖励绿宝石与经验
+    onAwardEmeralds(8, 20);
+
+    // 自动记录解锁历史与个人档案
+    const newCraftedIds = Array.from(new Set([...(profile.unlockedCraftingIds || []), matchedRecipe.id]));
+    if (onUpdateProfile) {
+      onUpdateProfile({
+        ...profile,
+        unlockedCraftingIds: newCraftedIds,
+        emeralds: profile.emeralds + 8,
+        xp: profile.xp + 20
       });
-
-      setLastCraftedRecipe(matchedRecipe);
-
-      // Save to crafted history
-      if (!craftedHistory.includes(matchedRecipe.id)) {
-        const next = [...craftedHistory, matchedRecipe.id];
-        setCraftedHistory(next);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('mc_crafted_items', JSON.stringify(next));
-        }
-      }
-
-      // Award Emeralds and XP
-      onAwardEmeralds(8, 20);
-      if (onMasterWord) {
-        onMasterWord(matchedRecipe.nameEn);
-      }
-
-      // Speak word name
-      speakText(matchedRecipe.nameEn, { lang: 'en-US' });
-    }, 600);
-  };
-
-  // Sentence Synthesizer Logic
-  const handleAddSentenceBlock = (block: string, index: number) => {
-    playClickSound();
-    setPlacedSentenceBlocks(prev => [...prev, block]);
-    setAvailableSentencePool(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleRemoveSentenceBlock = (block: string, index: number) => {
-    playClickSound();
-    setPlacedSentenceBlocks(prev => prev.filter((_, i) => i !== index));
-    setAvailableSentencePool(prev => [...prev, block]);
-  };
-
-  const handleCheckSentence = () => {
-    const constructed = placedSentenceBlocks.join(' ');
-    if (constructed === selectedSentencePattern.targetSentence) {
-      playLevelUpSound();
-      playEmeraldSound();
-      setSentenceSuccess(true);
-      confetti({ particleCount: 90, spread: 80, origin: { y: 0.5 } });
-      onAwardEmeralds(10, 25);
-      speakText(selectedSentencePattern.targetSentence, { lang: 'en-US' });
-    } else {
-      playBlockBreakSound();
-      alert(`差一点点哦！真正的句子是：\n"${selectedSentencePattern.targetSentence}"`);
     }
   };
 
-  // Boss Battle Quiz Answer
-  const handleAnswerBossQuiz = (option: string) => {
-    if (bossQuizSelected) return; // Prevent double click
+  // 词汇朗读
+  const handlePlayVoice = (text: string) => {
+    unlockMobileAudio();
+    speakText(text, { lang: 'en-US' });
+  };
 
-    const boss = bosses[activeBossIndex];
-    const q = boss.questions[currentBossQIndex];
-    setBossQuizSelected(option);
+  // 过滤后的调色板物品
+  const filteredPalette = PALETTE_MATERIALS.filter(m => {
+    if (paletteCategory === 'all') return true;
+    return m.category === paletteCategory;
+  });
 
-    if (option === q.answer) {
-      playLevelUpSound();
-      setBossQuizFeedback({ isCorrect: true, text: `💥 暴击斩击！知识威力极大！${q.explanation}` });
+  // 过滤后的配方本
+  const filteredRecipes = RECIPES.filter(r => {
+    const matchCategory = recipeCategoryFilter === 'all' || r.category === recipeCategoryFilter;
+    const matchQuery = recipeSearch.trim() === '' ||
+      r.nameEn.toLowerCase().includes(recipeSearch.toLowerCase()) ||
+      r.nameZh.includes(recipeSearch);
+    return matchCategory && matchQuery;
+  });
 
-      // Reduce boss HP
-      const damage = 40;
-      setBosses(prev => {
-        const updated = [...prev];
-        const target = { ...updated[activeBossIndex] };
-        target.currentHp = Math.max(0, target.currentHp - damage);
-        updated[activeBossIndex] = target;
+  // ========== 句子工坊交互 ==========
+  const handleAddSentenceBlock = (candidate: { id: string; text: string; role: string; used: boolean }) => {
+    if (candidate.used) return;
+    playClickSound();
+    unlockMobileAudio();
+    setUserSentenceSlots([...userSentenceSlots, { text: candidate.text, role: candidate.role }]);
+    setSentenceCandidatePool(prev => prev.map(c => c.id === candidate.id ? { ...c, used: true } : c));
+    setSentenceCheckedState('idle');
+  };
 
-        if (target.currentHp === 0) {
-          // Boss defeated!
-          setTimeout(() => {
-            playEmeraldSound();
-            confetti({ particleCount: 120, spread: 90, origin: { y: 0.5 } });
-            onAwardEmeralds(target.rewardEmeralds, target.rewardXp);
-          }, 800);
+  const handleRemoveSentenceSlot = (index: number) => {
+    playBlockBreakSound();
+    const removed = userSentenceSlots[index];
+    const newSlots = userSentenceSlots.filter((_, i) => i !== index);
+    setUserSentenceSlots(newSlots);
+
+    // 归还到候选池
+    setSentenceCandidatePool(prev => {
+      let restored = false;
+      return prev.map(c => {
+        if (!restored && c.used && c.text === removed.text) {
+          restored = true;
+          return { ...c, used: false };
         }
-
-        return updated;
+        return c;
       });
+    });
+    setSentenceCheckedState('idle');
+  };
+
+  const handleCheckSentence = () => {
+    const currentPattern = dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length];
+    if (!currentPattern) return;
+
+    unlockMobileAudio();
+    const constructed = userSentenceSlots.map(s => s.text).join(' ').trim().toLowerCase();
+    const targetClean = currentPattern.targetSentence.trim().toLowerCase().replace(/[.?!,]/g, '');
+    const constructedClean = constructed.replace(/[.?!,]/g, '');
+
+    if (constructedClean === targetClean) {
+      setSentenceCheckedState('correct');
+      playEmeraldSound();
+      playLevelUpSound();
+      confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+      onAwardEmeralds(10, 25);
+      speakText(currentPattern.targetSentence, { lang: 'en-US' });
+    } else {
+      setSentenceCheckedState('wrong');
+      playBlockBreakSound();
+    }
+  };
+
+  const handleNextSentence = () => {
+    playClickSound();
+    setCurrentSentenceIndex((prev) => (prev + 1) % dynamicSentencePatterns.length);
+  };
+
+  // ========== 怪物擂台交互 ==========
+  const currentBoss = bossList[activeBossIndex];
+  const currentQuestion = currentBoss?.questions[currentQuestionIndex];
+
+  const handleAnswerBossQuestion = (optionIndex: number) => {
+    if (selectedOption !== null || !currentQuestion || isBossDefeated) return;
+
+    unlockMobileAudio();
+    setSelectedOption(optionIndex);
+    const isCorrect = optionIndex === currentQuestion.correctIndex;
+
+    if (isCorrect) {
+      playEmeraldSound();
+      setAttackAnimation(true);
+      setTimeout(() => setAttackAnimation(false), 800);
+
+      // 扣血
+      const newHp = Math.max(0, currentBoss.currentHp - 1);
+      const updatedBossList = [...bossList];
+      updatedBossList[activeBossIndex] = { ...currentBoss, currentHp: newHp };
+      setBossList(updatedBossList);
+
+      setBattleFeedback({
+        isCorrect: true,
+        show: true,
+        msg: `💥 暴击命中！斩落 1 点生命值！${currentQuestion.explanation}`
+      });
+
+      if (newHp === 0) {
+        setIsBossDefeated(true);
+        playLevelUpSound();
+        confetti({ particleCount: 120, spread: 90, origin: { y: 0.5 } });
+        onAwardEmeralds(currentBoss.rewardEmeralds, currentBoss.rewardXp);
+      }
     } else {
       playBlockBreakSound();
-      setBossQuizFeedback({ isCorrect: false, text: `🛡️ 招架防御！正确答案是：${q.answer}。原因：${q.explanation}` });
+      setBattleFeedback({
+        isCorrect: false,
+        show: true,
+        msg: `🛡️ 格挡！怪物发起了反击！正确答案是选项 ${String.fromCharCode(65 + currentQuestion.correctIndex)}。${currentQuestion.explanation}`
+      });
     }
   };
 
   const handleNextBossQuestion = () => {
     playClickSound();
-    setBossQuizSelected(null);
-    setBossQuizFeedback(null);
-    const boss = bosses[activeBossIndex];
-    if (currentBossQIndex + 1 < boss.questions.length) {
-      setCurrentBossQIndex(prev => prev + 1);
+    setSelectedOption(null);
+    setBattleFeedback(null);
+    if (currentBoss && currentQuestionIndex < currentBoss.questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      setCurrentBossQIndex(0);
+      setCurrentQuestionIndex(0);
     }
   };
 
-  const filteredRecipes = RECIPES.filter(recipe => {
-    const isUnlocked = isRecipeUnlocked(recipe);
-    if (recipeFilter === 'unlocked' && !isUnlocked) return false;
-    if (recipeFilter === 'locked' && isUnlocked) return false;
-    return true;
-  });
+  const handleResetBossBattle = (bossIdx: number) => {
+    playClickSound();
+    const updated = [...bossList];
+    updated[bossIdx] = { ...updated[bossIdx], currentHp: updated[bossIdx].maxHp };
+    setBossList(updated);
+    setActiveBossIndex(bossIdx);
+    setCurrentQuestionIndex(0);
+    setSelectedOption(null);
+    setBattleFeedback(null);
+    setIsBossDefeated(false);
+  };
 
   return (
-    <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-3 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] flex flex-col space-y-4 sm:space-y-6">
-      
-      {/* Top Banner Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-[#487E2C] to-[#2D5A1B] text-white p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border-2 border-[#355E20] shadow-md">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-900 border-2 border-amber-600 rounded-xl flex items-center justify-center text-2xl shadow-inner shrink-0">
-            🔨
-          </div>
+    <div id="crafting_lab_container" className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* 顶部导航面板 */}
+      <div id="crafting_lab_header" className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-6 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-32 -bottom-16 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base sm:text-xl font-black font-mono tracking-wide flex items-center space-x-2">
-              <span>MC 3x3 英语合成实验室</span>
-              <span className="text-[10px] bg-[#FFD700] text-black px-2 py-0.5 rounded-full uppercase font-bold">
-                按学习进度开放
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-md text-2xl">
+                🛠️
               </span>
-            </h2>
-            <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-0.5">
-              当前关卡进度：第 1 ~ {maxUnlockedLesson} 课 • 摆放方块与词汇碎片，合成本领词汇与语法神装！
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2 text-xs font-mono font-black bg-black/30 px-3 py-1.5 rounded-xl border border-white/20">
-          <span>当前已解封配方:</span>
-          <span className="text-[#FFD700]">{unlockedRecipes.length} / {RECIPES.length}</span>
-        </div>
-      </div>
-
-      {/* Nav Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b-2 border-slate-200 pb-2 overflow-x-auto">
-        <button
-          onClick={() => { playClickSound(); setActiveTab('recipes'); }}
-          className={`flex items-center space-x-1.5 px-3.5 sm:px-5 py-2 rounded-xl font-black text-xs sm:text-sm transition-all ${
-            activeTab === 'recipes'
-              ? 'bg-[#487E2C] text-white shadow-sm'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          <Hammer className="w-4 h-4" />
-          <span>3x3 物品合成台 ({unlockedRecipes.length}/{RECIPES.length})</span>
-        </button>
-
-        <button
-          onClick={() => { playClickSound(); setActiveTab('sentence'); }}
-          className={`flex items-center space-x-1.5 px-3.5 sm:px-5 py-2 rounded-xl font-black text-xs sm:text-sm transition-all ${
-            activeTab === 'sentence'
-              ? 'bg-[#487E2C] text-white shadow-sm'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>3x3 语法句子工坊 ({sentencePatterns.length} 组课文)</span>
-        </button>
-
-        <button
-          onClick={() => { playClickSound(); setActiveTab('boss'); }}
-          className={`flex items-center space-x-1.5 px-3.5 sm:px-5 py-2 rounded-xl font-black text-xs sm:text-sm transition-all ${
-            activeTab === 'boss'
-              ? 'bg-[#487E2C] text-white shadow-sm'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          <Sword className="w-4 h-4" />
-          <span>⚔️ 怪物英语擂台 ({bosses.length} 阶首领)</span>
-        </button>
-      </div>
-
-      {/* TAB 1: 3x3 RECIPE CRAFTING TABLE */}
-      {activeTab === 'recipes' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Left: Recipe Book List with Progress Filtering */}
-          <div className="lg:col-span-5 bg-amber-950/5 border-2 border-amber-800/20 rounded-2xl p-3 sm:p-4 flex flex-col space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-mono font-black text-sm text-amber-900 flex items-center space-x-1.5">
-                <span>📖 合成秘籍 (Recipes)</span>
-              </h3>
-              
-              {/* Recipe Progress Filter */}
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => setRecipeFilter('all')}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
-                    recipeFilter === 'all' ? 'bg-amber-600 text-white border-black' : 'bg-white text-slate-600 border-slate-300'
-                  }`}
-                >
-                  全部
-                </button>
-                <button
-                  onClick={() => setRecipeFilter('unlocked')}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
-                    recipeFilter === 'unlocked' ? 'bg-emerald-600 text-white border-black' : 'bg-white text-slate-600 border-slate-300'
-                  }`}
-                >
-                  已解锁 ({unlockedRecipes.length})
-                </button>
-                <button
-                  onClick={() => setRecipeFilter('locked')}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
-                    recipeFilter === 'locked' ? 'bg-rose-600 text-white border-black' : 'bg-white text-slate-600 border-slate-300'
-                  }`}
-                >
-                  未解锁
-                </button>
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2 font-mono">
+                  MINECRAFT 合成实验室
+                  <span className="text-xs px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full font-sans font-medium">
+                    深度认知工坊
+                  </span>
+                </h1>
+                <p className="text-sm text-slate-300 mt-0.5">
+                  严密契合课程体系 · 构词拆解 · 3x3 语法句子重组 · 5阶擂台实战
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-              {filteredRecipes.map(recipe => {
-                const isCrafted = craftedHistory.includes(recipe.id);
-                const isSelected = selectedRecipe.id === recipe.id;
-                const isUnlocked = isRecipeUnlocked(recipe);
-                const isPaywallLocked = isRecipePaywallLocked(recipe);
-                const reqLesson = recipe.requiredLessonId || 1;
+          {/* 选项卡切换 */}
+          <div id="crafting_subtabs" className="flex items-center bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 gap-1.5 self-start md:self-auto">
+            <button
+              id="tab_bench_btn"
+              onClick={() => { playClickSound(); setActiveSubTab('bench'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeSubTab === 'bench'
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-900/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Hammer className="w-4 h-4" />
+              3x3 物品合成台
+            </button>
+            <button
+              id="tab_sentences_btn"
+              onClick={() => { playClickSound(); setActiveSubTab('sentences'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeSubTab === 'sentences'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              3x3 语法句子工坊
+            </button>
+            <button
+              id="tab_boss_btn"
+              onClick={() => { playClickSound(); setActiveSubTab('boss'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeSubTab === 'boss'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-900/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Sword className="w-4 h-4" />
+              ⚔️ 怪物英语擂台
+            </button>
+          </div>
+        </div>
+      </div>
 
-                return (
+      {/* ======================= 子板块 1: 3x3 物品合成台 ======================= */}
+      {activeSubTab === 'bench' && (
+        <div id="subtab_bench_content" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* 左侧：3x3 网格与操作台 */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-base font-mono">
+                  <Layers className="w-5 h-5" />
+                  <span>3×3 原版合成网格 (Crafting Grid)</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <button
-                    key={recipe.id}
-                    onClick={() => {
-                      if (isUnlocked) {
-                        handleQuickFillRecipe(recipe);
-                      } else if (isPaywallLocked) {
-                        if (onOpenVipModal) onOpenVipModal();
-                      } else {
-                        if (onNavigateToLesson) onNavigateToLesson(reqLesson);
-                      }
-                    }}
-                    className={`w-full text-left p-2.5 rounded-xl border-2 transition-all flex items-center justify-between ${
-                      !isUnlocked
-                        ? isPaywallLocked
-                          ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
-                          : 'bg-slate-100 border-slate-200 hover:border-slate-300 opacity-75'
-                        : isSelected
-                        ? 'bg-amber-100 border-amber-600 shadow-sm'
-                        : 'bg-white border-slate-200 hover:border-amber-400'
-                    }`}
+                    id="clear_bench_btn"
+                    onClick={handleClearGrid}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-9 h-9 border rounded-lg flex items-center justify-center text-xl shrink-0 ${
-                        !isUnlocked
-                          ? 'bg-slate-200 border-slate-300 grayscale'
-                          : 'bg-amber-900/10 border-amber-800/30'
-                      }`}>
-                        {recipe.mcIcon}
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`font-mono font-black text-xs sm:text-sm ${!isUnlocked ? 'text-slate-600' : 'text-slate-800'}`}>
-                            {recipe.nameEn}
-                          </span>
-                          
-                          {/* Unlock Condition Badges */}
-                          {!isUnlocked ? (
-                            isPaywallLocked ? (
-                              <span className="text-[9px] bg-purple-100 text-purple-900 font-bold px-1.5 py-0.2 rounded border border-purple-300 flex items-center space-x-0.5">
-                                <Crown className="w-2.5 h-2.5 text-amber-500" />
-                                <span>VIP第{reqLesson}课</span>
-                              </span>
-                            ) : (
-                              <span className="text-[9px] bg-slate-200 text-slate-600 font-bold px-1.5 py-0.2 rounded border border-slate-300 flex items-center space-x-0.5">
-                                <Lock className="w-2.5 h-2.5 text-rose-500" />
-                                <span>第{reqLesson}关解锁</span>
-                              </span>
-                            )
-                          ) : (
-                            isCrafted && (
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-300">
-                                已拥有
-                              </span>
-                            )
-                          )}
-                        </div>
-                        <div className={`text-[11px] font-medium ${!isUnlocked ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {recipe.nameZh} {isUnlocked && <span className="font-mono">• {recipe.phonetic}</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    {isUnlocked ? (
-                      <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
-                    ) : isPaywallLocked ? (
-                      <span className="text-[10px] text-amber-700 font-black bg-amber-100 px-2 py-1 rounded-md border border-amber-300 shrink-0">
-                        激活 VIP
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-emerald-700 font-black bg-emerald-100 px-2 py-1 rounded-md border border-emerald-300 shrink-0">
-                        去闯关
-                      </span>
-                    )}
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    清空网格
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right: The 3x3 Minecraft Wood Crafting Grid */}
-          <div className="lg:col-span-7 bg-[#8B6133] border-4 border-[#5A3C1A] rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col items-center justify-between text-white relative">
-            
-            <div className="w-full flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-xl">🪵</span>
-                <span className="font-mono font-black text-sm text-amber-100 uppercase tracking-wider">
-                  Minecraft 3x3 Crafting Bench
-                </span>
+                </div>
               </div>
-              
-              <button
-                onClick={handleClearGrid}
-                className="flex items-center space-x-1 text-xs font-mono font-bold bg-amber-900/60 hover:bg-amber-900 px-2.5 py-1 rounded-lg border border-amber-600/50 transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>清空网格</span>
-              </button>
-            </div>
 
-            {/* Grid & Output Area */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 my-2">
-              
-              {/* 3x3 Grid */}
-              <div className="grid grid-cols-3 gap-2 bg-[#5A3C1A] p-3 rounded-xl border-2 border-[#3D2811] shadow-inner">
-                {gridSlots.map((itemIcon, idx) => (
+              {/* 3x3 与合成输出区 */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-6 bg-slate-950/60 rounded-xl border border-slate-800/80 p-4">
+                {/* 3x3 网格 */}
+                <div className="grid grid-cols-3 gap-2.5 p-3 bg-stone-900 rounded-xl border-4 border-stone-700 shadow-inner">
+                  {gridSlots.map((slot, index) => (
+                    <button
+                      key={`slot_${index}`}
+                      id={`grid_slot_${index}`}
+                      onClick={() => handleGridSlotClick(index)}
+                      className={`w-16 h-16 sm:w-18 sm:h-18 rounded-lg flex items-center justify-center text-3xl font-bold transition-all relative select-none ${
+                        selectedSlotIndex === index
+                          ? 'bg-stone-800 ring-2 ring-amber-400 shadow-lg scale-105 z-10'
+                          : slot
+                          ? 'bg-stone-800 hover:bg-stone-700'
+                          : 'bg-stone-950/80 hover:bg-stone-900 border border-stone-800'
+                      }`}
+                    >
+                      {slot ? (
+                        <span className="transform hover:scale-110 transition-transform">{slot}</span>
+                      ) : (
+                        <span className="text-stone-700 text-xs font-mono select-none">{index + 1}</span>
+                      )}
+                      {selectedSlotIndex === index && (
+                        <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-400 rounded-full border-2 border-stone-900" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 箭头指示 */}
+                <div className="flex flex-col items-center justify-center text-slate-500">
+                  <ArrowRight className="w-8 h-8 hidden sm:block text-amber-500 animate-pulse" />
+                  <span className="text-xs font-mono font-bold mt-1 text-slate-400">CRAFT</span>
+                </div>
+
+                {/* 合成输出口 */}
+                <div className="flex flex-col items-center gap-3">
                   <div
-                    key={idx}
-                    onClick={() => handleRemoveFromGrid(idx)}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 bg-[#3D2811] border-2 border-[#8B6133] rounded-lg flex items-center justify-center text-2xl sm:text-3xl shadow-inner transition-transform cursor-pointer ${
-                      isCraftingAnimation ? 'animate-pulse scale-95' : 'hover:border-amber-400'
+                    id="craft_output_slot"
+                    className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-4 transition-all relative ${
+                      matchedRecipe
+                        ? 'bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border-amber-400 shadow-lg shadow-amber-500/20 scale-105 animate-bounce-subtle'
+                        : 'bg-slate-950 border-slate-800 text-slate-600'
                     }`}
-                    title={itemIcon ? '点击从合成格移除' : '点击放置原料'}
                   >
-                    {itemIcon ? (
-                      <span className="transform hover:scale-110 transition-transform select-none">
-                        {itemIcon}
-                      </span>
+                    {matchedRecipe ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-4xl">{matchedRecipe.mcIcon}</span>
+                        <span className="text-[10px] font-bold text-amber-300 mt-1 max-w-[80px] truncate text-center">
+                          {matchedRecipe.nameEn}
+                        </span>
+                      </div>
                     ) : (
-                      <span className="text-xs text-amber-900/40 font-mono font-bold select-none">
-                        {idx + 1}
-                      </span>
+                      <div className="text-center text-slate-600 text-xs font-mono">
+                        <span>EMPTY</span>
+                      </div>
                     )}
                   </div>
-                ))}
-              </div>
 
-              {/* Crafting Arrow */}
-              <div className="flex flex-col items-center justify-center space-y-1">
-                <div className="text-2xl text-amber-300 animate-pulse">
-                  ➔
-                </div>
-                <span className="text-[10px] font-mono text-amber-200">合成判定</span>
-              </div>
-
-              {/* Output Result Slot */}
-              <div className="flex flex-col items-center space-y-2">
-                <div className={`w-20 h-20 sm:w-24 sm:h-24 bg-[#3D2811] border-4 border-[#FFD700] rounded-xl flex items-center justify-center text-4xl sm:text-5xl shadow-[0_0_15px_rgba(255,215,0,0.3)] relative ${
-                  matchedRecipe ? 'ring-4 ring-emerald-400 animate-bounce' : 'opacity-60'
-                }`}>
-                  {matchedRecipe ? (
-                    <span>{matchedRecipe.mcIcon}</span>
-                  ) : (
-                    <span className="text-xs text-amber-200/50 font-mono text-center px-1">
-                      未就绪
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  onClick={handleCraft}
-                  disabled={!matchedRecipe || isCraftingAnimation}
-                  className={`px-5 py-2.5 rounded-xl font-mono font-black text-xs sm:text-sm uppercase tracking-wide border-2 shadow-lg transition-all flex items-center space-x-2 ${
-                    matchedRecipe && !isCraftingAnimation
-                      ? 'bg-[#FF6321] border-amber-200 text-white hover:bg-[#E55210] active:scale-95 shadow-[0_4px_0_0_#9E3200]'
-                      : 'bg-stone-600 border-stone-700 text-stone-400 cursor-not-allowed opacity-50'
-                  }`}
-                >
-                  <Hammer className="w-4 h-4" />
-                  <span>{isCraftingAnimation ? '正在锻造中...' : '开始合成 (Craft)'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Material Ingredients Palette below grid */}
-            <div className="w-full bg-[#5A3C1A] border-2 border-[#3D2811] rounded-xl p-3 my-2 flex flex-col space-y-2">
-              <div className="text-xs font-mono font-bold text-amber-200 flex items-center justify-between">
-                <span>🧰 点击基础素材放入网格 (Ingredients Palette):</span>
-                <span className="text-[10px] text-amber-300/80">或点击左侧秘籍一键填充</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {[
-                  { name: '木板 (Plank)', icon: '🪵' },
-                  { name: '木棒 (Stick)', icon: '🥢' },
-                  { name: '圆石 (Stone)', icon: '🪨' },
-                  { name: '煤炭 (Coal)', icon: '⬛' },
-                  { name: '铁锭 (Iron)', icon: '🪙' },
-                  { name: '钻石 (Diamond)', icon: '💎' },
-                  { name: '羊毛 (Wool)', icon: '🧶' },
-                ].map((mat, mIdx) => (
                   <button
-                    key={mIdx}
-                    onClick={() => handleAddIngredientToGrid(mat.icon)}
-                    className="px-2.5 py-1.5 bg-[#8B6133] hover:bg-[#a3723d] active:scale-95 border-2 border-[#3D2811] hover:border-[#FFD700] rounded-lg text-xs font-mono font-bold text-white flex items-center space-x-1 shadow-sm transition-all"
-                    title={`把 ${mat.name} 放入合成格`}
+                    id="execute_craft_btn"
+                    disabled={!matchedRecipe}
+                    onClick={handleCraftItem}
+                    className={`w-full px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+                      matchedRecipe
+                        ? 'bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white cursor-pointer hover:scale-105 active:scale-95 shadow-emerald-900/40'
+                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                    }`}
                   >
-                    <span className="text-base">{mat.icon}</span>
-                    <span>{mat.name}</span>
+                    <Hammer className="w-4 h-4" />
+                    {matchedRecipe ? '合成并收录 (+8 💎)' : '放入有效配方'}
                   </button>
-                ))}
+                </div>
               </div>
-            </div>
 
-            {/* Last Crafted Item Card Display */}
-            {lastCraftedRecipe && (
-              <div className="w-full bg-amber-900/80 border-2 border-[#FFD700] rounded-xl p-3.5 mt-3 text-white flex flex-col space-y-2 animate-fade-in">
-                <div className="flex items-center justify-between border-b border-amber-700 pb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-2xl">{lastCraftedRecipe.mcIcon}</span>
-                    <div>
-                      <h4 className="font-mono font-black text-sm sm:text-base text-[#FFD700]">
-                        {lastCraftedRecipe.nameEn}
-                      </h4>
-                      <div className="text-xs text-amber-200">
-                        {lastCraftedRecipe.nameZh} • <span className="font-mono">{lastCraftedRecipe.phonetic}</span>
-                      </div>
-                    </div>
+              {/* 成功合成特效 */}
+              {craftSuccessEffect && matchedRecipe && (
+                <div className="mt-4 p-3 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-between animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span>✨ 合成成功！获得 {matchedRecipe.nameEn} · {matchedRecipe.nameZh}！(+8 绿宝石, +20 经验)</span>
                   </div>
-
                   <button
-                    onClick={() => speakText(lastCraftedRecipe.nameEn, { lang: 'en-US' })}
-                    className="p-2 bg-amber-800 hover:bg-amber-700 border border-amber-500 rounded-lg text-white"
+                    onClick={() => handlePlayVoice(matchedRecipe.nameEn)}
+                    className="p-1 hover:bg-emerald-500/30 rounded-lg text-emerald-200"
                   >
                     <Volume2 className="w-4 h-4" />
                   </button>
                 </div>
+              )}
+            </div>
 
-                <div className="text-xs text-amber-100 bg-black/30 p-2 rounded-lg font-mono">
-                  <div>💬 <span className="text-white font-bold">{lastCraftedRecipe.sampleSentence}</span></div>
-                  <div className="text-amber-300 text-[11px] mt-0.5">{lastCraftedRecipe.sampleTranslation}</div>
+            {/* 下方：材料选择调色板 */}
+            <div id="materials_palette_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
+                  <Sparkle className="w-4 h-4 text-amber-400" />
+                  <span>材料调色板 (点击物品自动装填入选中网格)</span>
                 </div>
-
-                <div className="flex items-center justify-end space-x-2 text-[11px] font-mono font-bold text-[#7CFC00]">
-                  <span>❇️ +8 Emeralds</span>
-                  <span>•</span>
-                  <span>⭐ +20 XP</span>
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+                  <button
+                    onClick={() => setPaletteCategory('all')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      paletteCategory === 'all' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    全部
+                  </button>
+                  <button
+                    onClick={() => setPaletteCategory('wood_stone')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      paletteCategory === 'wood_stone' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    木石
+                  </button>
+                  <button
+                    onClick={() => setPaletteCategory('minerals')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      paletteCategory === 'minerals' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    矿物
+                  </button>
+                  <button
+                    onClick={() => setPaletteCategory('mobs')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      paletteCategory === 'mobs' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    掉落物
+                  </button>
+                  <button
+                    onClick={() => setPaletteCategory('food_farm')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      paletteCategory === 'food_farm' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    食材
+                  </button>
                 </div>
               </div>
+
+              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2.5">
+                {filteredPalette.map((mat) => (
+                  <button
+                    key={mat.id}
+                    id={`palette_item_${mat.id}`}
+                    onClick={() => handleSelectPaletteItem(mat)}
+                    className="p-2.5 bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 rounded-xl flex flex-col items-center gap-1 transition-all group active:scale-95 text-center"
+                    title={`${mat.nameEn} (${mat.name})`}
+                  >
+                    <span className="text-2xl group-hover:scale-125 transition-transform">{mat.icon}</span>
+                    <span className="text-[11px] font-medium text-slate-300 max-w-[70px] truncate">{mat.name}</span>
+                    <span className="text-[9px] text-slate-500 font-mono max-w-[70px] truncate">{mat.nameEn}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 右侧：深度认知词卡与配方图鉴 */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* 深度词汇与构词法解析卡片 */}
+            {selectedInspectRecipe && (
+              <div id="recipe_inspect_card" className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl p-6 border border-amber-500/30 shadow-xl relative overflow-hidden">
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
+                      {selectedInspectRecipe.mcIcon}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-white font-mono">{selectedInspectRecipe.nameEn}</h2>
+                        <button
+                          id="play_inspect_voice_btn"
+                          onClick={() => handlePlayVoice(selectedInspectRecipe.nameEn)}
+                          className="p-1.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 rounded-lg transition-colors"
+                          title="听发音"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-sm font-medium text-amber-400 font-mono mt-0.5">{selectedInspectRecipe.phonetic}</p>
+                      <p className="text-xs text-slate-300 mt-0.5">{selectedInspectRecipe.nameZh}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] px-2.5 py-1 bg-amber-500/10 text-amber-300 rounded-full border border-amber-500/30 font-medium">
+                      第 {selectedInspectRecipe.requiredLessonId || 1} 课协同
+                    </span>
+                    {onMasterWord && (
+                      <button
+                        onClick={() => {
+                          playClickSound();
+                          onMasterWord(selectedInspectRecipe.nameEn);
+                        }}
+                        className="mt-2 text-[11px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg flex items-center gap-1 border border-slate-700 transition-colors"
+                      >
+                        <Star className="w-3 h-3 text-amber-400" />
+                        收录进宝典
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 构词法与语法解析 */}
+                <div className="space-y-3 pt-3 border-t border-slate-800 text-xs">
+                  {selectedInspectRecipe.wordBreakdown && (
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80">
+                      <span className="font-bold text-amber-400 block mb-1 flex items-center gap-1">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        构词法拆解与词根记忆
+                      </span>
+                      <p className="text-slate-300 leading-relaxed font-sans">
+                        {selectedInspectRecipe.wordBreakdown}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedInspectRecipe.grammarTip && (
+                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80">
+                      <span className="font-bold text-emerald-400 block mb-1 flex items-center gap-1">
+                        <Info className="w-3.5 h-3.5" />
+                        语法搭配与实用句型
+                      </span>
+                      <p className="text-slate-300 leading-relaxed font-sans">
+                        {selectedInspectRecipe.grammarTip}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-amber-300">游戏实战例句</span>
+                      <button
+                        onClick={() => handlePlayVoice(selectedInspectRecipe.sampleSentence)}
+                        className="text-amber-400 hover:text-amber-300 flex items-center gap-1 text-[10px]"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                        朗读例句
+                      </button>
+                    </div>
+                    <p className="text-slate-200 font-mono italic">{selectedInspectRecipe.sampleSentence}</p>
+                    <p className="text-slate-400 mt-1">{selectedInspectRecipe.sampleTranslation}</p>
+                  </div>
+                </div>
+
+                {/* 一键装填到 3x3 */}
+                <button
+                  id="quick_fill_bench_btn"
+                  onClick={() => handleQuickFillRecipe(selectedInspectRecipe)}
+                  className="w-full mt-4 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-colors"
+                >
+                  <Hammer className="w-3.5 h-3.5" />
+                  一键将本配方材料填入 3×3 工作台
+                </button>
+              </div>
             )}
+
+            {/* 配方图鉴库 */}
+            <div id="recipe_book_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
+                  <BookOpen className="w-4 h-4 text-emerald-400" />
+                  <span>配方宝典库 ({filteredRecipes.length})</span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="搜索配方/单词..."
+                  value={recipeSearch}
+                  onChange={(e) => setRecipeSearch(e.target.value)}
+                  className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-32 sm:w-40"
+                />
+              </div>
+
+              <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                {filteredRecipes.map((recipe) => {
+                  const unlocked = isRecipeUnlocked(recipe);
+                  const paywalled = isRecipePaywall(recipe);
+                  const isCrafted = (profile.unlockedCraftingIds || []).includes(recipe.id);
+
+                  return (
+                    <div
+                      key={recipe.id}
+                      onClick={() => {
+                        playClickSound();
+                        setSelectedInspectRecipe(recipe);
+                      }}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                        selectedInspectRecipe?.id === recipe.id
+                          ? 'bg-amber-950/40 border-amber-500/60 shadow-md'
+                          : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{recipe.mcIcon}</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-white font-mono">{recipe.nameEn}</span>
+                            {isCrafted && (
+                              <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded border border-emerald-500/30">
+                                已合成
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400">{recipe.nameZh}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {unlocked ? (
+                          <span className="text-xs text-emerald-400 font-mono font-medium">L{recipe.requiredLessonId || 1}</span>
+                        ) : paywalled ? (
+                          <span className="text-xs text-amber-400 flex items-center gap-1 font-mono">
+                            <Crown className="w-3 h-3" /> VIP
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
+                            <Lock className="w-3 h-3" /> L{recipe.requiredLessonId}
+                          </span>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* TAB 2: 3x3 SENTENCE SYNTHESIZER */}
-      {activeTab === 'sentence' && (
-        <div className="flex flex-col space-y-5">
-          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="font-mono font-black text-sm text-emerald-900 flex items-center space-x-2">
-                <span>选择要合成的课文句型（已按通关进度开放）:</span>
-              </h3>
-              <p className="text-xs text-emerald-700 mt-0.5">
-                将下方的句子方块按正确的标准语法顺序放置到合成槽中，组合成完整的魔方英语文卷！
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {sentencePatterns.map(pat => (
-                <button
-                  key={pat.id}
-                  onClick={() => { playClickSound(); setSelectedSentencePattern(pat); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
-                    selectedSentencePattern.id === pat.id
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-                  }`}
-                >
-                  {pat.title}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sentence Crafting Area */}
-          <div className="bg-[#2D4723] border-4 border-[#1E3316] rounded-2xl p-5 text-white flex flex-col space-y-5 shadow-xl">
-            
-            <div className="flex items-center justify-between border-b border-emerald-700/50 pb-3">
+      {/* ======================= 子板块 2: 3x3 语法句子工坊 ======================= */}
+      {activeSubTab === 'sentences' && (
+        <div id="subtab_sentences_content" className="space-y-6">
+          <div className="bg-slate-900/90 rounded-2xl p-6 border border-slate-800 shadow-xl space-y-6">
+            {/* 顶部标题与进度 */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               <div>
-                <span className="text-xs text-emerald-300 font-mono uppercase font-bold">目标例句翻译</span>
-                <div className="text-base sm:text-lg font-black text-[#FFD700]">
-                  "{selectedSentencePattern.translation}"
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-mono font-bold">
+                    {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length]?.title || '第 1 课'}
+                  </span>
+                  <h2 className="text-lg font-bold text-white font-mono">
+                    3×3 语法拼装机 · 组句实训
+                  </h2>
                 </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  将下方的句法积木拖入或点击放入网格，构建符合英语句法规则的完整句子！
+                </p>
               </div>
 
-              <button
-                onClick={() => speakText(selectedSentencePattern.targetSentence, { lang: 'en-US' })}
-                className="flex items-center space-x-1.5 bg-emerald-800 hover:bg-emerald-700 px-3 py-1.5 rounded-lg text-xs font-mono border border-emerald-500"
-              >
-                <Volume2 className="w-4 h-4 text-emerald-200" />
-                <span>朗读全句</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-mono">
+                  {((currentSentenceIndex % dynamicSentencePatterns.length) + 1)} / {dynamicSentencePatterns.length}
+                </span>
+                <button
+                  id="sentence_next_btn"
+                  onClick={handleNextSentence}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-700 transition-colors"
+                >
+                  换一题
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            {/* Placed Target Sentence Slots */}
-            <div className="bg-black/30 border-2 border-dashed border-emerald-500/50 rounded-xl p-4 min-h-[70px] flex flex-wrap items-center gap-2">
-              {placedSentenceBlocks.length === 0 ? (
-                <span className="text-xs text-emerald-400/60 font-mono">
-                  点击下方的方块按语法顺序填充至此...
-                </span>
+            {/* 句式蓝图与目标中文 */}
+            {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length] && (
+              <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block font-mono">
+                    目标句型中文含义
+                  </span>
+                  <p className="text-base font-bold text-white mt-1">
+                    “{dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length].translation}”
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 font-mono">
+                    {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length].grammarBlueprint}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => handlePlayVoice(dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length].targetSentence)}
+                  className="self-start sm:self-auto px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors"
+                >
+                  <Volume2 className="w-4 h-4" />
+                  听例句发音
+                </button>
+              </div>
+            )}
+
+            {/* 用户句子装配槽区 */}
+            <div className="p-6 bg-stone-900/90 rounded-2xl border-2 border-dashed border-stone-700 min-h-[120px] flex flex-wrap items-center justify-center gap-3 relative">
+              {userSentenceSlots.length === 0 ? (
+                <div className="text-center text-stone-500 text-sm font-medium">
+                  点击下方词块按正确语序放入这里...
+                </div>
               ) : (
-                placedSentenceBlocks.map((block, idx) => (
+                userSentenceSlots.map((slot, idx) => (
                   <button
-                    key={idx}
-                    onClick={() => handleRemoveSentenceBlock(block, idx)}
-                    className="bg-[#FF6321] text-white px-3 py-2 rounded-lg font-mono font-black text-sm border-2 border-amber-200 shadow-md hover:bg-rose-600 transition-all transform hover:scale-105"
+                    key={`slot_${idx}`}
+                    onClick={() => handleRemoveSentenceSlot(idx)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-xl font-bold font-mono text-sm shadow-md hover:bg-amber-800 transition-all flex items-center gap-2 group active:scale-95"
+                    title="点击取回"
                   >
-                    {block}
+                    <span>{slot.text}</span>
+                    <span className="text-xs text-amber-200/60 group-hover:text-amber-100">✕</span>
                   </button>
                 ))
               )}
             </div>
 
-            {/* Available Block Pool */}
-            <div>
-              <span className="text-xs text-emerald-300 font-mono font-bold block mb-2">
-                可选词汇/短语方块 (Click to Place):
-              </span>
-              <div className="flex flex-wrap gap-2.5">
-                {availableSentencePool.map((block, idx) => (
+            {/* 校验反馈与解析 */}
+            {sentenceCheckedState === 'correct' && (
+              <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold">🎉 完美合成！语序与句法完全正确！(+10 💎, +25 XP)</p>
+                    <p className="text-xs text-emerald-400/80 mt-0.5">
+                      {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length]?.explanation}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleNextSentence}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shrink-0 shadow-md transition-colors"
+                >
+                  挑战下一句
+                </button>
+              </div>
+            )}
+
+            {sentenceCheckedState === 'wrong' && (
+              <div className="p-4 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between gap-3 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                  <p className="text-xs font-medium">
+                    语序有误，请注意主谓宾结构与连系动词位置，再试一次吧！
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    playBlockBreakSound();
+                    setUserSentenceSlots([]);
+                    setSentenceCandidatePool(prev => prev.map(c => ({ ...c, used: false })));
+                    setSentenceCheckedState('idle');
+                  }}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold shrink-0 transition-colors"
+                >
+                  重置清空
+                </button>
+              </div>
+            )}
+
+            {/* 词块候选池 */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-slate-300 block">可用语法积木池：</span>
+              <div className="flex flex-wrap gap-3">
+                {sentenceCandidatePool.map((candidate) => (
                   <button
-                    key={idx}
-                    onClick={() => handleAddSentenceBlock(block, idx)}
-                    className="bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border-2 border-emerald-500 px-3.5 py-2 rounded-xl font-mono font-bold text-xs sm:text-sm shadow-sm transition-all transform hover:scale-105 active:scale-95"
+                    key={candidate.id}
+                    disabled={candidate.used}
+                    onClick={() => handleAddSentenceBlock(candidate)}
+                    className={`px-4 py-2.5 rounded-xl font-bold font-mono text-sm transition-all shadow-sm ${
+                      candidate.used
+                        ? 'bg-slate-950 text-slate-600 border border-slate-900 cursor-not-allowed opacity-40'
+                        : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/60 active:scale-95'
+                    }`}
                   >
-                    + {block}
+                    {candidate.text}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Check Action Button */}
-            <div className="flex items-center justify-between pt-2">
+            {/* 底部按钮 */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
               <button
-                onClick={() => { setPlacedSentenceBlocks([]); }}
-                className="text-xs font-mono text-emerald-300 hover:underline"
+                onClick={() => {
+                  playBlockBreakSound();
+                  setUserSentenceSlots([]);
+                  setSentenceCandidatePool(prev => prev.map(c => ({ ...c, used: false })));
+                  setSentenceCheckedState('idle');
+                }}
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
               >
-                重置排列
+                清空重来
               </button>
-
               <button
+                disabled={userSentenceSlots.length === 0}
                 onClick={handleCheckSentence}
-                disabled={placedSentenceBlocks.length === 0}
-                className={`px-6 py-2.5 rounded-xl font-mono font-black text-sm uppercase tracking-wide border-2 shadow-lg transition-all flex items-center space-x-2 ${
-                  placedSentenceBlocks.length > 0
-                    ? 'bg-[#7CFC00] border-emerald-300 text-black hover:bg-lime-300 active:scale-95 shadow-[0_4px_0_0_#388E3C]'
-                    : 'bg-stone-600 border-stone-700 text-stone-400 cursor-not-allowed opacity-50'
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
+                  userSentenceSlots.length > 0
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/40 cursor-pointer active:scale-95'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 }`}
               >
-                <Sparkles className="w-4 h-4" />
-                <span>验证句型合成</span>
+                <Check className="w-4 h-4" />
+                校验句子合成
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: MOB BOSS BATTLE ARENA */}
-      {activeTab === 'boss' && (
-        <div className="flex flex-col space-y-5">
-          
-          {/* Boss Selector */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {bosses.map((boss, idx) => {
-              const isSelected = activeBossIndex === idx;
-              const isBossAccessible = hasLessonAccess(profile, currentVolId, boss.requiredLessonId);
-              const isBossReached = unlockedLessonSet.has(boss.requiredLessonId) || completedLessonSet.has(boss.requiredLessonId) || boss.requiredLessonId <= maxUnlockedLesson;
-              const isBossUnlocked = isBossAccessible && isBossReached;
-              const isPaywallLocked = isLessonPaywallLocked(profile, currentVolId, boss.requiredLessonId);
+      {/* ======================= 子板块 3: 怪物英语擂台 (Mob Arena) ======================= */}
+      {activeSubTab === 'boss' && (
+        <div id="subtab_boss_content" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* 左侧：擂台怪物列表 */}
+          <div className="lg:col-span-4 space-y-3">
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800">
+              <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-400" />
+                怪物擂台通关阶梯
+              </h3>
+              <p className="text-xs text-slate-400">
+                答对题目发动暴击斩击，清空怪物生命值即可赢取丰厚绿宝石与稀有宝藏！
+              </p>
+            </div>
 
-              return (
-                <button
-                  key={boss.id}
-                  onClick={() => {
-                    playClickSound();
-                    if (!isBossUnlocked) {
-                      if (isPaywallLocked && onOpenVipModal) {
-                        onOpenVipModal();
-                      } else if (onNavigateToLesson) {
-                        onNavigateToLesson(boss.requiredLessonId);
+            <div className="space-y-2.5">
+              {bossList.map((boss, idx) => {
+                const isSelected = activeBossIndex === idx;
+                const isLocked = !hasLessonAccess(profile, 'vol1', boss.requiredLessonId);
+                const isPaywalled = isLessonPaywallLocked(profile, 'vol1', boss.requiredLessonId);
+
+                return (
+                  <div
+                    key={boss.id}
+                    onClick={() => {
+                      if (isLocked) {
+                        if (isPaywalled && onOpenVipModal) {
+                          onOpenVipModal();
+                        }
+                        return;
                       }
-                      return;
-                    }
-                    setActiveBossIndex(idx);
-                    setCurrentBossQIndex(0);
-                    setBossQuizSelected(null);
-                    setBossQuizFeedback(null);
-                  }}
-                  className={`p-3 rounded-2xl border-2 transition-all text-left flex items-center space-x-3 ${
-                    !isBossUnlocked
-                      ? 'bg-slate-100 border-slate-200 opacity-75'
-                      : isSelected
-                      ? 'bg-rose-950/10 border-rose-600 shadow-md ring-2 ring-rose-400'
-                      : 'bg-white border-slate-200 hover:border-rose-300'
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 border ${
-                    !isBossUnlocked ? 'bg-slate-200 border-slate-300 grayscale' : 'bg-rose-900/10 border-rose-800/30'
-                  }`}>
-                    {boss.avatar}
-                  </div>
-                  <div>
-                    <div className="font-mono font-black text-xs sm:text-sm text-slate-800 flex items-center gap-1">
-                      <span>{boss.nameZh}</span>
-                      {!isBossUnlocked && (
-                        isPaywallLocked ? <Crown className="w-3 h-3 text-amber-500" /> : <Lock className="w-3 h-3 text-rose-500" />
+                      playClickSound();
+                      setActiveBossIndex(idx);
+                      setCurrentQuestionIndex(0);
+                      setSelectedOption(null);
+                      setBattleFeedback(null);
+                      setIsBossDefeated(boss.currentHp === 0);
+                    }}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-purple-950/40 border-purple-500/60 shadow-lg'
+                        : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/60'
+                    } ${isLocked ? 'opacity-60' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">{boss.icon}</span>
+                        <div>
+                          <h4 className="font-bold text-sm text-white">{boss.name}</h4>
+                          <p className="text-xs text-slate-400 mt-0.5">{boss.title}</p>
+                        </div>
+                      </div>
+
+                      {isLocked ? (
+                        <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
+                          <Lock className="w-3.5 h-3.5" /> L{boss.requiredLessonId}
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-1 text-rose-400 text-xs font-mono font-bold">
+                          <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                          <span>{boss.currentHp}/{boss.maxHp}</span>
+                        </div>
                       )}
                     </div>
-                    <div className="text-[10px] text-rose-600 font-bold mt-0.5">
-                      {!isBossUnlocked
-                        ? isPaywallLocked ? `👑 VIP 第 ${boss.requiredLessonId} 课` : `🔒 第 ${boss.requiredLessonId} 关解锁`
-                        : `难度: ${boss.difficulty} • HP: ${boss.currentHp}/${boss.maxHp}`}
-                    </div>
                   </div>
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          {/* Boss Battle Arena Screen */}
-          {(() => {
-            const currentBoss = bosses[activeBossIndex];
-            const isBossAccessible = hasLessonAccess(profile, currentVolId, currentBoss.requiredLessonId);
-            const isBossReached = unlockedLessonSet.has(currentBoss.requiredLessonId) || completedLessonSet.has(currentBoss.requiredLessonId) || currentBoss.requiredLessonId <= maxUnlockedLesson;
-            const isBossUnlocked = isBossAccessible && isBossReached;
-            const isPaywallLocked = isLessonPaywallLocked(profile, currentVolId, currentBoss.requiredLessonId);
-
-            if (!isBossUnlocked) {
-              return (
-                <div className="bg-[#1A1A1A] border-4 border-rose-900/50 rounded-2xl p-8 text-center text-white space-y-4 shadow-xl">
-                  <div className="text-5xl grayscale opacity-70">{currentBoss.avatar}</div>
-                  <h3 className="font-mono font-black text-lg text-rose-400">
-                    {currentBoss.nameZh} 尚未解锁
-                  </h3>
-                  <p className="text-xs text-stone-300 font-mono max-w-md mx-auto">
-                    {isPaywallLocked
-                      ? `此首领为 VIP 专属高阶挑战（需要完成第 ${currentBoss.requiredLessonId} 课）。激活完整144课即可挑战！`
-                      : `此首领需要在地图探险中通关第 ${currentBoss.requiredLessonId} 课后解锁！`}
-                  </p>
-                  {isPaywallLocked ? (
-                    <button
-                      onClick={() => onOpenVipModal && onOpenVipModal()}
-                      className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-purple-600 text-black font-black font-mono text-xs rounded-xl border border-black shadow-lg"
-                    >
-                      👑 立即激活完整144课 VIP
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onNavigateToLesson && onNavigateToLesson(currentBoss.requiredLessonId)}
-                      className="px-6 py-2.5 bg-emerald-600 text-white font-black font-mono text-xs rounded-xl border border-black shadow-lg"
-                    >
-                      ⚔️ 前往地图挑战第 {currentBoss.requiredLessonId} 关
-                    </button>
-                  )}
-                </div>
-              );
-            }
-
-            const currentQ = currentBoss.questions[currentBossQIndex];
-
-            return (
-              <div className="bg-[#1A1A1A] border-4 border-rose-900 rounded-2xl p-5 text-white flex flex-col space-y-5 shadow-2xl relative overflow-hidden">
-                
-                {/* Boss Health Header */}
-                <div className="flex items-center justify-between border-b border-rose-900/60 pb-3">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-4xl">{currentBoss.avatar}</span>
+          {/* 右侧：战斗擂台与答题区 */}
+          <div className="lg:col-span-8 space-y-6">
+            {currentBoss && (
+              <div className="bg-slate-900/90 rounded-2xl p-6 border border-slate-800 shadow-xl relative overflow-hidden space-y-6">
+                {/* 擂台对决状态栏 */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-950/80 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-4">
+                    <div className={`text-5xl transition-transform ${attackAnimation ? 'scale-125 animate-bounce' : ''}`}>
+                      {currentBoss.icon}
+                    </div>
                     <div>
-                      <h3 className="font-mono font-black text-base sm:text-lg text-rose-400">
-                        {currentBoss.nameZh} ({currentBoss.name})
+                      <h3 className="text-lg font-black text-white font-mono flex items-center gap-2">
+                        {currentBoss.name}
+                        {isBossDefeated && (
+                          <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full">
+                            已击败
+                          </span>
+                        )}
                       </h3>
-                      <div className="text-xs text-stone-400 font-mono">
-                        第 {currentBossQIndex + 1} / {currentBoss.questions.length} 斩击回合
+                      {/* HP 血条 */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-40 sm:w-56 h-3.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700 p-0.5">
+                          <div
+                            className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full transition-all duration-500"
+                            style={{ width: `${(currentBoss.currentHp / currentBoss.maxHp) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-mono font-bold text-rose-400">
+                          {currentBoss.currentHp} / {currentBoss.maxHp} HP
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* HP Bar */}
-                  <div className="w-36 sm:w-48">
-                    <div className="flex justify-between text-[11px] font-mono font-bold mb-1">
-                      <span className="text-rose-400">BOSS HP</span>
-                      <span className="text-stone-300">{currentBoss.currentHp} / {currentBoss.maxHp}</span>
+                  <div className="flex items-center gap-3 self-end sm:self-center">
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block font-mono">通关赏金</span>
+                      <span className="text-xs font-bold text-emerald-400 font-mono">
+                        +{currentBoss.rewardEmeralds} 💎 / +{currentBoss.rewardXp} XP
+                      </span>
                     </div>
-                    <div className="h-3 bg-stone-800 rounded-full overflow-hidden border border-rose-900 p-0.5">
-                      <div
-                        className="h-full bg-rose-600 rounded-full transition-all duration-500 shadow-[inset_-2px_0_4px_rgba(0,0,0,0.5)]"
-                        style={{ width: `${(currentBoss.currentHp / currentBoss.maxHp) * 100}%` }}
-                      />
-                    </div>
+                    {isBossDefeated && (
+                      <button
+                        onClick={() => handleResetBossBattle(activeBossIndex)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-colors border border-slate-700"
+                      >
+                        重新挑战
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Boss Defeated Banner */}
-                {currentBoss.currentHp <= 0 ? (
-                  <div className="bg-amber-950/80 border-2 border-[#FFD700] rounded-xl p-6 text-center flex flex-col items-center space-y-3">
-                    <div className="text-5xl">🏆</div>
-                    <h3 className="font-mono font-black text-lg text-[#FFD700]">
-                      已成功击败 {currentBoss.nameZh}！
-                    </h3>
-                    <p className="text-xs text-amber-200">
-                      获得了末影宝箱奖励：❇️ +{currentBoss.rewardEmeralds} 绿宝石 & ⭐ +{currentBoss.rewardXp} XP！
-                    </p>
-                  </div>
-                ) : (
-                  /* Question Challenge Area */
-                  <div className="flex flex-col space-y-4">
-                    <div className="bg-stone-900 border border-stone-700 rounded-xl p-4 font-mono">
-                      <div className="text-xs text-amber-400 font-bold mb-1">🗡️ 英语斩击关卡挑战:</div>
-                      <div className="text-sm sm:text-base text-white font-bold">
-                        {currentQ.question}
+                {/* 战斗题目展示 */}
+                {!isBossDefeated && currentQuestion ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-purple-950/20 border border-purple-500/30 rounded-xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-purple-400 font-mono">
+                          回合 {currentQuestionIndex + 1} / {currentBoss.questions.length}
+                        </span>
+                        <span className="text-xs text-slate-400">选择正确答案发起斩击</span>
                       </div>
+                      <p className="text-base font-bold text-white leading-relaxed">
+                        {currentQuestion.question}
+                      </p>
                     </div>
 
-                    {/* Options */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {currentQ.options.map((opt, oIdx) => (
-                        <button
-                          key={oIdx}
-                          onClick={() => handleAnswerBossQuiz(opt)}
-                          disabled={!!bossQuizSelected}
-                          className={`p-3 rounded-xl border-2 font-mono text-xs sm:text-sm font-bold text-left transition-all ${
-                            bossQuizSelected === opt
-                              ? opt === currentQ.answer
-                                ? 'bg-emerald-900/80 border-emerald-400 text-emerald-200'
-                                : 'bg-rose-900/80 border-rose-500 text-rose-200'
-                              : 'bg-stone-800 border-stone-700 text-stone-200 hover:border-amber-400 hover:bg-stone-750'
-                          }`}
-                        >
-                          {String.fromCharCode(65 + oIdx)}. {opt}
-                        </button>
-                      ))}
+                    {/* 选项 */}
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {currentQuestion.options.map((option, optIdx) => {
+                        const isChosen = selectedOption === optIdx;
+                        const isCorrectOpt = optIdx === currentQuestion.correctIndex;
+                        let optStyle = 'bg-slate-950/80 hover:bg-slate-800/80 border-slate-800 text-slate-200';
+
+                        if (selectedOption !== null) {
+                          if (isCorrectOpt) {
+                            optStyle = 'bg-emerald-500/20 border-emerald-500 text-emerald-200 font-bold';
+                          } else if (isChosen) {
+                            optStyle = 'bg-rose-500/20 border-rose-500 text-rose-200';
+                          } else {
+                            optStyle = 'bg-slate-950/40 border-slate-900 text-slate-600 opacity-50';
+                          }
+                        }
+
+                        return (
+                          <button
+                            key={optIdx}
+                            disabled={selectedOption !== null}
+                            onClick={() => handleAnswerBossQuestion(optIdx)}
+                            className={`p-3.5 rounded-xl border text-left font-medium text-sm transition-all flex items-center justify-between ${optStyle}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-mono text-xs font-bold">
+                                {String.fromCharCode(65 + optIdx)}
+                              </span>
+                              <span>{option}</span>
+                            </div>
+                            {selectedOption !== null && isCorrectOpt && (
+                              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    {/* Feedback Banner */}
-                    {bossQuizFeedback && (
-                      <div className={`p-3.5 rounded-xl border font-mono text-xs font-bold flex items-center justify-between ${
-                        bossQuizFeedback.isCorrect
-                          ? 'bg-emerald-950 border-emerald-500 text-emerald-300'
-                          : 'bg-rose-950 border-rose-500 text-rose-300'
-                      }`}>
-                        <span>{bossQuizFeedback.text}</span>
-
+                    {/* 战斗反馈 */}
+                    {battleFeedback && (
+                      <div
+                        className={`p-4 rounded-xl border flex items-start justify-between gap-3 animate-fade-in ${
+                          battleFeedback.isCorrect
+                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-200'
+                            : 'bg-rose-500/20 border-rose-500/40 text-rose-200'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold">{battleFeedback.msg}</p>
+                          {currentQuestion.grammarNote && (
+                            <p className="text-[11px] opacity-80 mt-1">
+                              💡 考点聚焦：{currentQuestion.grammarNote}
+                            </p>
+                          )}
+                        </div>
                         <button
                           onClick={handleNextBossQuestion}
-                          className="px-3 py-1.5 bg-amber-500 text-black font-black rounded-lg text-xs hover:bg-amber-400 shrink-0 ml-2"
+                          className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold shrink-0 border border-slate-700 transition-colors"
                         >
-                          下一题 ➔
+                          下一回合
                         </button>
                       </div>
                     )}
                   </div>
+                ) : (
+                  /* 通关胜利界面 */
+                  <div className="p-8 bg-gradient-to-b from-amber-500/10 to-slate-950 rounded-2xl border border-amber-500/30 text-center space-y-4 animate-fade-in">
+                    <span className="text-6xl animate-bounce inline-block">👑</span>
+                    <h3 className="text-2xl font-black text-amber-300 font-mono">
+                      VICTORY! 擂台通关大捷！
+                    </h3>
+                    <p className="text-sm text-slate-300 max-w-md mx-auto">
+                      恭喜你成功击败了 {currentBoss.name}！不仅掌握了关键语法考点，还赢取了丰厚绿宝石与经验奖励！
+                    </p>
+                    <div className="flex items-center justify-center gap-4 pt-2">
+                      <button
+                        onClick={() => handleResetBossBattle(activeBossIndex)}
+                        className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-colors"
+                      >
+                        重新对决
+                      </button>
+                      {activeBossIndex < bossList.length - 1 && (
+                        <button
+                          onClick={() => {
+                            playClickSound();
+                            setActiveBossIndex(prev => prev + 1);
+                            setCurrentQuestionIndex(0);
+                            setSelectedOption(null);
+                            setBattleFeedback(null);
+                            setIsBossDefeated(false);
+                          }}
+                          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg transition-all"
+                        >
+                          进军下一阶擂台 ➔
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            );
-          })()}
+            )}
+          </div>
         </div>
       )}
-
     </div>
   );
 };
+export default CraftingLabView;

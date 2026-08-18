@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, Mic, MicOff, Star, Sparkles, CheckCircle2, RotateCcw, Award, Play } from 'lucide-react';
-import { speakText, playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
+import { Volume2, Mic, MicOff, Star, Sparkles, CheckCircle2, RotateCcw, Award, Play, AlertCircle, HelpCircle, ShieldCheck, Zap } from 'lucide-react';
+import { speakText, stopSpeech, playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
+import { evaluateSpeech, SpeechAssessmentResult, WordAssessment } from '../services/speechAssessmentService';
+import confetti from 'canvas-confetti';
 
 interface OralEvaluationModalProps {
   targetText: string;
@@ -9,7 +11,8 @@ interface OralEvaluationModalProps {
   phonetic?: string;
   mcItemIcon?: string;
   onClose: () => void;
-  onAwardEmeralds: (emeralds: number, xp: number) => void;
+  onAwardEmeralds?: (emeralds: number, xp: number, reason?: string) => void;
+  onMasterWord?: (word: string) => void;
 }
 
 export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
@@ -18,7 +21,8 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   phonetic,
   mcItemIcon,
   onClose,
-  onAwardEmeralds
+  onAwardEmeralds,
+  onMasterWord
 }) => {
   const [isPlayingStandard, setIsPlayingStandard] = useState(false);
   const [isPlayingMyRecording, setIsPlayingMyRecording] = useState(false);
@@ -26,31 +30,48 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [hasRealRecording, setHasRealRecording] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState<{
-    score: number;
-    stars: number;
-    fluency: number;
-    accuracy: number;
-    completeness: number;
-    feedbackMsg: string;
-    tips: string;
-    wordScores?: { word: string; score: number; status: 'perfect' | 'good' | 'needs_work' }[];
-  } | null>(null);
+  const [micAudioLevel, setMicAudioLevel] = useState<number>(0);
+  const [liveTranscript, setLiveTranscript] = useState<string>('');
+  const [evaluationResult, setEvaluationResult] = useState<SpeechAssessmentResult | null>(null);
+  const [selectedWordTip, setSelectedWordTip] = useState<{ word: string; tip?: string; score: number } | null>(null);
+  const [showMicPermissionGuide, setShowMicPermissionGuide] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Auto play standard sound on modal open
   useEffect(() => {
     handlePlayStandard();
     return () => {
+      stopSpeech();
       if (activeAudioRef.current) {
         activeAudioRef.current.pause();
         activeAudioRef.current = null;
       }
+      cleanupAudioStream();
     };
   }, []);
+
+  const cleanupAudioStream = () => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+  };
 
   // Timer for recording duration
   useEffect(() => {
@@ -65,7 +86,7 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
     return () => clearInterval(timer);
   }, [isRecording]);
 
-  const handlePlayStandard = () => {
+  const handlePlayStandard = (rate: number = 1.0) => {
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
       activeAudioRef.current = null;
@@ -75,12 +96,13 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
     setIsPlayingStandard(true);
     speakText(targetText, () => {
       setIsPlayingStandard(false);
-    });
+    }, { rate });
   };
 
   const startRecording = async () => {
     unlockMobileAudio();
     playClickSound();
+    stopSpeech();
 
     if (activeAudioRef.current) {
       activeAudioRef.current.pause();
@@ -95,12 +117,78 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
     setRecordedAudioUrl(null);
     setHasRealRecording(false);
     setIsPlayingMyRecording(false);
+    setLiveTranscript('');
+    setSelectedWordTip(null);
     chunksRef.current = [];
 
+    // 1. Initialize Web Speech API for real-time speech-to-text recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    let recognitionInstance: any = null;
+    let spokenAcc = '';
+
+    if (SpeechRecognition) {
+      try {
+        recognitionInstance = new SpeechRecognition();
+        recognitionInstance.lang = 'en-US';
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+
+        recognitionInstance.onresult = (event: any) => {
+          let currentTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            currentTranscript += event.results[i][0].transcript;
+          }
+          spokenAcc = currentTranscript;
+          setLiveTranscript(currentTranscript);
+        };
+
+        recognitionInstance.onerror = (event: any) => {
+          console.warn('SpeechRecognition error:', event?.error);
+        };
+
+        recognitionInstance.start();
+        recognitionRef.current = recognitionInstance;
+      } catch (err) {
+        console.warn('Recognition start error:', err);
+      }
+    }
+
+    // 2. Initialize MediaRecorder & Web Audio Analyser for Audio Level Meter
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
+        streamRef.current = stream;
+
+        // Setup Analyser
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            const audioCtx = new AudioContextClass();
+            audioContextRef.current = audioCtx;
+            const source = audioCtx.createMediaStreamSource(stream);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 64;
+            source.connect(analyser);
+            analyserRef.current = analyser;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            const updateLevel = () => {
+              if (!analyserRef.current) return;
+              analyserRef.current.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+              }
+              const avg = sum / dataArray.length;
+              setMicAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+              animFrameRef.current = requestAnimationFrame(updateLevel);
+            };
+            updateLevel();
+          }
+        } catch (e) {
+          console.warn('AudioContext setup error:', e);
+        }
+
         let mimeType = '';
         if (typeof MediaRecorder !== 'undefined') {
           if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
@@ -127,17 +215,14 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
               setHasRealRecording(true);
             }
           }
-          // Stop track stream
-          stream.getTracks().forEach(track => track.stop());
-          generateEvaluation();
+          cleanupAudioStream();
+          finishAssessment(spokenAcc || liveTranscript);
         };
 
-        // Pass 100ms timeslice to ensure continuous data chunks
         recorder.start(100);
         mediaRecorderRef.current = recorder;
         setIsRecording(true);
       } else {
-        // Fallback if mediaDevices not allowed in container/browser
         simulateRecording();
       }
     } catch (err) {
@@ -151,68 +236,61 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
     setHasRealRecording(false);
     setTimeout(() => {
       setIsRecording(false);
-      generateEvaluation();
-    }, 2500);
+      finishAssessment(targetText);
+    }, 2800);
   };
 
   const stopRecording = () => {
     playClickSound();
+    setIsRecording(false);
+    setMicAudioLevel(0);
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         mediaRecorderRef.current.stop();
       } catch {
-        setIsRecording(false);
-        generateEvaluation();
+        finishAssessment(liveTranscript);
       }
-      setIsRecording(false);
     } else {
-      setIsRecording(false);
-      generateEvaluation();
+      finishAssessment(liveTranscript);
     }
   };
 
-  const generateEvaluation = () => {
-    const baseScore = Math.floor(Math.random() * 12) + 88; // 88 - 99
-    const stars = baseScore >= 95 ? 5 : baseScore >= 90 ? 4 : 3;
-    const fluency = Math.floor(Math.random() * 8) + 92;
-    const accuracy = baseScore;
-    const completeness = 100;
-
-    const feedbackOptions = [
-      "太棒了！你的发音就像真正的 Minecraft 英文原声语音！",
-      "音标清晰重音到位！Alex 老师为你点赞！",
-      "节奏极佳，吐字圆润流利，完全掌握了这个表达！"
-    ];
-    const tipsOptions = [
-      "提示：保持元音饱满，试着一口气连贯读出更好听！",
-      "提示：注意尾音清脆发音，表现非常出色！",
-      "提示：重音放在核心动词上，听起来更地道哦！"
-    ];
-
-    const cleanWords = targetText.replace(/[^a-zA-Z0-9\s']/g, '').split(/\s+/).filter(Boolean);
-    const wordScores = cleanWords.map((word) => {
-      const randScore = Math.floor(Math.random() * 25) + 75; // 75 - 99
-      let status: 'perfect' | 'good' | 'needs_work' = 'perfect';
-      if (randScore >= 88) status = 'perfect';
-      else if (randScore >= 78) status = 'good';
-      else status = 'needs_work';
-      return { word, score: randScore, status };
-    });
-
-    const result = {
-      score: baseScore,
-      stars,
-      fluency,
-      accuracy,
-      completeness,
-      wordScores,
-      feedbackMsg: feedbackOptions[Math.floor(Math.random() * feedbackOptions.length)],
-      tips: tipsOptions[Math.floor(Math.random() * tipsOptions.length)]
-    };
-
+  const finishAssessment = (spoken: string) => {
+    const duration = Math.max(1.5, recordingSeconds);
+    const result = evaluateSpeech(targetText, spoken, duration);
     setEvaluationResult(result);
-    playLevelUpSound();
-    onAwardEmeralds(5, 15);
+
+    // Audio & Confetti Feedback
+    if (result.stars >= 4) {
+      playLevelUpSound();
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.6 }
+        });
+      } catch {}
+    } else {
+      playEmeraldSound();
+    }
+
+    // Award rewards
+    if (onAwardEmeralds) {
+      onAwardEmeralds(result.emeraldReward, result.xpReward, '口语跟读打分');
+    }
+
+    // Auto master word if 4+ stars
+    if (result.stars >= 4 && onMasterWord && targetText.split(' ').length <= 2) {
+      onMasterWord(targetText);
+    }
   };
 
   const handlePlayMyRecording = () => {
@@ -252,280 +330,290 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
       });
     } else {
       setIsPlayingMyRecording(false);
-      alert("⚠️ 未检测到您的麦克风真实原声！\n\n提示：可能是由于未允许网页使用麦克风，或设备未连接话筒。\n请在浏览器地址栏允许使用【麦克风】权限后，点击【重新跟读】录下您的声音！");
+      setShowMicPermissionGuide(true);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
-      <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-lg text-[#2D2D2D] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] sm:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden my-auto max-h-[92dvh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
+      <div className="bg-[#18181b] border-2 sm:border-4 border-[#3b82f6] rounded-2xl sm:rounded-3xl w-full max-w-xl text-slate-100 shadow-[0_0_30px_rgba(59,130,246,0.3)] overflow-hidden my-auto max-h-[94dvh] flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="bg-[#487E2C] p-5 border-b-4 border-[#355E20] flex items-center justify-between text-white">
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-4 sm:p-5 border-b-2 border-blue-500/40 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[#FFD700] border-2 border-black rounded-2xl flex items-center justify-center text-xl shadow-sm text-black">
+            <div className="w-10 h-10 bg-amber-400 border-2 border-black rounded-2xl flex items-center justify-center text-xl shadow-md text-black">
               🎙️
             </div>
             <div>
-              <h2 className="text-lg font-black font-mono">
-                AI 儿童口语跟读与发音评测
+              <h2 className="text-base sm:text-lg font-black font-mono text-white flex items-center space-x-2">
+                <span>AI 智能语音发音评测与音素纠音</span>
+                <span className="text-[10px] bg-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full border border-blue-400/40">Phonics AI</span>
               </h2>
-              <p className="text-xs text-white/90 font-mono font-bold">
-                跟 Alex 老师读英文 • 获得星级智能评分与绿宝石 ❇️
+              <p className="text-xs text-blue-200/90 font-mono">
+                跟随 Alex 老师标准发音 • 智能音素对齐与星级打分 💎
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="text-white/80 hover:text-white text-xs font-mono font-bold bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-xl border-2 border-white/30"
+            className="text-slate-300 hover:text-white text-xs font-mono font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl border border-white/20 transition-colors"
           >
             ✕ 关闭
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1 custom-scrollbar">
           
           {/* Target Word / Sentence Card */}
-          <div className="bg-slate-50 border-4 border-slate-200 rounded-3xl p-5 text-center space-y-3 relative shadow-inner">
+          <div className="bg-slate-900/90 border-2 border-slate-700/80 rounded-2xl p-4 sm:p-5 text-center space-y-3 relative shadow-inner">
             {mcItemIcon && (
-              <div className="w-14 h-14 bg-white border-2 border-slate-300 rounded-2xl mx-auto flex items-center justify-center text-3xl shadow-sm">
+              <div className="w-12 h-12 bg-slate-800 border border-slate-600 rounded-xl mx-auto flex items-center justify-center text-2xl shadow-sm">
                 {mcItemIcon}
               </div>
             )}
 
             <div>
-              <h3 className="text-2xl font-black font-mono text-[#2D2D2D] tracking-wide">
+              <h3 className="text-xl sm:text-2xl font-black font-mono text-white tracking-wide">
                 "{targetText}"
               </h3>
               {phonetic && (
-                <p className="text-xs font-mono text-[#487E2C] font-bold mt-1">
+                <p className="text-xs font-mono text-emerald-400 font-bold mt-1">
                   [{phonetic}]
                 </p>
               )}
               {translation && (
-                <p className="text-xs text-slate-500 font-bold mt-1">
+                <p className="text-xs text-slate-300 font-medium mt-1">
                   {translation}
                 </p>
               )}
             </div>
 
-            {/* Standard Audio Listen Button */}
-            <button
-              onClick={handlePlayStandard}
-              className={`px-4 py-2 rounded-2xl border-2 font-mono font-black text-xs inline-flex items-center space-x-2 transition-all ${
-                isPlayingStandard
-                  ? 'bg-[#FF6321] text-white border-black animate-pulse shadow-sm'
-                  : 'bg-white hover:bg-slate-100 text-[#487E2C] border-[#487E2C] shadow-sm'
-              }`}
-            >
-              <Volume2 className="w-4 h-4" />
-              <span>{isPlayingStandard ? 'Alex 老师朗读中...' : '点击听标准示范发音'}</span>
-            </button>
+            {/* Standard Audio Controls (Normal & Slow) */}
+            <div className="flex items-center justify-center space-x-2 pt-1">
+              <button
+                onClick={() => handlePlayStandard(1.0)}
+                className={`px-3.5 py-1.5 rounded-xl border font-mono font-bold text-xs inline-flex items-center space-x-1.5 transition-all ${
+                  isPlayingStandard
+                    ? 'bg-blue-600 text-white border-blue-400 animate-pulse shadow-md'
+                    : 'bg-slate-800 hover:bg-slate-700 text-blue-300 border-blue-500/50 shadow-sm'
+                }`}
+              >
+                <Volume2 className="w-3.5 h-3.5 text-blue-400" />
+                <span>{isPlayingStandard ? '标准示范播放中...' : '标准原声 (1.0x)'}</span>
+              </button>
+
+              <button
+                onClick={() => handlePlayStandard(0.7)}
+                className="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-mono text-xs inline-flex items-center space-x-1 transition-all"
+              >
+                <span>🐢 慢速听 (0.7x)</span>
+              </button>
+            </div>
           </div>
 
           {/* Recording & Oral Practice Section */}
           <div className="text-center space-y-4">
             
             {!evaluationResult ? (
-              <div className="space-y-4 py-2">
-                <p className="text-xs font-mono font-bold text-slate-600">
-                  按住下方大麦克风，大声念出上面的英文句子：
+              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <p className="text-xs font-mono font-bold text-slate-300">
+                  {isRecording ? '正在收音，请清晰大声念出上面的英文：' : '点击下方大麦克风，大声跟读上方英文句子：'}
                 </p>
 
-                {/* Big Mic Button */}
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className={`w-24 h-24 rounded-full border-4 mx-auto flex flex-col items-center justify-center shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
-                    isRecording
-                      ? 'bg-rose-600 border-black text-white animate-pulse'
-                      : 'bg-[#487E2C] hover:bg-[#355E20] border-black text-white shadow-[0_6px_0_0_#2A4718]'
-                  }`}
-                >
-                  {isRecording ? (
-                    <>
-                      <MicOff className="w-8 h-8 mb-1" />
-                      <span className="text-[10px] font-mono font-black uppercase">松开/结束</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-8 h-8 mb-1 text-[#FFD700]" />
-                      <span className="text-[10px] font-mono font-black uppercase">点击录音</span>
-                    </>
+                {/* Big Mic Button with Pulsing Wave */}
+                <div className="relative inline-flex items-center justify-center">
+                  {isRecording && (
+                    <div 
+                      className="absolute inset-0 rounded-full bg-rose-500/30 animate-ping"
+                      style={{ transform: `scale(${1 + micAudioLevel / 100})` }}
+                    />
                   )}
-                </button>
+                  <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`relative w-24 h-24 rounded-full border-4 flex flex-col items-center justify-center shadow-xl transition-all transform hover:scale-105 active:scale-95 z-10 ${
+                      isRecording
+                        ? 'bg-gradient-to-br from-rose-600 to-red-700 border-rose-400 text-white animate-pulse shadow-[0_0_25px_rgba(244,63,94,0.6)]'
+                        : 'bg-gradient-to-br from-emerald-600 to-green-700 hover:from-emerald-500 hover:to-green-600 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                    }`}
+                  >
+                    {isRecording ? (
+                      <>
+                        <MicOff className="w-8 h-8 mb-0.5 text-white" />
+                        <span className="text-[10px] font-mono font-black uppercase">点击完成</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-8 h-8 mb-0.5 text-amber-300" />
+                        <span className="text-[10px] font-mono font-black uppercase">开始录音</span>
+                      </>
+                    )}
+                  </button>
+                </div>
 
+                {/* Real-time Audio Wave Visualizer Meter */}
                 {isRecording && (
-                  <div className="flex items-center justify-center space-x-2 text-rose-600 font-mono font-black text-xs">
-                    <span className="w-2.5 h-2.5 bg-rose-600 rounded-full animate-ping" />
-                    <span>正在对麦克风录音 ({recordingSeconds}s)... 请大声发音</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center space-x-1.5 h-6">
+                      {[40, 70, 90, 60, 100, 75, 45, 80, 60, 85].map((h, i) => (
+                        <div
+                          key={i}
+                          className="w-1.5 bg-gradient-to-t from-emerald-500 to-rose-400 rounded-full transition-all duration-75"
+                          style={{
+                            height: `${Math.max(4, (micAudioLevel / 100) * h)}px`,
+                            opacity: micAudioLevel > 10 ? 1 : 0.4
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-center space-x-2 text-rose-400 font-mono font-bold text-xs">
+                      <span className="w-2 h-2 bg-rose-500 rounded-full animate-ping" />
+                      <span>正在录制 ({recordingSeconds}s)... 音量: {micAudioLevel}%</span>
+                    </div>
+
+                    {liveTranscript && (
+                      <div className="text-xs font-mono text-emerald-300 bg-emerald-950/50 p-2 rounded-lg border border-emerald-500/30 animate-in fade-in">
+                        识别中: "{liveTranscript}"
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             ) : (
               /* Evaluation Result Score Card */
-              <div className="bg-amber-50 border-4 border-[#FFD700] rounded-3xl p-5 space-y-4 animate-in zoom-in-95 text-left">
+              <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl p-4 sm:p-5 space-y-4 animate-in zoom-in-95 text-left shadow-lg">
                 
                 {/* Score Header */}
-                <div className="flex items-center justify-between border-b-2 border-amber-200 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-12 h-12 bg-[#FFD700] border-2 border-black rounded-2xl flex items-center justify-center text-xl font-black font-mono text-black shadow-sm">
-                      {evaluationResult.score}
+                <div className="flex items-center justify-between border-b border-slate-700/80 pb-3.5">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 border-2 border-black rounded-2xl flex flex-col items-center justify-center shadow-md text-slate-950 font-black">
+                      <span className="text-xl leading-none">{evaluationResult.overallScore}</span>
+                      <span className="text-[9px] font-mono uppercase tracking-tighter">分</span>
                     </div>
                     <div>
-                      <h4 className="font-black text-base text-amber-900 font-mono">
-                        跟读评测得分：{evaluationResult.score} 分
-                      </h4>
-                      <div className="flex items-center space-x-1">
-                        {Array.from({ length: evaluationResult.stars }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-[#FF6321] text-[#FF6321]" />
+                      <div className="flex items-center space-x-1.5">
+                        <h4 className="font-black text-sm sm:text-base text-white font-mono">
+                          {evaluationResult.gradeZh}
+                        </h4>
+                        <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full font-mono border border-amber-400/40">
+                          {evaluationResult.overallScore >= 90 ? '🌟 优秀' : '👍 达标'}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1 mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star 
+                            key={i} 
+                            className={`w-4 h-4 ${
+                              i < evaluationResult.stars 
+                                ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]' 
+                                : 'text-slate-600'
+                            }`} 
+                          />
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-[#487E2C] text-white px-3 py-1 rounded-full text-xs font-mono font-black flex items-center space-x-1 shadow-sm">
-                    <Award className="w-4 h-4 text-[#FFD700]" />
-                    <span>+5 ❇️ +15 XP</span>
+                  <div className="bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 px-3 py-1.5 rounded-xl text-xs font-mono font-black flex items-center space-x-1.5 shadow-sm">
+                    <Award className="w-4 h-4 text-emerald-400" />
+                    <span>+{evaluationResult.emeraldReward} 💎 +{evaluationResult.xpReward} XP</span>
                   </div>
                 </div>
 
-                {/* Sub Metrics */}
+                {/* 3-Dimensional Assessment Metrics */}
                 <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
-                  <div className="bg-white p-2 rounded-xl border-2 border-amber-200">
-                    <span className="text-[10px] text-slate-500 font-bold block">准确度</span>
-                    <span className="font-black text-[#487E2C]">{evaluationResult.accuracy}%</span>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700">
+                    <span className="text-[10px] text-slate-400 font-bold block">🎯 准确度 (Accuracy)</span>
+                    <span className="font-black text-emerald-400 text-sm">{evaluationResult.accuracy}%</span>
                   </div>
-                  <div className="bg-white p-2 rounded-xl border-2 border-amber-200">
-                    <span className="text-[10px] text-slate-500 font-bold block">流利度</span>
-                    <span className="font-black text-[#FF6321]">{evaluationResult.fluency}%</span>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700">
+                    <span className="text-[10px] text-slate-400 font-bold block">🌊 流利度 (Fluency)</span>
+                    <span className="font-black text-blue-400 text-sm">{evaluationResult.fluency}%</span>
                   </div>
-                  <div className="bg-white p-2 rounded-xl border-2 border-amber-200">
-                    <span className="text-[10px] text-slate-500 font-bold block">完整度</span>
-                    <span className="font-black text-[#487E2C]">{evaluationResult.completeness}%</span>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700">
+                    <span className="text-[10px] text-slate-400 font-bold block">📈 完整度 (Completeness)</span>
+                    <span className="font-black text-amber-400 text-sm">{evaluationResult.completeness}%</span>
                   </div>
                 </div>
 
-                {/* 逐字发音诊断与多倍速对比 (Word-by-word Diagnostic Feedback & Speed Controls) */}
-                <div className="bg-white/90 p-3.5 rounded-2xl border-2 border-amber-300 space-y-3">
-                  <div className="flex items-center justify-between text-[11px] font-mono font-bold text-amber-900 flex-wrap gap-1">
-                    <span className="flex items-center space-x-1">
-                      <span>🎯 逐字发音精准诊断（点击单字单独听）：</span>
-                    </span>
+                {/* Word-by-Word Alignment & Phonics Diagnostics */}
+                <div className="bg-slate-800/60 p-3.5 rounded-xl border border-slate-700/80 space-y-2.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold text-slate-200 flex-wrap gap-1">
+                    <span>🔤 逐词音素发音对齐（点击单词单独听音）：</span>
                     <div className="flex items-center space-x-2 text-[10px]">
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"/>完美</span>
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"/>良好</span>
-                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"/>重读练习</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"/>完美</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>良好</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block"/>待强化</span>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
-                    {evaluationResult.wordScores?.map((item, idx) => (
+                    {evaluationResult.wordAssessments.map((item, idx) => (
                       <button
                         key={idx}
                         onClick={() => {
                           playClickSound();
                           speakText(item.word);
+                          setSelectedWordTip({
+                            word: item.word,
+                            tip: item.phoneticTip,
+                            score: item.score
+                          });
                         }}
-                        title={`点击听 "${item.word}" 正确发音 • 评测得分: ${item.score}`}
-                        className={`px-2.5 py-1 rounded-xl text-xs font-mono font-black border-2 transition-transform active:scale-95 flex items-center space-x-1 ${
+                        title={`点击试听 "${item.word}" • 匹配得分: ${item.score}`}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-transform active:scale-95 flex items-center space-x-1 ${
                           item.status === 'perfect'
-                            ? 'bg-emerald-100 text-emerald-900 border-emerald-400 hover:bg-emerald-200'
+                            ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/60 hover:bg-emerald-900/60'
                             : item.status === 'good'
-                            ? 'bg-amber-100 text-amber-900 border-amber-400 hover:bg-amber-200'
-                            : 'bg-rose-100 text-rose-900 border-rose-400 hover:bg-rose-200'
+                            ? 'bg-amber-950/70 text-amber-300 border-amber-500/60 hover:bg-amber-900/60'
+                            : 'bg-rose-950/70 text-rose-300 border-rose-500/60 hover:bg-rose-900/60'
                         }`}
                       >
                         <span>{item.word}</span>
-                        <Volume2 className="w-3 h-3 opacity-70" />
+                        <span className="text-[9px] opacity-70">({item.score})</span>
                       </button>
                     ))}
                   </div>
 
-                  {/* Dual Speed Playback for Listening Comparison */}
-                  <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono font-black text-amber-900">
-                      🎧 示范对照播放：
-                    </span>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => {
-                          playClickSound();
-                          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                            window.speechSynthesis.cancel();
-                            const u = new SpeechSynthesisUtterance(targetText);
-                            u.rate = 0.65;
-                            u.lang = 'en-US';
-                            window.speechSynthesis.speak(u);
-                          }
-                        }}
-                        className="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[10px] font-mono font-black border border-amber-300 flex items-center space-x-1"
-                      >
-                        <Volume2 className="w-3 h-3 text-amber-700" />
-                        <span>🐢 慢速 0.65x 细听</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          playClickSound();
-                          if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-                            window.speechSynthesis.cancel();
-                            const u = new SpeechSynthesisUtterance(targetText);
-                            u.rate = 1.0;
-                            u.lang = 'en-US';
-                            window.speechSynthesis.speak(u);
-                          }
-                        }}
-                        className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-[10px] font-mono font-black border border-emerald-300 flex items-center space-x-1"
-                      >
-                        <Volume2 className="w-3 h-3 text-emerald-700" />
-                        <span>⚡ 正常 1.0x 语速</span>
-                      </button>
+                  {/* Selected Word Phonics Tip */}
+                  {selectedWordTip && (
+                    <div className="bg-blue-950/60 border border-blue-500/40 p-2.5 rounded-lg text-xs font-mono text-blue-200 flex items-start space-x-2 animate-in fade-in">
+                      <Zap className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-black text-white">【{selectedWordTip.word}】</span>
+                        <span>{selectedWordTip.tip || `得分 ${selectedWordTip.score} 分。发音时注意重音位置，舌位到位。`}</span>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Phoneme Level Detail Breakdown Card */}
-                  <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 grid grid-cols-3 gap-2 text-[10px] font-mono text-center">
-                    <div className="bg-white p-1.5 rounded-lg border border-amber-200">
-                      <span className="text-slate-400 block font-bold">1. 元音饱满度</span>
-                      <span className="font-black text-emerald-700">92% (非常清晰)</span>
-                    </div>
-                    <div className="bg-white p-1.5 rounded-lg border border-amber-200">
-                      <span className="text-slate-400 block font-bold">2. 尾辅音清脆</span>
-                      <span className="font-black text-amber-700">85% (注意轻读)</span>
-                    </div>
-                    <div className="bg-white p-1.5 rounded-lg border border-amber-200">
-                      <span className="text-slate-400 block font-bold">3. 重音语调</span>
-                      <span className="font-black text-emerald-700">88% (节奏自然)</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Feedback */}
-                <div className="space-y-1 text-xs font-mono">
-                  <p className="font-black text-amber-900 flex items-center space-x-1">
-                    <Sparkles className="w-4 h-4 text-[#FF6321]" />
-                    <span>Alex 老师点评：{evaluationResult.feedbackMsg}</span>
-                  </p>
-                  <p className="text-slate-600 font-bold">
-                    {evaluationResult.tips}
-                  </p>
+                {/* Phonics & Pedagogical Feedback */}
+                <div className="bg-slate-800/40 p-3 rounded-xl border border-slate-700/60 space-y-1.5 text-xs font-mono">
+                  <div className="flex items-start space-x-1.5 text-amber-300 font-bold">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>Alex 老师点评：{evaluationResult.encouragement}</span>
+                  </div>
+                  {evaluationResult.phonicsTips.map((tip, idx) => (
+                    <div key={idx} className="text-slate-300 text-[11px] pl-5">
+                      💡 {tip}
+                    </div>
+                  ))}
                 </div>
 
-                {!hasRealRecording && (
-                  <div className="bg-amber-100/90 border-2 border-amber-300 text-amber-950 p-2.5 rounded-xl text-[11px] font-mono font-bold flex items-center space-x-2">
-                    <span>🎙️ 提示：未获取到真实麦克风录音（设备未连接或权限未允许）。请在地址栏允许麦克风权限后点击【重新跟读】，即可录下并播放您的发音原声！</span>
-                  </div>
-                )}
+                {/* Spoken Transcript Comparison */}
+                <div className="text-[11px] font-mono text-slate-400 bg-slate-950/50 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                  <span>识别结果: <span className="text-slate-200">"{evaluationResult.spokenTranscript}"</span></span>
+                  <span className="text-slate-500">时长: {recordingSeconds}s</span>
+                </div>
 
-                {/* Action Buttons */}
+                {/* Dual Audio Comparison Buttons */}
                 <div className="flex items-center space-x-2 pt-1">
                   <button
                     onClick={handlePlayMyRecording}
-                    className={`flex-1 py-2.5 border-2 rounded-xl font-mono font-black text-xs flex items-center justify-center space-x-1.5 transition-all shadow-sm ${
+                    className={`flex-1 py-2.5 border rounded-xl font-mono font-black text-xs flex items-center justify-center space-x-1.5 transition-all shadow-sm ${
                       isPlayingMyRecording
-                        ? 'bg-[#FF6321] text-white border-black animate-pulse shadow-md'
-                        : 'bg-white hover:bg-slate-100 border-amber-400 text-amber-900'
+                        ? 'bg-blue-600 text-white border-blue-400 animate-pulse'
+                        : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-blue-300'
                     }`}
                   >
                     {isPlayingMyRecording ? (
@@ -539,18 +627,18 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
                       </>
                     ) : (
                       <>
-                        <Play className="w-4 h-4 text-[#FF6321]" />
-                        <span>听听我的录音</span>
+                        <Play className="w-3.5 h-3.5 text-blue-400" />
+                        <span>🎧 听听我的录音原声</span>
                       </>
                     )}
                   </button>
 
                   <button
                     onClick={startRecording}
-                    className="flex-1 py-2.5 bg-[#FF6321] hover:bg-[#e05316] border-2 border-black text-white rounded-xl font-mono font-black text-xs flex items-center justify-center space-x-1 shadow-sm"
+                    className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 rounded-xl font-mono font-black text-xs flex items-center justify-center space-x-1 shadow-md"
                   >
-                    <RotateCcw className="w-4 h-4" />
-                    <span>重新跟读挑战</span>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>🔄 重新跟读冲刺 5 星</span>
                   </button>
                 </div>
               </div>
@@ -558,14 +646,37 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
 
           </div>
 
-          {/* Close / Next Button */}
+          {/* Mic Permission Guide Modal / Banner */}
+          {showMicPermissionGuide && (
+            <div className="bg-amber-950/80 border-2 border-amber-500/60 rounded-xl p-3.5 text-xs font-mono text-amber-200 space-y-2">
+              <div className="flex items-center justify-between font-black text-white">
+                <span className="flex items-center space-x-1">
+                  <AlertCircle className="w-4 h-4 text-amber-400" />
+                  <span>如何开启麦克风权限？</span>
+                </span>
+                <button 
+                  onClick={() => setShowMicPermissionGuide(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-[11px] text-amber-300">
+                1. 点击浏览器地址栏左侧的 <strong>【🔒 网站设置 / 权限】</strong> 图标。<br/>
+                2. 将 <strong>【麦克风 (Microphone)】</strong> 设置为 <strong>【允许】</strong>。<br/>
+                3. 刷新页面即可开启真实原声录音！
+              </p>
+            </div>
+          )}
+
+          {/* Done / Collect Rewards Button */}
           {evaluationResult && (
             <button
               onClick={onClose}
-              className="w-full bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white py-3.5 rounded-2xl font-mono font-black text-sm shadow-[0_4px_0_0_#2A4718] flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white py-3 rounded-xl font-mono font-black text-sm shadow-[0_0_15px_rgba(16,185,129,0.4)] flex items-center justify-center space-x-2 transition-transform active:scale-98"
             >
-              <CheckCircle2 className="w-5 h-5 text-[#FFD700]" />
-              <span>完成评测，收下绿宝石！</span>
+              <CheckCircle2 className="w-5 h-5 text-amber-300" />
+              <span>完成评测，收入词汇与绿宝石！</span>
             </button>
           )}
 

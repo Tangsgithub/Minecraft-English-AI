@@ -409,7 +409,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
             {BIOME_CHAPTERS.map(ch => {
               const isActive = selectedUnit === ch.unit;
               const unitLessons = catalog.filter(l => l.unit === ch.unit);
-              const completedCount = unitLessons.filter(l => l.id < profile.currentLessonId || profile.unlockedLessonIds.includes(l.id + 1)).length;
+              const unlockedIds = profile.unlockedLessonIds || [1];
+              const completedCount = unitLessons.filter(l => l.id < profile.currentLessonId || unlockedIds.includes(l.id + 1)).length;
               const isUnitFinished = completedCount === 12;
               const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
               const isPlayerHere = currentUnitNum === ch.unit;
@@ -654,7 +655,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                   {unitLessons.map((item) => {
                     const unlockStatus = getLessonUnlockStatus(profile, selectedVolId, item.id);
                     const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
-                    const isTrial = selectedVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
+                    const isTrial = selectedVolId === 'vol1' && item.id <= 20 && !isVolumeFullyUnlocked(profile, 'vol1');
                     const isBossNode = item.id % 12 === 0;
                     const isBreaking = breakingLessonId === item.id;
 

@@ -315,15 +315,15 @@ export const INITIAL_MISSIONS: Mission[] = [
   },
   {
     id: 'adv_007',
-    title: '第一单元大满贯 (完成 10 关)',
-    titleZh: '第一单元大满贯',
-    description: '通关前 10 课免费试学全量内容，迈入进阶英语探险世界！',
-    mcChallenge: 'Clear 10 Lessons & Unlock Full Chapter',
-    englishChallenge: 'Master 10 Lessons Foundation',
-    xpReward: 90,
-    emeraldReward: 30,
+    title: '体验课大满贯 (通关 20 关)',
+    titleZh: '体验课大满贯',
+    description: '通关前 20 课免费试学全量内容，迈入进阶英语探险世界！',
+    mcChallenge: 'Clear 20 Lessons & Complete Trial Campaign',
+    englishChallenge: 'Master 20 Lessons Foundation',
+    xpReward: 120,
+    emeraldReward: 40,
     category: 'adventure',
-    requiredLessonId: 10,
+    requiredLessonId: 20,
     isCompleted: false
   },
   {
@@ -456,30 +456,44 @@ export function evaluateMissionsForProfile(profile: Partial<UserProfile>): strin
   const completedCount = completedLessonIds.length;
   const masteredWordsCount = (profile.masteredWords || []).length;
   const unlockedCraftingCount = (profile.unlockedCraftingIds || []).length;
-  const alreadyClaimed = new Set(profile.completedMissionIds || []);
+
+  // Strict separation: Daily claimed set vs Lifetime claimed set
+  const completedDailySet = new Set(profile.completedDailyMissionIds || []);
+  const permanentClaimedSet = new Set(profile.completedMissionIds || []);
   const readyIds: string[] = [];
 
   INITIAL_MISSIONS.forEach(mission => {
-    if (alreadyClaimed.has(mission.id)) return;
+    // Check if already claimed
+    if (mission.category === 'daily') {
+      if (completedDailySet.has(mission.id)) return;
+    } else {
+      if (permanentClaimedSet.has(mission.id)) return;
+    }
 
     let isMet = false;
     switch (mission.id) {
-      // Dailies
+      // Dailies: STRICTLY evaluated against today's actual actions
       case 'daily_001':
-        // Must have completed at least 5 minutes of study or completed 1 lesson today
-        isMet = (profile.todayStudyMinutes || 0) >= 5 || completedCount >= 1;
+        // Daily Check-in & Exploration: Done if todayCheckedIn, or studied >= 1 min today, or passed 1 lesson today, or chatted with Alex today
+        isMet = Boolean(
+          profile.todayCheckedIn ||
+          (profile.todayStudyMinutes || 0) >= 1 ||
+          (profile.todayCompletedLessonsCount || 0) >= 1 ||
+          profile.todayAlexChatDone ||
+          (profile.todayMasteredWordsCount || 0) >= 1
+        );
         break;
       case 'daily_002':
-        // Must have completed at least 1 lesson
-        isMet = completedCount >= 1;
+        // Daily Lesson Clear: Must have completed at least 1 lesson TODAY
+        isMet = (profile.todayCompletedLessonsCount || 0) >= 1;
         break;
       case 'daily_003':
-        // Must have genuinely mastered at least 3 vocabulary words
-        isMet = masteredWordsCount >= 3;
+        // Daily Vocabulary Excavation: Must have mastered or reviewed at least 3 words TODAY
+        isMet = (profile.todayMasteredWordsCount || 0) >= 3;
         break;
       case 'daily_004':
-        // Only ready if specifically triggered via Alex conversation
-        isMet = false;
+        // Greet Alex: Must have chatted with Alex in 1V1 chat TODAY
+        isMet = Boolean(profile.todayAlexChatDone);
         break;
 
       // Adventures (Must strictly complete the exact lesson)
@@ -555,7 +569,13 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
   const completedLessonIds = profile.completedLessonIds || [];
   const completedCount = completedLessonIds.length;
   const masteredWordsCount = (profile.masteredWords || []).length;
-  const alreadyClaimed = (profile.completedMissionIds || []).includes(mission.id);
+  
+  const completedDailySet = new Set(profile.completedDailyMissionIds || []);
+  const permanentClaimedSet = new Set(profile.completedMissionIds || []);
+  const isClaimed = mission.category === 'daily'
+    ? completedDailySet.has(mission.id)
+    : permanentClaimedSet.has(mission.id);
+
   const readyList = (profile.readyToClaimMissionIds || []);
   const isReady = readyList.includes(mission.id);
 
@@ -565,19 +585,26 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
   switch (mission.id) {
     case 'daily_001':
       target = 1;
-      current = ((profile.todayStudyMinutes || 0) >= 5 || completedCount >= 1) ? 1 : 0;
+      const isDaily001Met = Boolean(
+        profile.todayCheckedIn ||
+        (profile.todayStudyMinutes || 0) >= 1 ||
+        (profile.todayCompletedLessonsCount || 0) >= 1 ||
+        profile.todayAlexChatDone ||
+        (profile.todayMasteredWordsCount || 0) >= 1
+      );
+      current = isDaily001Met ? 1 : 0;
       break;
     case 'daily_002':
       target = 1;
-      current = completedCount >= 1 ? 1 : 0;
+      current = Math.min(1, profile.todayCompletedLessonsCount || 0);
       break;
     case 'daily_003':
       target = 3;
-      current = Math.min(3, masteredWordsCount);
+      current = Math.min(3, profile.todayMasteredWordsCount || 0);
       break;
     case 'daily_004':
       target = 1;
-      current = (isReady || alreadyClaimed) ? 1 : 0;
+      current = (profile.todayAlexChatDone || isReady || isClaimed) ? 1 : 0;
       break;
     case 'mission_001':
       target = 1;
@@ -645,11 +672,13 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
       break;
     default:
       target = 1;
-      current = (mission.requiredLessonId && completedLessonIds.includes(mission.requiredLessonId)) ? 1 : 0;
+      if (mission.requiredLessonId) {
+        current = completedLessonIds.includes(mission.requiredLessonId) ? 1 : 0;
+      }
       break;
   }
 
-  const percent = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : (current >= 1 ? 100 : 0);
+  const percent = Math.min(100, Math.round((current / Math.max(1, target)) * 100));
   return { current, target, percent, isReady: isReady || percent >= 100 };
 }
 

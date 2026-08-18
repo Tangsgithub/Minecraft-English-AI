@@ -8,6 +8,7 @@ import { MinecraftAvatar } from './MinecraftAvatar';
 import { SceneOralCheckInModal, RealWorldSceneItem } from './SceneOralCheckInModal';
 import { RedstoneLogicWorkbench } from './RedstoneLogicWorkbench';
 import { StoryRetellingDeck } from './StoryRetellingDeck';
+import { OralEvaluationModal } from './OralEvaluationModal';
 
 interface LessonStudyModalProps {
   lesson: Lesson;
@@ -322,17 +323,20 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   
   const [shuffledWords, setShuffledWords] = useState<string[]>([]);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
+  const [completedScaffoldIndices, setCompletedScaffoldIndices] = useState<Set<number>>(new Set());
+  const isCurrentScaffoldFinished = completedScaffoldIndices.has(activeScaffoldSentenceIdx);
   const [isScaffoldSuccess, setIsScaffoldSuccess] = useState<boolean>(false);
   const [completedQuests, setCompletedQuests] = useState<Set<number>>(new Set());
   const [completedSceneTypes, setCompletedSceneTypes] = useState<Record<number, boolean>>({}); // sceneId -> isSpoken
   const [activeSceneForCheckIn, setActiveSceneForCheckIn] = useState<RealWorldSceneItem | null>(null);
+  const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string; mcIcon?: string } | null>(null);
 
   useEffect(() => {
     // Shuffle words for sentence crafting
     const scrambled = [...cleanTargetWords].sort(() => Math.random() - 0.5);
     setShuffledWords(scrambled);
     setSelectedWords([]);
-    setIsScaffoldSuccess(false);
+    setIsScaffoldSuccess(completedScaffoldIndices.has(activeScaffoldSentenceIdx));
   }, [lesson.id, activeScaffoldSentenceIdx]);
 
   const handleSelectWordBlock = (word: string, indexInShuffled: number) => {
@@ -346,8 +350,12 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     if (newSelected.length === cleanTargetWords.length) {
       if (newSelected.join(' ').toLowerCase() === cleanTargetWords.join(' ').toLowerCase()) {
         setIsScaffoldSuccess(true);
+        setCompletedScaffoldIndices(prev => new Set(prev).add(activeScaffoldSentenceIdx));
         playEmeraldSound();
         speakText(targetSentenceForScaffold);
+        if (onAwardEmeralds) {
+          onAwardEmeralds(3, 10);
+        }
       }
     }
   };
@@ -357,7 +365,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     const scrambled = [...cleanTargetWords].sort(() => Math.random() - 0.5);
     setShuffledWords(scrambled);
     setSelectedWords([]);
-    setIsScaffoldSuccess(false);
+    setIsScaffoldSuccess(completedScaffoldIndices.has(activeScaffoldSentenceIdx));
   };
 
   useEffect(() => {
@@ -426,14 +434,49 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     setCurrentDialogueIndex(null);
   };
 
-  // Study Requirements Validation
-  const dialogueAudioCount = Array.from(playedAudioIds).filter((id: string) => id.startsWith('dialogue_')).length;
-  const vocabAudioCount = Array.from(playedAudioIds).filter((id: string) => id.startsWith('vocab_')).length;
+  // Vocabulary Continuous Playback
+  const [isPlayingAllVocab, setIsPlayingAllVocab] = useState<boolean>(false);
+  const stopVocabPlayRef = useRef<boolean>(false);
 
-  const isDialogueDone = isAlreadyCompleted || hasPlayedFullDialogue || dialogueAudioCount >= Math.min(2, lesson.dialogueScript.length);
-  const isScaffoldDone = isAlreadyCompleted || isScaffoldSuccess;
-  const isRealWorldDone = isAlreadyCompleted || completedQuests.size >= 1;
-  const isVocabDone = isAlreadyCompleted || vocabAudioCount >= Math.min(2, lesson.vocabulary.length);
+  const handleTogglePlayAllVocab = async () => {
+    if (isPlayingAllVocab) {
+      stopVocabPlayRef.current = true;
+      stopSpeech();
+      setIsPlayingAllVocab(false);
+      return;
+    }
+
+    stopVocabPlayRef.current = false;
+    setIsPlayingAllVocab(true);
+    playClickSound();
+
+    const vocabs = lesson.vocabulary;
+    for (let i = 0; i < vocabs.length; i++) {
+      if (stopVocabPlayRef.current) break;
+      const v = vocabs[i];
+      const audioId = `vocab_${v.id}_${i}`;
+
+      setPlayedAudioIds(prev => new Set(prev).add(audioId));
+      await speakText(v.word);
+      if (stopVocabPlayRef.current) break;
+      await new Promise(res => setTimeout(res, 400));
+    }
+
+    if (!stopVocabPlayRef.current) {
+      playEmeraldSound();
+    }
+    setIsPlayingAllVocab(false);
+  };
+
+  // Study Requirements Validation - Strict & Complete
+  const realWorldScenes = getRealWorldBridgesForLesson(lesson);
+  const dialogueAudioCount = Array.from(playedAudioIds).filter((id: string) => id.startsWith('dialogue_')).length;
+  const playedVocabIds = Array.from(playedAudioIds).filter((id: string) => id.startsWith('vocab_'));
+
+  const isDialogueDone = isAlreadyCompleted || hasPlayedFullDialogue || dialogueAudioCount >= lesson.dialogueScript.length;
+  const isScaffoldDone = isAlreadyCompleted || completedScaffoldIndices.size >= coreSentences.length;
+  const isRealWorldDone = isAlreadyCompleted || (realWorldScenes.length > 0 && completedQuests.size >= realWorldScenes.length);
+  const isVocabDone = isAlreadyCompleted || (lesson.vocabulary.length > 0 && playedVocabIds.length >= lesson.vocabulary.length);
 
   const completedTaskCount = (isDialogueDone ? 1 : 0) + (isScaffoldDone ? 1 : 0) + (isRealWorldDone ? 1 : 0) + (isVocabDone ? 1 : 0);
   const isAllTasksCompleted = isAlreadyCompleted || completedTaskCount === 4;
@@ -453,13 +496,13 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     if (!isAllTasksCompleted) {
       playAnvilSound();
       if (!isDialogueDone) {
-        scrollToSection('section-dialogue', '🎧 任务 1：请先收听课文对话（可点击【一键连读】整篇）！');
+        scrollToSection('section-dialogue', '🎧 任务 1：请收听课文对话全文（可点击【一键连读】整篇）！');
       } else if (!isScaffoldDone) {
-        scrollToSection('section-scaffold', '🧱 任务 2：请在方块拼句工作台拼出正确的核心句子！');
+        scrollToSection('section-scaffold', `🧱 任务 2：请完成全部 ${coreSentences.length} 个句型脚手架拼句（当前已完成 ${completedScaffoldIndices.size}/${coreSentences.length}）！`);
       } else if (!isRealWorldDone) {
-        scrollToSection('section-realworld', '🎙️ 任务 3：请在下方 3 个生活场景中完成至少 1 个场景的朗读打卡！');
+        scrollToSection('section-realworld', `🎙️ 任务 3：请完成全部 ${realWorldScenes.length} 个生活场景的朗读打卡（当前已打卡 ${completedQuests.size}/${realWorldScenes.length}）！`);
       } else if (!isVocabDone) {
-        scrollToSection('section-vocabulary', '📦 任务 4：请点击收听本课 Minecraft 核心词汇发音！');
+        scrollToSection('section-vocabulary', `📦 任务 4：请收听本课所有 ${lesson.vocabulary.length} 个核心词汇发音（当前已听 ${playedVocabIds.length}/${lesson.vocabulary.length}）！`);
       }
       return;
     }
@@ -631,7 +674,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isDialogueDone ? '✓ 课文对话已收听' : '点击【连读整篇】听完全文'}
+                  {isDialogueDone ? '✓ 课文对话已听完' : `点击【连读整篇】听完全文 (${dialogueAudioCount}/${lesson.dialogueScript.length})`}
                 </p>
               </div>
 
@@ -639,7 +682,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               <div
                 onClick={() => {
                   if (!isScaffoldDone) {
-                    scrollToSection('section-scaffold', '🧱 正在定位语法拼句：按正确语序点击散落单词方块！');
+                    scrollToSection('section-scaffold', `🧱 正在定位语法拼句：需完成本课全部 ${coreSentences.length} 个核心句型拼句！`);
                   }
                 }}
                 className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
@@ -663,7 +706,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isScaffoldDone ? '✓ 核心句型已正确合成' : '在工作台按语序拼句'}
+                  {isScaffoldDone ? `✓ 全部 ${coreSentences.length} 个句型均已拼对` : `需拼对全部句型 (${completedScaffoldIndices.size}/${coreSentences.length})`}
                 </p>
               </div>
 
@@ -671,7 +714,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               <div
                 onClick={() => {
                   if (!isRealWorldDone) {
-                    scrollToSection('section-realworld', '🎙️ 正在定位生活场景：任选 1 场景进行口语跟读打卡！');
+                    scrollToSection('section-realworld', `🎙️ 正在定位生活场景：需完成全部 ${realWorldScenes.length} 个场景的朗读打卡！`);
                   }
                 }}
                 className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
@@ -695,7 +738,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isRealWorldDone ? `✓ 已达成 (${completedQuests.size}/3 场景)` : '任选 1 场景口语打卡'}
+                  {isRealWorldDone ? `✓ 全部 ${realWorldScenes.length} 个场景均已打卡` : `需打卡全部 3 场景 (${completedQuests.size}/${realWorldScenes.length})`}
                 </p>
               </div>
 
@@ -703,7 +746,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               <div
                 onClick={() => {
                   if (!isVocabDone) {
-                    scrollToSection('section-vocabulary', '📦 正在定位核心词汇：点击喇叭收听生词发音！');
+                    scrollToSection('section-vocabulary', `📦 正在定位核心词汇：需收听全部 ${lesson.vocabulary.length} 个生词发音！`);
                   }
                 }}
                 className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
@@ -727,7 +770,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isVocabDone ? '✓ 核心生词发音已收听' : '点击收听词汇示范朗读'}
+                  {isVocabDone ? `✓ 全部 ${lesson.vocabulary.length} 个词汇发音已收听` : `需收听全量生词 (${playedVocabIds.length}/${lesson.vocabulary.length})`}
                 </p>
               </div>
             </div>
@@ -831,19 +874,36 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                           <p className="font-mono font-bold leading-relaxed text-[#111111] text-xs sm:text-sm flex-1">
                             {turn.text}
                           </p>
-                          <button
-                            onClick={() => handlePlayAudio(audioId, turn.text, turn.speaker)}
-                            className={`p-1.5 rounded-lg border transition-all shrink-0 active:scale-95 ${
-                              isCurrentlyPlaying
-                                ? 'bg-emerald-600 text-white border-black'
-                                : isRightSpeaker
-                                  ? 'bg-[#82e054] text-slate-900 border-[#6fc843] hover:bg-[#72d444]'
-                                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
-                            }`}
-                            title="点击朗读此句"
-                          >
-                            <Volume2 className={`w-3.5 h-3.5 ${isCurrentlyPlaying ? 'animate-bounce' : ''}`} />
-                          </button>
+                          <div className="flex items-center space-x-1 shrink-0">
+                            <button
+                              onClick={() => handlePlayAudio(audioId, turn.text, turn.speaker)}
+                              className={`p-1.5 rounded-lg border transition-all active:scale-95 ${
+                                isCurrentlyPlaying
+                                  ? 'bg-emerald-600 text-white border-black'
+                                  : isRightSpeaker
+                                    ? 'bg-[#82e054] text-slate-900 border-[#6fc843] hover:bg-[#72d444]'
+                                    : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                              }`}
+                              title="点击朗读此句"
+                            >
+                              <Volume2 className={`w-3.5 h-3.5 ${isCurrentlyPlaying ? 'animate-bounce' : ''}`} />
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                playClickSound();
+                                setOralTarget({
+                                  text: turn.text,
+                                  translation: turn.translation,
+                                  mcIcon: '🎙️'
+                                });
+                              }}
+                              className="px-2 py-1 bg-amber-200/90 hover:bg-amber-300 text-amber-900 border border-amber-400 rounded-lg text-[10px] font-mono font-black flex items-center space-x-0.5 active:scale-95 shadow-xs"
+                              title="跟读并开启 AI 发音评测与星星打分"
+                            >
+                              <span>🎙️ 跟读</span>
+                            </button>
+                          </div>
                         </div>
 
                         {/* Translation */}
@@ -890,13 +950,30 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                         {coreSentenceTranslations[idx] || ''}
                       </p>
                     </div>
-                    <button
-                      onClick={() => handlePlayAudio(audioId, sentence)}
-                      className={`p-2.5 rounded-xl border-2 transition-colors shadow-sm shrink-0 ${isPlayed ? 'bg-[#487E2C] text-white border-black' : 'bg-slate-100 text-[#487E2C] border-[#487E2C] hover:bg-green-100'}`}
-                      title="朗读示范发音"
-                    >
-                      <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
+                    <div className="flex items-center space-x-1.5 shrink-0">
+                      <button
+                        onClick={() => handlePlayAudio(audioId, sentence)}
+                        className={`p-2 sm:p-2.5 rounded-xl border-2 transition-colors shadow-sm ${isPlayed ? 'bg-[#487E2C] text-white border-black' : 'bg-slate-100 text-[#487E2C] border-[#487E2C] hover:bg-green-100'}`}
+                        title="朗读示范发音"
+                      >
+                        <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          playClickSound();
+                          setOralTarget({
+                            text: sentence,
+                            translation: coreSentenceTranslations[idx],
+                            mcIcon: '✨'
+                          });
+                        }}
+                        className="px-2.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-mono font-black text-xs rounded-xl border-2 border-black shadow-sm flex items-center space-x-1 active:scale-95 transition-all"
+                        title="开启核心句 AI 发音评测与星级打分"
+                      >
+                        <span>🎙️ AI 评测打分</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -933,25 +1010,43 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             </div>
 
             {/* Sentence Selector Tabs - Clean flex-wrap tabs for core sentences */}
-            <div className="flex items-center gap-2 flex-wrap pb-0.5">
-              <span className="text-[10px] font-mono font-bold text-amber-200 shrink-0">核心句型脚手架:</span>
-              {coreSentences.map((sentence, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    playClickSound();
-                    setActiveScaffoldSentenceIdx(idx);
-                  }}
-                  className={`px-3 py-1 rounded-lg font-mono font-black text-xs border transition-all ${
-                    activeScaffoldSentenceIdx === idx
-                      ? 'bg-amber-400 text-slate-950 border-black shadow-sm'
-                      : 'bg-emerald-900 text-emerald-300 border-emerald-700 hover:bg-emerald-800'
-                  }`}
-                  title={sentence}
-                >
-                  句型 {idx + 1}
-                </button>
-              ))}
+            <div className="flex items-center justify-between gap-2 flex-wrap pb-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-mono font-bold text-amber-200 shrink-0">核心句型脚手架:</span>
+                {coreSentences.map((sentence, idx) => {
+                  const isDone = completedScaffoldIndices.has(idx);
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        playClickSound();
+                        setActiveScaffoldSentenceIdx(idx);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg font-mono font-black text-xs border transition-all flex items-center gap-1.5 ${
+                        activeScaffoldSentenceIdx === idx
+                          ? 'bg-amber-400 text-slate-950 border-black shadow-sm'
+                          : isDone
+                          ? 'bg-emerald-900 text-emerald-100 border-emerald-500 hover:bg-emerald-800'
+                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-700 hover:bg-emerald-900'
+                      }`}
+                      title={sentence}
+                    >
+                      <span>{isDone ? '✓ ' : ''}句型 {idx + 1}</span>
+                      <span className={`text-[9px] px-1 py-0.2 rounded font-bold ${
+                        isDone
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {isDone ? '已达标' : '待拼句'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <span className="text-[10px] font-mono font-bold text-amber-300 bg-emerald-900/80 px-2 py-1 rounded border border-emerald-700">
+                拼句达标: {completedScaffoldIndices.size}/{coreSentences.length}
+              </span>
             </div>
 
             {/* Grammar Structure Legend Banner */}
@@ -997,11 +1092,27 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
 
             {/* Success Banner */}
             {isScaffoldSuccess ? (
-              <div className="bg-amber-400 text-slate-950 p-3 rounded-xl font-mono font-black text-xs flex items-center justify-between animate-bounce border-2 border-black">
+              <div className="bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 p-3 rounded-xl font-mono font-black text-xs flex flex-wrap items-center justify-between gap-2 border-2 border-black animate-in fade-in">
                 <div className="flex items-center space-x-2">
-                  <Sparkles className="w-4 h-4 text-emerald-900" />
-                  <span>🎉 完美！语法结构完全拼对！获得 +5 ❇️ 绿宝石</span>
+                  <Sparkles className="w-4 h-4 text-emerald-950" />
+                  <span>
+                    {completedScaffoldIndices.size >= coreSentences.length
+                      ? `🎉 完美！本课全部 ${coreSentences.length} 个核心句型脚手架已全部拼对！获得 +5 ❇️ 绿宝石`
+                      : `🎉 句型 ${activeScaffoldSentenceIdx + 1} 拼对！脚手架达标进度 (${completedScaffoldIndices.size}/${coreSentences.length})`}
+                  </span>
                 </div>
+                {completedScaffoldIndices.size < coreSentences.length && (
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      const nextIdx = (activeScaffoldSentenceIdx + 1) % coreSentences.length;
+                      setActiveScaffoldSentenceIdx(nextIdx);
+                    }}
+                    className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-amber-300 rounded-lg text-xs font-bold border border-black transition-transform active:scale-95 cursor-pointer"
+                  >
+                    👉 立即挑战【句型 {(activeScaffoldSentenceIdx + 1) % coreSentences.length + 1}】
+                  </button>
+                )}
               </div>
             ) : (
               /* Shuffled Word Blocks with Grammar Roles */
@@ -1053,7 +1164,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               highlightedSection === 'section-realworld' ? 'ring-4 ring-amber-400 animate-pulse' : ''
             }`}
           >
-            <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+            <div className="flex items-center justify-between border-b border-amber-200 pb-2 flex-wrap gap-2">
               <div className="flex items-center space-x-2">
                 <span className="text-xl">🌍</span>
                 <div>
@@ -1066,9 +1177,15 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                 </div>
               </div>
 
-              <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-mono font-bold">
-                学以致用 3 场景
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${
+                  isRealWorldDone
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-amber-200 text-amber-900 border-amber-300'
+                }`}>
+                  {isRealWorldDone ? `✓ 全部 3 场景已达标` : `打卡进度: ${completedQuests.size}/${realWorldScenes.length}`}
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1146,9 +1263,31 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               highlightedSection === 'section-vocabulary' ? 'p-3 bg-amber-50/80 rounded-2xl ring-4 ring-amber-400 animate-pulse' : ''
             }`}
           >
-            <h3 className="text-xs font-mono font-black text-[#487E2C] flex items-center space-x-2 uppercase tracking-wider">
-              <span>📦 本课 Minecraft 核心词汇</span>
-            </h3>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="text-xs font-mono font-black text-[#487E2C] flex items-center space-x-2 uppercase tracking-wider">
+                <span>📦 本课 Minecraft 核心词汇</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                  isVocabDone
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-amber-100 text-amber-900 border-amber-300'
+                }`}>
+                  {isVocabDone ? `✓ 全部 ${lesson.vocabulary.length} 词汇已听` : `听读达标: ${playedVocabIds.length}/${lesson.vocabulary.length}`}
+                </span>
+              </h3>
+
+              <button
+                type="button"
+                onClick={handleTogglePlayAllVocab}
+                className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border-2 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${
+                  isPlayingAllVocab
+                    ? 'bg-red-500 text-white border-black animate-pulse'
+                    : 'bg-emerald-100 hover:bg-emerald-200 text-[#487E2C] border-[#487E2C]'
+                }`}
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>{isPlayingAllVocab ? '⏹️ 停止词汇连播' : '▶️ 连播全量词汇'}</span>
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {lesson.vocabulary.map((vocab, idx) => {
                 const audioId = `vocab_${vocab.id}_${idx}`;
@@ -1166,12 +1305,31 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                         <span className="font-black text-sm sm:text-base text-[#2D2D2D] font-mono truncate">
                           {vocab.word}
                         </span>
-                        <button
-                          onClick={() => handlePlayAudio(audioId, vocab.word)}
-                          className={`p-1.5 rounded-lg border transition-colors ${isPlayed ? 'bg-[#487E2C] text-white border-black' : 'bg-slate-200 text-[#487E2C] border-slate-300 hover:bg-slate-300'}`}
-                        >
-                          <Volume2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handlePlayAudio(audioId, vocab.word)}
+                            className={`p-1.5 rounded-lg border transition-colors ${isPlayed ? 'bg-[#487E2C] text-white border-black' : 'bg-slate-200 text-[#487E2C] border-slate-300 hover:bg-slate-300'}`}
+                            title="播放读音"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              playClickSound();
+                              setOralTarget({
+                                text: vocab.word,
+                                translation: vocab.meaning,
+                                phonetic: vocab.phonetic,
+                                mcIcon: vocab.mcItemIcon
+                              });
+                            }}
+                            className="px-1.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-mono font-black flex items-center space-x-0.5 active:scale-95"
+                            title="AI 单词发音评测"
+                          >
+                            <span>🎙️ 打分</span>
+                          </button>
+                        </div>
                       </div>
                       <p className="text-[10px] sm:text-xs text-slate-500 font-mono mt-0.5">{vocab.phonetic}</p>
                       <p className="text-[11px] sm:text-xs text-[#FF6321] font-bold truncate mt-0.5">{vocab.meaning}</p>
@@ -1193,7 +1351,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           {(() => {
             const currentVol = profile?.selectedVolumeId || 'vol1';
             const hasNextLessonAccess = profile ? hasLessonAccess(profile, currentVol, lesson.id + 1) : true;
-            const isFinishingTrial = lesson.id === 10 && !hasNextLessonAccess;
+            const isFinishingTrial = lesson.id === 20 && !hasNextLessonAccess;
 
             return (
               <div className="flex flex-col items-center text-center space-y-3">
@@ -1224,7 +1382,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   {isAlreadyCompleted ? (
                     <span className="text-[#487E2C]">🌟 本课已通关！你可以随时重复收听、巩固复习或重新对练 🌟</span>
                   ) : isFinishingTrial ? (
-                    <span className="text-amber-800">🎉 完成前 10 课免费试学！激活 VIP 或第 1 册卡密即可畅享 11-144 课！</span>
+                    <span className="text-amber-800">🎉 完成前 20 课免费试学！激活 VIP 或第 1 册卡密即可畅享 21-144 课！</span>
                   ) : isAllTasksCompleted ? (
                     <span className="text-[#487E2C]">✨ 4 项学习任务均已达标！可点击下方打卡通关并解锁第 {lesson.id + 1} 课 ✨</span>
                   ) : (
@@ -1256,7 +1414,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                       }`}
                     >
                       <Lock className="w-4 h-4" />
-                      <span>{isAllTasksCompleted ? '🎉 打卡通关 · 激活 VIP 解锁 11-144 课' : `🔒 请先完成学习任务 (${completedTaskCount}/4)`}</span>
+                      <span>{isAllTasksCompleted ? '🎉 打卡通关 · 激活 VIP 解锁 21-144 课' : `🔒 请先完成学习任务 (${completedTaskCount}/4)`}</span>
                     </button>
                   ) : (
                     <button
@@ -1312,6 +1470,20 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             if (onAwardEmeralds) {
               onAwardEmeralds(earnedEmeralds, earnedXp);
             }
+          }}
+        />
+      )}
+
+      {/* AI Speech & Pronunciation Assessment Modal */}
+      {oralTarget && (
+        <OralEvaluationModal
+          targetText={oralTarget.text}
+          translation={oralTarget.translation}
+          phonetic={oralTarget.phonetic}
+          mcItemIcon={oralTarget.mcIcon || '🧱'}
+          onClose={() => setOralTarget(null)}
+          onAwardEmeralds={(emeralds, xp) => {
+            if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
           }}
         />
       )}

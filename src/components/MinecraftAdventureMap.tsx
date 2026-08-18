@@ -419,7 +419,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
 
             const unlockStatus = getLessonUnlockStatus(profile, currentVolId, item.id);
             const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
-            const isTrial = currentVolId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
+            const isTrial = currentVolId === 'vol1' && item.id <= 20 && !isVolumeFullyUnlocked(profile, 'vol1');
 
             const isBossNode = item.id % 12 === 0;
             const isFirstInUnit = (item.id - 1) % 12 === 0;

@@ -18,6 +18,7 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { VipActivationModal } from './components/VipActivationModal';
+import { AudioImmersionRadioModal } from './components/AudioImmersionRadioModal';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
@@ -77,11 +78,21 @@ const sanitizeProfile = (raw: any): UserProfile => {
     ? raw.totalStudyDays 
     : (typeof raw.studyDays === 'number' && raw.studyDays > 0 ? raw.studyDays : streakDays);
 
+  const rawDailyMissionsDate = raw.dailyMissionsDate || rawLastActive;
+  const isNewDay = rawDailyMissionsDate !== todayStr || rawLastActive !== todayStr;
+
   const activeDatesSet = new Set<string>(Array.isArray(raw.activeDates) ? raw.activeDates : [rawLastActive]);
   activeDatesSet.add(todayStr);
   totalStudyDays = Math.max(totalStudyDays, activeDatesSet.size);
 
-  let todayStudyMinutes = typeof raw.todayStudyMinutes === 'number' ? raw.todayStudyMinutes : 0;
+  let todayStudyMinutes = isNewDay ? 0 : (typeof raw.todayStudyMinutes === 'number' ? raw.todayStudyMinutes : 0);
+  let todayCompletedLessonsCount = isNewDay ? 0 : (typeof raw.todayCompletedLessonsCount === 'number' ? raw.todayCompletedLessonsCount : 0);
+  let todayMasteredWordsCount = isNewDay ? 0 : (typeof raw.todayMasteredWordsCount === 'number' ? raw.todayMasteredWordsCount : 0);
+  let todayAlexChatDone = isNewDay ? false : Boolean(raw.todayAlexChatDone);
+  let todayCheckedIn = isNewDay ? false : Boolean(raw.todayCheckedIn);
+  let completedDailyMissionIds: string[] = isNewDay
+    ? []
+    : (Array.isArray(raw.completedDailyMissionIds) ? raw.completedDailyMissionIds : []);
 
   if (rawLastActive !== todayStr) {
     try {
@@ -105,8 +116,6 @@ const sanitizeProfile = (raw: any): UserProfile => {
     } catch (e) {
       console.warn("Date parse error", e);
     }
-    // New day: reset today's study minutes
-    todayStudyMinutes = 0;
   }
 
   const rawVolProgress = raw.volumeProgress && typeof raw.volumeProgress === 'object' ? raw.volumeProgress : {};
@@ -158,8 +167,15 @@ const sanitizeProfile = (raw: any): UserProfile => {
     }
   });
 
-  const activeVolId: CourseVolumeId = raw.selectedVolumeId || 'vol1';
-  const activeProg = volProgress[activeVolId] || volProgress.vol1;
+  const activeVolId: CourseVolumeId = 'vol1';
+  const activeProg = volProgress.vol1;
+
+  // Separate permanent completed mission IDs from daily mission IDs
+  const rawCompletedMissions: string[] = Array.isArray(raw.completedMissionIds)
+    ? raw.completedMissionIds
+    : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []);
+  const permanentCompletedMissions = rawCompletedMissions.filter(id => !id.startsWith('daily_'));
+  const effectiveCompletedMissions = Array.from(new Set([...permanentCompletedMissions, ...completedDailyMissionIds]));
 
   const merged: UserProfile = {
     ...DEFAULT_PROFILE,
@@ -168,7 +184,13 @@ const sanitizeProfile = (raw: any): UserProfile => {
     totalStudyDays,
     activeDates: Array.from(activeDatesSet),
     lastActiveDate: todayStr,
+    dailyMissionsDate: todayStr,
     todayStudyMinutes,
+    todayCompletedLessonsCount,
+    todayMasteredWordsCount,
+    todayAlexChatDone,
+    todayCheckedIn,
+    completedDailyMissionIds,
     selectedAvatar: raw.selectedAvatar || raw.avatar || 'steve',
     avatar: raw.avatar || raw.selectedAvatar || 'steve',
     selectedVolumeId: activeVolId,
@@ -176,9 +198,7 @@ const sanitizeProfile = (raw: any): UserProfile => {
     currentLessonId: activeProg.currentLessonId,
     unlockedLessonIds: activeProg.unlockedLessonIds,
     completedLessonIds: activeProg.completedLessonIds,
-    completedMissionIds: Array.isArray(raw.completedMissionIds)
-      ? raw.completedMissionIds
-      : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []),
+    completedMissionIds: effectiveCompletedMissions,
     readyToClaimMissionIds: Array.isArray(raw.readyToClaimMissionIds) ? raw.readyToClaimMissionIds : [],
     unlockedBadgeIds: Array.isArray(raw.unlockedBadgeIds) ? raw.unlockedBadgeIds : ['badge_first_words'],
     masteredWords: Array.isArray(raw.masteredWords) ? raw.masteredWords : []
@@ -186,6 +206,15 @@ const sanitizeProfile = (raw: any): UserProfile => {
 
   if (merged.nickname === 'Tom') merged.nickname = 'Olaf';
   merged.level = getLevelFromXp(merged.xp || 40);
+
+  // If user account is 测试001 or test001, ensure set to regular user (普通用户)
+  const cleanAcc = (merged.account || merged.nickname || '').trim().toLowerCase();
+  if (cleanAcc === '测试001' || cleanAcc === 'test001') {
+    merged.isVip = false;
+    merged.vipActivatedAt = 0;
+    merged.activatedVolumes = [];
+    merged.isAdmin = false;
+  }
 
   // Strictly evaluate and populate readyToClaimMissionIds based on existing real completed lessons & achievements
   const evaluatedReady = evaluateMissionsForProfile(merged);
@@ -214,7 +243,7 @@ export default function App() {
   const [isLandingView, setIsLandingView] = useState<boolean>(() => !auth.currentUser);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
-  const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>(profile.selectedVolumeId || 'vol1');
+  const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>('vol1');
   const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
@@ -231,6 +260,7 @@ export default function App() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
+  const [isRadioOpen, setIsRadioOpen] = useState<boolean>(false);
 
   // Fetch latest cloud profile on login or user switch
   useEffect(() => {
@@ -412,9 +442,14 @@ export default function App() {
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
 
   const handleChangeVolumeId = (newVolId: CourseVolumeId) => {
-    setSelectedVolumeId(newVolId);
+    if (newVolId !== 'vol1') {
+      alert('《新概念英语》第二册目前正由教研团队深度打磨中，已全量锁定，暂未开放，敬请期待！');
+      setSelectedVolumeId('vol1');
+      return;
+    }
+    setSelectedVolumeId('vol1');
     setProfile(prev => {
-      const updated = switchActiveVolume(prev, newVolId);
+      const updated = switchActiveVolume(prev, 'vol1');
       if (typeof window !== 'undefined') {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(updated));
       }
@@ -457,6 +492,9 @@ export default function App() {
         completedLessonIds: nextCompleted
       });
 
+      // Increment today's completed lessons count
+      nextProfile.todayCompletedLessonsCount = (nextProfile.todayCompletedLessonsCount || 0) + 1;
+
       // Automatically evaluate missions for newly completed lesson
       const newlyReadyMissions = evaluateMissionsForProfile(nextProfile);
       nextProfile.readyToClaimMissionIds = Array.from(new Set([
@@ -475,11 +513,52 @@ export default function App() {
 
   const handleCompleteMission = (missionId: string, xpReward: number, emeraldReward: number) => {
     handleAwardEmeralds(emeraldReward, xpReward);
-    setProfile(prev => ({
-      ...prev,
-      completedMissionIds: Array.from(new Set([...prev.completedMissionIds, missionId])),
-      readyToClaimMissionIds: (prev.readyToClaimMissionIds || []).filter(id => id !== missionId)
-    }));
+    setProfile(prev => {
+      const isDaily = missionId.startsWith('daily_');
+      const nextDailyCompleted = isDaily
+        ? Array.from(new Set([...(prev.completedDailyMissionIds || []), missionId]))
+        : (prev.completedDailyMissionIds || []);
+      const nextCompleted = Array.from(new Set([...prev.completedMissionIds, missionId]));
+      const nextReady = (prev.readyToClaimMissionIds || []).filter(id => id !== missionId);
+
+      const next: UserProfile = {
+        ...prev,
+        completedDailyMissionIds: nextDailyCompleted,
+        completedMissionIds: nextCompleted,
+        readyToClaimMissionIds: nextReady
+      };
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
+      }
+      saveUserProfileToCloud(next, currentUser?.uid);
+      return next;
+    });
+  };
+
+  const handleDailyCheckIn = () => {
+    setProfile(prev => {
+      if (prev.todayCheckedIn) return prev;
+      playEmeraldSound();
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+
+      const next: UserProfile = {
+        ...prev,
+        todayCheckedIn: true
+      };
+
+      const newlyReadyMissions = evaluateMissionsForProfile(next);
+      next.readyToClaimMissionIds = Array.from(new Set([
+        ...(next.readyToClaimMissionIds || []),
+        ...newlyReadyMissions
+      ])).filter(id => !(next.completedMissionIds || []).includes(id));
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
+      }
+      saveUserProfileToCloud(next, currentUser?.uid);
+      return next;
+    });
   };
 
   const handleToggleMasterWord = (word: string) => {
@@ -496,7 +575,8 @@ export default function App() {
 
       const next: UserProfile = {
         ...prev,
-        masteredWords: nextMastered
+        masteredWords: nextMastered,
+        todayMasteredWordsCount: !isAlready ? (prev.todayMasteredWordsCount || 0) + 1 : prev.todayMasteredWordsCount
       };
 
       const newlyReadyMissions = evaluateMissionsForProfile(next);
@@ -504,6 +584,11 @@ export default function App() {
         ...(next.readyToClaimMissionIds || []),
         ...newlyReadyMissions
       ])).filter(id => !(next.completedMissionIds || []).includes(id));
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
+      }
+      saveUserProfileToCloud(next, currentUser?.uid);
 
       return next;
     });
@@ -621,6 +706,7 @@ export default function App() {
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
+        onOpenRadio={() => setIsRadioOpen(true)}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
         onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
@@ -760,28 +846,46 @@ export default function App() {
               onCompleteLesson={handleCompleteLesson}
               onCheckMission={(text) => {
                 const lowerText = text.toLowerCase();
-                const newReady = [];
-                import('./data/gamificationData').then(({ INITIAL_MISSIONS }) => {
-                  INITIAL_MISSIONS.forEach(mission => {
-                    if ((profile.completedMissionIds || []).includes(mission.id)) return;
-                    if ((profile.readyToClaimMissionIds || []).includes(mission.id)) return;
-                    
-                    let matched = false;
-                    if (mission.id === 'mission_001' && lowerText.includes('wooden door')) matched = true;
-                    if (mission.id === 'mission_002' && (lowerText.includes('excuse me') || lowerText.includes('teacher'))) matched = true;
-                    if (mission.id === 'mission_003' && lowerText.includes('diamonds')) matched = true;
-                    if (mission.id === 'mission_004' && (lowerText.includes('how much') || lowerText.includes('emerald'))) matched = true;
-                    
-                    if (matched) {
-                      newReady.push(mission.id);
-                      alert(`🎉 恭喜！你通过对话完成了隐藏任务: [${mission.titleZh}]！请去"任务"页面领取奖励吧！`);
+                setProfile(prev => {
+                  const next: UserProfile = {
+                    ...prev,
+                    todayAlexChatDone: true
+                  };
+                  const newlyReadyMissions = evaluateMissionsForProfile(next);
+                  next.readyToClaimMissionIds = Array.from(new Set([
+                    ...(next.readyToClaimMissionIds || []),
+                    ...newlyReadyMissions
+                  ])).filter(id => !(next.completedMissionIds || []).includes(id));
+
+                  const hiddenReady: string[] = [];
+                  import('./data/gamificationData').then(({ INITIAL_MISSIONS }) => {
+                    INITIAL_MISSIONS.forEach(mission => {
+                      if ((next.completedMissionIds || []).includes(mission.id)) return;
+                      if ((next.readyToClaimMissionIds || []).includes(mission.id)) return;
+                      
+                      let matched = false;
+                      if (mission.id === 'mission_001' && lowerText.includes('wooden door')) matched = true;
+                      if (mission.id === 'mission_002' && (lowerText.includes('excuse me') || lowerText.includes('teacher'))) matched = true;
+                      if (mission.id === 'mission_003' && lowerText.includes('diamonds')) matched = true;
+                      if (mission.id === 'mission_004' && (lowerText.includes('how much') || lowerText.includes('emerald'))) matched = true;
+                      
+                      if (matched) {
+                        hiddenReady.push(mission.id);
+                        alert(`🎉 恭喜！你通过对话完成了隐藏任务: [${mission.titleZh}]！请去"任务"页面领取奖励吧！`);
+                      }
+                    });
+                    if (hiddenReady.length > 0) {
+                      handleUpdateProfile({
+                        readyToClaimMissionIds: Array.from(new Set([...(next.readyToClaimMissionIds || []), ...hiddenReady]))
+                      });
                     }
                   });
-                  if (newReady.length > 0) {
-                    handleUpdateProfile({
-                      readyToClaimMissionIds: [...(profile.readyToClaimMissionIds || []), ...newReady]
-                    });
+
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
                   }
+                  saveUserProfileToCloud(next, currentUser?.uid);
+                  return next;
                 });
               }}
               onBackToMap={() => {
@@ -814,6 +918,7 @@ export default function App() {
               onMasterWord={handleToggleMasterWord}
               onOpenVipModal={() => setIsVipModalOpen(true)}
               onNavigateToLesson={handleSelectLessonForChat}
+              onUpdateProfile={handleUpdateProfile}
             />
           )}
 
@@ -825,6 +930,7 @@ export default function App() {
               onNavigateToMap={() => setActiveTab('map')}
               onNavigateToVocab={() => setActiveTab('vocab')}
               onNavigateToCrafting={() => setActiveTab('crafting')}
+              onDailyCheckIn={handleDailyCheckIn}
               onUpdateProfile={handleUpdateProfile}
             />
           )}
@@ -944,6 +1050,15 @@ export default function App() {
         profile={profile}
         onUpdateProfile={handleUpdateProfile}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
+      />
+
+      <AudioImmersionRadioModal
+        isOpen={isRadioOpen}
+        onClose={() => setIsRadioOpen(false)}
+        selectedVolumeId={selectedVolumeId}
+        profile={profile}
+        currentLessonId={profile.currentLessonId || 1}
+        onAwardEmeralds={handleAwardEmeralds}
       />
 
       {isAdminConsoleOpen && (

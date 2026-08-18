@@ -362,7 +362,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
             {filteredCatalog.map(item => {
               const unlockStatus = getLessonUnlockStatus(profile, selectedVolumeId, item.id);
               const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
-              const isTrial = selectedVolumeId === 'vol1' && item.id <= 10 && !isVolumeFullyUnlocked(profile, 'vol1');
+              const isTrial = selectedVolumeId === 'vol1' && item.id <= 20 && !isVolumeFullyUnlocked(profile, 'vol1');
 
               return (
                 <div

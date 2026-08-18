@@ -1,7 +1,6 @@
 import React from 'react';
-import { UserProfile } from '../types';
-import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
-import { LESSONS_DATA } from '../data/lessonsData';
+import { UserProfile, CourseVolumeId, VocabItem } from '../types';
+import { getFullBook1VocabList } from '../data/book1VocabManager';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { BookOpen, Award, ArrowRight, Sparkles } from 'lucide-react';
 import { playClickSound } from '../utils/audio';
@@ -15,14 +14,9 @@ export const VocabProgressChart: React.FC<VocabProgressChartProps> = ({
   profile,
   onNavigateToVocab
 }) => {
-  // Calculate total combined vocabulary
-  const allLessonVocab = LESSONS_DATA.flatMap(l => l.vocabulary);
-  const combinedList = [...MINECRAFT_VOCABULARY];
-  allLessonVocab.forEach(lv => {
-    if (!combinedList.some(v => v.word.toLowerCase() === lv.word.toLowerCase())) {
-      combinedList.push(lv);
-    }
-  });
+  // Calculate total combined vocabulary from the authentic curriculum manager
+  const currentVolId: CourseVolumeId = profile.selectedVolumeId || 'vol1';
+  const combinedList: VocabItem[] = currentVolId === 'vol1' ? getFullBook1VocabList() : getFullBook1VocabList();
 
   const totalWords = combinedList.length;
   

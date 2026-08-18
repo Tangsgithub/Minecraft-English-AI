@@ -47,15 +47,15 @@ export const APP_VERSION_INFO = {
     {
       id: 'vol2',
       title: '新概念英语 第2册',
-      subtitle: 'Minecraft 红石工业与复杂句型篇',
+      subtitle: 'Minecraft 红石工业与复杂句型篇 (锁定打磨中)',
       mcWorldTheme: '⚡ 红石机械与要塞探险',
-      badge: '2册 官方正式版 (1-96关 全量原版)',
+      badge: '2册 敬请期待 (教研打磨锁定中)',
       totalLessons: 96,
-      unlockedLevelReq: 1,
-      status: 'active',
-      description: '【全书 96 关 100% 真实原版上线】掌握时态演练、双宾语、间接引语、条件从句与红石逻辑，包含《A private conversation》、《The dead return》等 96 篇经典原版课文。',
+      unlockedLevelReq: 999,
+      status: 'coming_soon',
+      description: '【教研深度打磨中】第二册 96 关红石机械进阶剧情、长句复述与复杂句型语法正在进行精细化教研打磨，当前已全面锁定，暂未开放，敬请期待后续版本！',
       targetAge: '8-14 岁 / 进阶中级',
-      features: ['96个100%真实红石剧情关卡', 'Alex AI长句复述与情景对话', '精细语法考点与实战例句']
+      features: ['96个红石剧情关卡（教研打磨中）', 'Alex AI长句复述与情景对话', '精细语法考点与实战例句']
     },
     {
       id: 'vol3',
@@ -138,10 +138,18 @@ export interface UserProfile {
   totalStudyMinutes?: number;
   totalStudyDays?: number;
   activeDates?: string[];
+  dailyMissionsDate?: string;
+  todayCompletedLessonsCount?: number;
+  todayMasteredWordsCount?: number;
+  todayAlexChatDone?: boolean;
+  todayCheckedIn?: boolean;
+  completedDailyMissionIds?: string[];
   parentSettings?: ParentSettings;
   isVip?: boolean;
   vipActivatedAt?: number;
   activatedVolumes?: CourseVolumeId[];
+  isAdmin?: boolean;
+  role?: string;
   lastEnderChestClaimDate?: string;
   selectedVolumeId?: CourseVolumeId;
   createdAt?: number;

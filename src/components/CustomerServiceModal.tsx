@@ -44,13 +44,13 @@ interface ChatMsg {
 
 const FAQ_ITEMS = [
   {
-    question: '所有账号都能免费体验前 10 课吗？',
-    answer: '是的！Minecraft English 实行正规公开体验政策。无论您是注册新账号还是已有账号，注册登录后均可免费体验第 1 课至第 10 课的所有全量学习关卡、听说评测及 Alex AI 智能对练！',
+    question: '所有账号都能免费体验前 20 课吗？',
+    answer: '是的！Minecraft English 实行正规公开体验政策。无论您是注册新账号还是已有账号，注册登录后均可免费体验第 1 课至第 20 课的所有全量学习关卡、听说评测及 Alex AI 智能对练！',
     category: '课程体验'
   },
   {
     question: '如何升级 VIP 尊享会员？全套课程包含哪些？',
-    answer: '升至 VIP 尊享会员后即可解锁全套 1 ~ 144 课《新概念英语》1/2/3/4册全部关卡、方块语法实验室及末地篇高级课程。在顶部或关卡弹窗点击【💎 开通VIP】，输入激活码即可一次激活，终身无锁。',
+    answer: '升至 VIP 尊享会员后即可解锁第一册全套 1 ~ 144 课全部关卡、方块语法实验室及末地篇高级课程。在顶部或关卡弹窗点击【💎 开通VIP】，输入激活码即可一次激活，终身无锁。',
     category: 'VIP会员'
   },
   {
@@ -76,7 +76,7 @@ const FAQ_ITEMS = [
 ];
 
 const PRESET_QUESTIONS = [
-  '1-10课如何免费试用？',
+  '1-20课如何免费试用？',
   'VIP激活码在哪兑换？',
   '怎么联系人工客服？',
   '语音评分听不到声音怎么办？',
@@ -160,8 +160,8 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
       const systemPrompt = `你当前是《Minecraft English 麦块英语》官方在线客服代表史蒂夫（Steve）。
 你的任务是以亲切、专业、鼓励的语气解答用户关于该应用程序的各种咨询。
 应用核心规则：
-1. 注册与登录：用户须注册/登录后即可畅享学习大厅。所有注册用户均可【免费体验 1 ~ 10 课】全量关卡及 AI 语音对练。
-2. VIP 会员：购买/获得 16 位激活码后可在系统输入解锁 11-144 全套课。
+1. 注册与登录：用户须注册/登录后即可畅享学习大厅。所有注册用户均可【免费体验 1 ~ 20 课】全量关卡及 AI 语音对练。
+2. VIP 会员：购买/获得 16 位激活码后可在系统输入解锁 21-144 全套课。
 3. 云端存储：支持 Google Firebase 云端 秒级实时同步学习进度、绿宝石和已收录单词。
 4. 口语评测与音效：采用标准美式发音与精准得分系统。
 请使用中文回答，回答简明扼要、排版清晰，符合 Minecraft 风格。`;
@@ -393,7 +393,7 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="输入您的疑问（如：怎么使用前10课试用？或重置进度）..."
+                  placeholder="输入您的疑问（如：怎么使用前20课试用？或重置进度）..."
                   className="flex-1 bg-slate-950 border-2 border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans"
                 />
                 <button
@@ -419,7 +419,7 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索常见问题关键词（VIP, 10课, 声音, 账号...）"
+                  placeholder="搜索常见问题关键词（VIP, 20课, 声音, 账号...）"
                   className="w-full bg-slate-950 border-2 border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans"
                 />
               </div>
@@ -597,7 +597,7 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
                     >
                       <option value="VIP激活与兑换">💎 VIP 激活与兑换卡号</option>
                       <option value="账号与云端同步">☁️ 账号登录 / 关卡进度未同步</option>
-                      <option value="免费10课体验咨询">🎁 免费试用 1-10 课体验咨询</option>
+                      <option value="免费20课体验咨询">🎁 免费试用 1-20 课体验咨询</option>
                       <option value="语音评测与设备发音">🎙️ 语音评测 / 话筒录音异常</option>
                       <option value="课程建议与Bug提交">🐛 课程反馈与应用 Bug 建议</option>
                       <option value="其它合作与问题">💬 其它合作与咨询</option>

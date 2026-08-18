@@ -28,7 +28,7 @@ let cachedBook1VocabList: VocabItem[] | null = null;
  * 获取《新概念英语》第一册（Volume 1）全册 144 课标准词汇全集（共 900+ 词）
  * - 确保词汇总数真实完整（900+ 词，覆盖 144 课）
  * - 每课词汇按标准课标平均分布（每课约 6~7 词）
- * - 当学生学完前 10 课时，准确解锁对应前 10 课的约 60 词，其余 800+ 词随关卡稳步解锁
+ * - 当学生学完前 20 课时，准确解锁对应前 20 课的词汇，其余词汇随关卡稳步解锁
  */
 export function getFullBook1VocabList(): VocabItem[] {
   if (cachedBook1VocabList) {
@@ -144,4 +144,12 @@ export function getFullBook1VocabList(): VocabItem[] {
   fullList.sort((a, b) => (a.requiredLessonId || 1) - (b.requiredLessonId || 1));
   cachedBook1VocabList = fullList;
   return fullList;
+}
+
+/**
+ * 获取指定课次（1~144课）的词汇列表
+ */
+export function getVocabForLessonFromManager(lessonId: number): VocabItem[] {
+  const full = getFullBook1VocabList();
+  return full.filter(v => (v.requiredLessonId || 1) === lessonId);
 }

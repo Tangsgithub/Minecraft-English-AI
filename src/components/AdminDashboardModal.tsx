@@ -376,6 +376,89 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     }
   };
 
+  const handleModifyUser = async (targetAccount: string, action: 'set_regular' | 'set_vip' | 'reset_progress') => {
+    const actionName = action === 'set_regular' ? '调整为普通用户' : action === 'set_vip' ? '设为 VIP 用户' : '重置关卡学习进度';
+    setConfirmDialog({
+      message: `确定要将学员【${targetAccount}】${actionName}吗？`,
+      onConfirm: async () => {
+        try {
+          const resp = await fetch('/api/admin/modify-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account: targetAccount, action })
+          });
+          const data = await resp.json();
+          if (data.success) {
+            playEmeraldSound();
+            setFetchStatusMsg(`✅ ${data.message || '操作成功！'}`);
+            setTimeout(() => setFetchStatusMsg(null), 3500);
+            
+            // If the updated user is the currently logged in profile, update local state
+            if (
+              profile.account?.toLowerCase() === targetAccount.toLowerCase() ||
+              profile.nickname?.toLowerCase() === targetAccount.toLowerCase() ||
+              (targetAccount === '测试001' && profile.id === 'user_001')
+            ) {
+              onUpdateProfile(prev => {
+                if (action === 'set_regular') {
+                  const unlocked = (prev.unlockedLessonIds || [1]).filter(id => id <= 20);
+                  const updated = {
+                    ...prev,
+                    isVip: false,
+                    vipActivatedAt: 0,
+                    activatedVolumes: [],
+                    unlockedLessonIds: unlocked.length > 0 ? unlocked : [1],
+                    volumeProgress: {
+                      vol1: {
+                        currentLessonId: Math.min(prev.volumeProgress?.vol1?.currentLessonId || 1, 20),
+                        unlockedLessonIds: (prev.volumeProgress?.vol1?.unlockedLessonIds || [1]).filter(id => id <= 20),
+                        completedLessonIds: (prev.volumeProgress?.vol1?.completedLessonIds || []).filter(id => id <= 20)
+                      },
+                      vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+                      vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+                      vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+                    }
+                  };
+                  localStorage.setItem('mc_english_user_profile', JSON.stringify(updated));
+                  return updated;
+                } else if (action === 'set_vip') {
+                  const allVol1Ids = Array.from({ length: 144 }, (_, i) => i + 1);
+                  const allVol2Ids = Array.from({ length: 96 }, (_, i) => i + 1);
+                  const allVol3Ids = Array.from({ length: 60 }, (_, i) => i + 1);
+                  const allVol4Ids = Array.from({ length: 48 }, (_, i) => i + 1);
+                  const updated = {
+                    ...prev,
+                    isVip: true,
+                    vipActivatedAt: Date.now(),
+                    activatedVolumes: ['vol1', 'vol2', 'vol3', 'vol4', 'all'],
+                    unlockedLessonIds: allVol1Ids,
+                    volumeProgress: {
+                      vol1: { currentLessonId: 1, unlockedLessonIds: allVol1Ids, completedLessonIds: prev.volumeProgress?.vol1?.completedLessonIds || [] },
+                      vol2: { currentLessonId: 1, unlockedLessonIds: allVol2Ids, completedLessonIds: prev.volumeProgress?.vol2?.completedLessonIds || [] },
+                      vol3: { currentLessonId: 1, unlockedLessonIds: allVol3Ids, completedLessonIds: prev.volumeProgress?.vol3?.completedLessonIds || [] },
+                      vol4: { currentLessonId: 1, unlockedLessonIds: allVol4Ids, completedLessonIds: prev.volumeProgress?.vol4?.completedLessonIds || [] }
+                    }
+                  };
+                  localStorage.setItem('mc_english_user_profile', JSON.stringify(updated));
+                  return updated;
+                }
+                return prev;
+              });
+            }
+
+            await fetchRegisteredUsers();
+          } else {
+            setFetchStatusMsg(`❌ ${data.error || '操作失败'}`);
+            setTimeout(() => setFetchStatusMsg(null), 3000);
+          }
+        } catch (err) {
+          setFetchStatusMsg('❌ 请求异常，请稍后重试');
+          setTimeout(() => setFetchStatusMsg(null), 3000);
+        }
+      }
+    });
+  };
+
   React.useEffect(() => {
     if (isAuthenticated) {
       fetchActivationCodes();
@@ -1141,12 +1224,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           <tr>
                             <th className="p-3">账号 (Account)</th>
                             <th className="p-3">昵称</th>
+                            <th className="p-3">用户身份</th>
                             <th className="p-3">等级</th>
                             <th className="p-3">绿宝石</th>
                             <th className="p-3">连签</th>
                             <th className="p-3">解锁课数</th>
                             <th className="p-3">注册时间</th>
-                            <th className="p-3 text-right">操作</th>
+                            <th className="p-3 text-right">权限与数据管理</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-stone-800 text-stone-300 font-mono">
@@ -1157,27 +1241,65 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                               u.nickname?.toLowerCase().includes(userSearch.toLowerCase()) ||
                               u.uid?.includes(userSearch)
                             )
-                            .map((u, idx) => (
-                              <tr key={u.uid || idx} className="hover:bg-stone-800/50 transition-colors">
-                                <td className="p-3 font-bold text-amber-300">{u.account}</td>
-                                <td className="p-3 font-semibold text-stone-200">{u.nickname}</td>
-                                <td className="p-3 text-amber-400 font-bold">Lv.{u.level}</td>
-                                <td className="p-3 text-emerald-400 font-bold">❇️ {u.emeralds}</td>
-                                <td className="p-3 text-orange-400">🔥 {u.streakDays} 天</td>
-                                <td className="p-3 text-blue-400">{u.unlockedLessonsCount} 课</td>
-                                <td className="p-3 text-stone-400 text-[11px]">
-                                  {u.createdAt ? new Date(u.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '更早以前'}
-                                </td>
-                                <td className="p-3 text-right">
-                                  <button
-                                    onClick={() => setSelectedUserDetail(u)}
-                                    className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold"
-                                  >
-                                    检视 Profile
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                            .map((u, idx) => {
+                              const isUserVip = Boolean(u.isVip || u.profile?.isVip);
+                              return (
+                                <tr key={u.uid || idx} className="hover:bg-stone-800/50 transition-colors">
+                                  <td className="p-3 font-bold text-amber-300">{u.account}</td>
+                                  <td className="p-3 font-semibold text-stone-200">{u.nickname}</td>
+                                  <td className="p-3">
+                                    {isUserVip ? (
+                                      <span className="bg-amber-950 text-amber-300 border border-amber-600 px-2 py-0.5 rounded text-[11px] font-bold">
+                                        👑 VIP 会员
+                                      </span>
+                                    ) : (
+                                      <span className="bg-stone-800 text-stone-300 border border-stone-600 px-2 py-0.5 rounded text-[11px] font-bold">
+                                        👤 普通用户
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-3 text-amber-400 font-bold">Lv.{u.level}</td>
+                                  <td className="p-3 text-emerald-400 font-bold">❇️ {u.emeralds}</td>
+                                  <td className="p-3 text-orange-400">🔥 {u.streakDays} 天</td>
+                                  <td className="p-3 text-blue-400">{u.unlockedLessonsCount} 课</td>
+                                  <td className="p-3 text-stone-400 text-[11px]">
+                                    {u.createdAt ? new Date(u.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '更早以前'}
+                                  </td>
+                                  <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                                    {isUserVip ? (
+                                      <button
+                                        onClick={() => handleModifyUser(u.account, 'set_regular')}
+                                        className="bg-stone-800 hover:bg-rose-950 text-stone-300 hover:text-rose-300 border border-stone-600 hover:border-rose-600 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors"
+                                        title="取消VIP并恢复为普通免费用户"
+                                      >
+                                        👤 设为普通用户
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleModifyUser(u.account, 'set_vip')}
+                                        className="bg-amber-950/80 hover:bg-amber-800 text-amber-300 border border-amber-600 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors"
+                                        title="升级开通全部关卡VIP"
+                                      >
+                                        👑 设为 VIP
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleModifyUser(u.account, 'reset_progress')}
+                                      className="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors"
+                                      title="重置关卡和经验"
+                                    >
+                                      🔄 重置进度
+                                    </button>
+                                    <button
+                                      onClick={() => setSelectedUserDetail(u)}
+                                      className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+                                    >
+                                      Profile
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           {registeredUsers.length === 0 && (
                             <tr>
                               <td colSpan={8} className="p-6 text-center text-stone-500">

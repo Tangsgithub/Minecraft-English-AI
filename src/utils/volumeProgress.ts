@@ -32,21 +32,24 @@ export const DEFAULT_VOLUME_PROGRESS: Record<CourseVolumeId, VolumeProgress> = {
 
 /**
  * Free Trial Limits:
- * Volume 1 (第一册): Lessons 1-10 are free trial for all users.
- * Volume 1 Lessons 11-144: Requires VIP or Volume 1 activation.
- * Volume 2, 3, 4: Requires specific volume activation or VIP.
+ * Volume 1 (第一册): Lessons 1-20 are free trial for all users.
+ * Volume 1 Lessons 21-144: Requires VIP or Volume 1 activation.
+ * Volume 2, 3, 4: Requires specific volume activation or VIP (currently locked for polishing).
  */
-export const FREE_TRIAL_LESSONS_LIMIT = 10;
+export const FREE_TRIAL_LESSONS_LIMIT = 20;
 
 /**
  * Check if the user has full access to a specific volume.
  */
 export function isVolumeFullyUnlocked(profile: UserProfile, volumeId: CourseVolumeId = 'vol1'): boolean {
   if (!profile) return false;
+  // Volume 2, 3, 4 are strictly locked for curriculum polishing
+  if (volumeId !== 'vol1') return false;
+
   if (profile.isVip === true || String(profile.isVip) === 'true') return true;
   if (profile.activatedVolumes && Array.isArray(profile.activatedVolumes)) {
     const vols = profile.activatedVolumes.map(v => String(v).toLowerCase());
-    if (vols.includes(volumeId.toLowerCase()) || vols.includes('all') || vols.includes('*')) {
+    if (vols.includes('vol1') || vols.includes('all') || vols.includes('*')) {
       return true;
     }
   }
@@ -61,14 +64,17 @@ export function hasLessonAccess(
   volumeId: CourseVolumeId = 'vol1',
   lessonId: number
 ): boolean {
+  // Volume 2, 3, 4 are strictly locked for curriculum polishing
+  if (volumeId !== 'vol1') return false;
+
   if (!profile) {
-    return volumeId === 'vol1' && lessonId <= FREE_TRIAL_LESSONS_LIMIT;
+    return lessonId <= FREE_TRIAL_LESSONS_LIMIT;
   }
-  if (isVolumeFullyUnlocked(profile, volumeId)) {
+  if (isVolumeFullyUnlocked(profile, 'vol1')) {
     return true;
   }
   // Free trial policy: Volume 1 lessons 1 to 10 are completely free
-  if (volumeId === 'vol1' && lessonId <= FREE_TRIAL_LESSONS_LIMIT) {
+  if (lessonId <= FREE_TRIAL_LESSONS_LIMIT) {
     return true;
   }
   return false;
@@ -98,7 +104,7 @@ export interface LessonUnlockStatus {
 
 /**
  * Determine full unlock status for a lesson:
- * Rule 1: Must have activation code / VIP (or be within free trial lessons 1-10 in Volume 1).
+ * Rule 1: Must have activation code / VIP (or be within free trial lessons 1-20 in Volume 1).
  * Rule 2: Must have completed the previous lesson (Lesson N - 1) before unlocking Lesson N.
  */
 export function getLessonUnlockStatus(
@@ -126,13 +132,22 @@ export function getLessonUnlockStatus(
   const isUnlocked = hasAccess && isProgressionUnlocked;
 
   let lockReasonMsg = '';
+  if (volumeId !== 'vol1') {
+    const volMap: Record<string, string> = { vol2: '第二册', vol3: '第三册', vol4: '第四册' };
+    lockReasonMsg = `🔒 《新概念英语》${volMap[volumeId] || volumeId}目前正由教研团队深度打磨中，已全量锁定，敬请期待！`;
+    return {
+      isUnlocked: false,
+      isCompleted: false,
+      isCurrent: false,
+      hasAccess: false,
+      isPaywallLocked: true,
+      isProgressionLocked: false,
+      lockReasonMsg
+    };
+  }
+
   if (isPaywallLocked) {
-    if (volumeId === 'vol1') {
-      lockReasonMsg = `🔒 VIP 专享关卡：第 ${lessonId} 课需使用 16 位激活码解锁（前 10 课免费试学）`;
-    } else {
-      const volMap: Record<string, string> = { vol2: '第二册', vol3: '第三册', vol4: '第四册' };
-      lockReasonMsg = `🔒 需激活：${volMap[volumeId] || volumeId}第 ${lessonId} 课需使用激活码或开通 VIP 解锁`;
-    }
+    lockReasonMsg = `🔒 VIP 专享关卡：第 ${lessonId} 课需使用 16 位激活码解锁（前 20 课免费试学）`;
   } else if (isProgressionLocked) {
     lockReasonMsg = `🔒 关卡锁定：请先学习并完成第 ${lessonId - 1} 课（打卡或通关对练）才能解锁本课！`;
   }
@@ -256,6 +271,8 @@ export function switchActiveVolume(
   profile: UserProfile,
   newVolumeId: CourseVolumeId
 ): UserProfile {
+  // Volume 2, 3, 4 are strictly locked for now
+  const safeVolumeId: CourseVolumeId = newVolumeId === 'vol1' ? 'vol1' : 'vol1';
   const oldVolumeId = profile.selectedVolumeId || 'vol1';
   
   // Save current active progress into old volume slot
@@ -269,7 +286,7 @@ export function switchActiveVolume(
   };
 
   // Load new volume progress
-  const targetProg = updatedVolumeMap[newVolumeId] || DEFAULT_VOLUME_PROGRESS[newVolumeId] || {
+  const targetProg = updatedVolumeMap[safeVolumeId] || DEFAULT_VOLUME_PROGRESS[safeVolumeId] || {
     currentLessonId: 1,
     unlockedLessonIds: [1],
     completedLessonIds: []
@@ -277,7 +294,7 @@ export function switchActiveVolume(
 
   return {
     ...profile,
-    selectedVolumeId: newVolumeId,
+    selectedVolumeId: safeVolumeId,
     volumeProgress: updatedVolumeMap,
     currentLessonId: targetProg.currentLessonId,
     unlockedLessonIds: targetProg.unlockedLessonIds,

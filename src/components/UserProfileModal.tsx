@@ -281,7 +281,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-black font-mono text-amber-400">VIP 尊享特权</span>
                       <span className="bg-slate-700 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded-full">
-                        未激活 (前 10 课免费试学)
+                        未激活 (前 20 课免费试学)
                       </span>
                     </div>
                     <p className="text-xs text-slate-300 font-sans mt-0.5">

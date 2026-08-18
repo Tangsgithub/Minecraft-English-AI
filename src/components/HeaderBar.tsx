@@ -18,6 +18,7 @@ interface HeaderBarProps {
   onOpenUserProfile?: () => void;
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
+  onOpenRadio?: () => void;
   onOpenCustomerService?: () => void;
   onGoToLandingPage?: () => void;
   onOpenAdminConsole?: () => void;
@@ -37,6 +38,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenUserProfile,
   onOpenHelpWizard,
   onOpenParentDashboard,
+  onOpenRadio,
   onOpenCustomerService,
   onGoToLandingPage,
   onOpenAdminConsole,
@@ -103,19 +105,13 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                   <div className="absolute left-0 top-full mt-2 w-60 bg-slate-900 border-2 border-amber-400/60 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden p-1.5">
                     <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 flex items-center justify-between">
                       <span>新概念教材分册</span>
-                      <span className="text-amber-400 text-[9px]">1册 & 2册全量开放</span>
+                      <span className="text-amber-400 text-[9px]">1册 144关全量开放</span>
                     </div>
                     {APP_VERSION_INFO.volumes.map(vol => {
-                      const isComingSoon = vol.status === 'coming_soon';
-                      const isUnactivated = !profile.isVip && vol.id !== 'vol1' && !(profile.activatedVolumes && profile.activatedVolumes.includes(vol.id));
-                      const isLocked = isComingSoon || isUnactivated;
-                      const statusText = isComingSoon 
+                      const isLocked = vol.id !== 'vol1';
+                      const statusText = isLocked 
                         ? '教研打磨中 · 敬请期待' 
-                        : isUnactivated
-                        ? '未解锁 · 需激活'
-                        : vol.id === 'vol1' 
-                        ? '144关真实课文已全量开放' 
-                        : '96关真实课文已全量开放';
+                        : '144关真实课文已全量开放';
                       return (
                         <button
                           key={vol.id}
@@ -242,6 +238,36 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                   Lv.{profile.level}
                 </span>
               )}
+            </button>
+
+            {/* Jukebox / Audio Immersion Radio Button */}
+            {onOpenRadio && (
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  onOpenRadio();
+                }}
+                className="px-2 sm:px-2.5 py-1 sm:py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#311042] active:translate-y-0.5 cursor-pointer animate-pulse"
+                title="唱片机磨耳朵沉浸电台（后台自动连播）"
+              >
+                <span className="text-sm">📻</span>
+                <span className="hidden sm:inline text-amber-300">电台</span>
+              </button>
+            )}
+
+            {/* Parent Center / Weekly Report Button */}
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                onOpenParentDashboard();
+              }}
+              className="hidden sm:flex px-2 sm:px-2.5 py-1 sm:py-1.5 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl transition-all items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer"
+              title="家长护航中心与周报仪表盘"
+            >
+              <span>👨‍👩‍👧</span>
+              <span className="hidden md:inline">家长</span>
             </button>
 
             {/* Guide Manual Button (Medium screen and up) */}
