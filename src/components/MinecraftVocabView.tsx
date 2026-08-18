@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA } from '../data/lessonsData';
-import { NCE_BOOK1_FULL_VOCAB } from '../data/nceBook1FullVocab';
+import { getFullBook1VocabList } from '../data/book1VocabManager';
 import { VocabItem, UserProfile, CourseVolumeId } from '../types';
 import { Volume2, Search, CheckCircle, Sparkles, BookOpen, Layers, Play, Award, RotateCcw, HelpCircle, CheckCircle2, XCircle, Lock, Unlock, Filter, ArrowRight, Crown, MapPin } from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText, playLevelUpSound } from '../utils/audio';
@@ -55,64 +55,51 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   // Case-insensitive Mastered Words Set for 100% accurate status matching
   const masteredSet = new Set((profile.masteredWords || []).map(w => w.toLowerCase()));
 
-  // 1. Convert NCE Full Vocab into VocabItem list (for Volume 1)
-  const nceFullList: VocabItem[] = currentVolId === 'vol1'
-    ? NCE_BOOK1_FULL_VOCAB.map((item, idx) => ({
-        id: `nce_full_${item.lessonId}_${idx}`,
-        word: item.word,
-        phonetic: item.phonetic || '',
-        meaning: item.meaning,
+  // 1. Extract vocabulary according to active volume (Volume 1 contains full 900+ words across 144 lessons)
+  let combinedList: VocabItem[] = [];
+
+  if (currentVolId === 'vol1') {
+    combinedList = getFullBook1VocabList();
+  } else {
+    const currentVolumeLessons = LESSONS_DATA;
+    const allLessonVocab: VocabItem[] = currentVolumeLessons.flatMap(l =>
+      l.vocabulary.map(v => ({
+        ...v,
         category: 'Course',
-        mcItem: item.mcItem,
-        mcItemIcon: item.mcItemIcon,
-        sampleSentence: item.sampleSentence,
-        sampleTranslation: item.sampleTranslation,
-        requiredLessonId: item.lessonId
+        requiredLessonId: v.requiredLessonId || l.id
       }))
-    : [];
+    );
 
-  // 2. Extract authentic lesson vocabulary according to active volume (Volume 1 or 2)
-  const currentVolumeLessons = currentVolId === 'vol1'
-    ? LESSONS_DATA
-    : Array.from({ length: 96 }, (_, i) => LESSONS_DATA[0] ? LESSONS_DATA[0] : LESSONS_DATA[0]); // Safe fallback
-
-  const allLessonVocab: VocabItem[] = LESSONS_DATA.flatMap(l =>
-    l.vocabulary.map(v => ({ ...v, requiredLessonId: v.requiredLessonId || l.id }))
-  );
-
-  const combinedList: VocabItem[] = [];
-  const wordMap = new Map<string, VocabItem>();
-
-  // Add Minecraft Vocabulary (assign lessonId smoothly if missing)
-  MINECRAFT_VOCABULARY.forEach((mv, idx) => {
-    const requiredLesson = mv.requiredLessonId || Math.min(144, Math.floor(idx / 2) + 1);
-    wordMap.set(mv.word.toLowerCase(), {
-      ...mv,
-      category: mv.category || 'Minecraft',
-      requiredLessonId: requiredLesson
+    const wordMap = new Map<string, VocabItem>();
+    allLessonVocab.forEach(lv => {
+      const key = lv.word.toLowerCase();
+      if (!wordMap.has(key)) {
+        wordMap.set(key, lv);
+      }
     });
-  });
 
-  // Add Lesson Vocab
-  allLessonVocab.forEach(lv => {
-    const key = lv.word.toLowerCase();
-    if (!wordMap.has(key)) {
-      wordMap.set(key, lv);
-    }
-  });
+    MINECRAFT_VOCABULARY.forEach(mv => {
+      const key = mv.word.toLowerCase();
+      if (wordMap.has(key)) {
+        const existing = wordMap.get(key)!;
+        wordMap.set(key, {
+          ...existing,
+          category: 'Minecraft',
+          mcItem: mv.mcItem || existing.mcItem,
+          mcItemIcon: mv.mcItemIcon || existing.mcItemIcon
+        });
+      } else {
+        wordMap.set(key, {
+          ...mv,
+          category: 'Minecraft',
+          requiredLessonId: mv.requiredLessonId || 1
+        });
+      }
+    });
 
-  // Add NCE Full Vocab
-  nceFullList.forEach(nv => {
-    const key = nv.word.toLowerCase();
-    if (!wordMap.has(key)) {
-      wordMap.set(key, nv);
-    }
-  });
-
-  wordMap.forEach(item => combinedList.push(item));
-
-  // Sort by requiredLessonId ascending so words unlock sequentially
-  combinedList.sort((a, b) => (a.requiredLessonId || 1) - (b.requiredLessonId || 1));
+    wordMap.forEach(item => combinedList.push(item));
+    combinedList.sort((a, b) => (a.requiredLessonId || 1) - (b.requiredLessonId || 1));
+  }
 
   // Helper to check if item is Minecraft specific
   const mcIds = new Set(MINECRAFT_VOCABULARY.map(m => m.id));
