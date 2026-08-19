@@ -446,7 +446,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const decorMob = index % 3 === 0 ? theme.mobs[index % theme.mobs.length] : null;
 
             return (
-              <React.Fragment key={item.id}>
+              <div key={item.id} className="relative w-full">
                 {/* Biome Divider Banner (When viewing all or unit header) */}
                 {isFirstInUnit && (selectedUnit === 0 || index === 0) && (
                   <div className="my-8 relative z-20">
@@ -679,7 +679,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                     </div>
                   </div>
                 )}
-              </React.Fragment>
+              </div>
             );
           })}
         </div>

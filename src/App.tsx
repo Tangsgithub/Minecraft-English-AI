@@ -1052,20 +1052,14 @@ export default function App() {
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
       />
 
-      <AudioImmersionRadioModal
-        isOpen={isRadioOpen}
-        onClose={() => setIsRadioOpen(false)}
-        selectedVolumeId={selectedVolumeId}
-        profile={profile}
-        currentLessonId={profile.currentLessonId || 1}
-        onAwardEmeralds={handleAwardEmeralds}
-      />
-
-      {isAdminConsoleOpen && (
-        <AdminDashboardModal
+      {isRadioOpen && (
+        <AudioImmersionRadioModal
+          isOpen={true}
+          onClose={() => setIsRadioOpen(false)}
+          selectedVolumeId={selectedVolumeId}
           profile={profile}
-          onUpdateProfile={(updater) => setProfile(updater)}
-          onClose={() => setIsAdminConsoleOpen(false)}
+          currentLessonId={profile.currentLessonId || 1}
+          onAwardEmeralds={handleAwardEmeralds}
         />
       )}
 

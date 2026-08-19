@@ -85,6 +85,7 @@ function getAudioContext(): AudioContext | null {
 
 export function playClickSound() {
   unlockAudio();
+  triggerHapticFeedback('light');
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -105,8 +106,36 @@ export function playClickSound() {
   }
 }
 
+export type HapticPattern = 'light' | 'medium' | 'heavy' | 'success' | 'loot';
+
+export function triggerHapticFeedback(pattern: HapticPattern = 'light') {
+  if (typeof window === 'undefined' || !('vibrate' in navigator)) return;
+  try {
+    switch (pattern) {
+      case 'light':
+        navigator.vibrate?.(10);
+        break;
+      case 'medium':
+        navigator.vibrate?.(25);
+        break;
+      case 'heavy':
+        navigator.vibrate?.([30, 30, 30]);
+        break;
+      case 'success':
+        navigator.vibrate?.([15, 35, 25, 45]);
+        break;
+      case 'loot':
+        navigator.vibrate?.([20, 40, 30, 60]);
+        break;
+    }
+  } catch {
+    // Ignore unsupported or rejected vibrate requests
+  }
+}
+
 export function playEmeraldSound() {
   unlockAudio();
+  triggerHapticFeedback('loot');
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -130,6 +159,7 @@ export function playEmeraldSound() {
 
 export function playLevelUpSound() {
   unlockAudio();
+  triggerHapticFeedback('success');
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();
@@ -155,6 +185,7 @@ export function playLevelUpSound() {
 
 export function playMissionCompleteSound() {
   unlockAudio();
+  triggerHapticFeedback('success');
   if (!getSoundEnabled()) return;
   try {
     const ctx = getAudioContext();

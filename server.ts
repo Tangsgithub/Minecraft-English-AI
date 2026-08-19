@@ -12,6 +12,7 @@ const app = express();
 // In-memory fallback ONLY when Neon DATABASE_URL is not configured yet in local environment
 const memoryUsersFallback = new Map<string, any>();
 const memoryCodesFallback = new Map<string, any>();
+const memoryStoriesFallback = new Map<string, any>();
 
 // Neon PostgreSQL Serverless Client
 const getNeonSql = () => {
@@ -54,8 +55,26 @@ async function ensureNeonTable() {
         created_at BIGINT
       );
     `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS custom_radio_stories (
+        id VARCHAR(255) PRIMARY KEY,
+        title TEXT,
+        title_zh TEXT,
+        category VARCHAR(50),
+        category_name VARCHAR(100),
+        narrator VARCHAR(20),
+        duration_approx VARCHAR(50),
+        disc_theme JSONB,
+        summary TEXT,
+        vocabulary_loot JSONB,
+        paragraphs JSONB,
+        creator_account VARCHAR(255),
+        created_at BIGINT,
+        updated_at BIGINT
+      );
+    `;
     neonTableInitialized = true;
-    console.log("[Neon Postgres] Database tables 'users' and 'activation_codes' initialized successfully!");
+    console.log("[Neon Postgres] Database tables 'users', 'activation_codes', and 'custom_radio_stories' initialized successfully!");
   } catch (e) {
     console.warn("[Neon Postgres] Table initialization warning:", e);
   }
@@ -366,6 +385,135 @@ function hashPassword(password: string, salt: string): string {
   } catch {
     return crypto.createHash('sha256').update(password + (salt || '')).digest('hex');
   }
+}
+
+// Custom Radio Stories Database Handlers
+async function getAllCustomStoriesFromDb(): Promise<any[]> {
+  const storiesMap = new Map<string, any>();
+
+  // In-memory stories
+  for (const [k, v] of memoryStoriesFallback.entries()) {
+    storiesMap.set(k, v);
+  }
+
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      const rows = await sql`
+        SELECT * FROM custom_radio_stories 
+        ORDER BY created_at DESC 
+        LIMIT 200
+      `;
+      if (rows && Array.isArray(rows)) {
+        for (const r of rows) {
+          const sObj = {
+            id: r.id,
+            title: r.title,
+            titleZh: r.title_zh,
+            category: r.category || 'mc_adventure',
+            categoryName: r.category_name || '✨ 自定义故事',
+            narrator: r.narrator || 'Alex',
+            durationApprox: r.duration_approx || '3 分钟',
+            discTheme: typeof r.disc_theme === 'string' ? JSON.parse(r.disc_theme) : (r.disc_theme || {}),
+            summary: r.summary || '',
+            vocabularyLoot: typeof r.vocabulary_loot === 'string' ? JSON.parse(r.vocabulary_loot) : (r.vocabulary_loot || []),
+            paragraphs: typeof r.paragraphs === 'string' ? JSON.parse(r.paragraphs) : (r.paragraphs || []),
+            creatorAccount: r.creator_account || '',
+            createdAt: Number(r.created_at || Date.now()),
+            updatedAt: Number(r.updated_at || Date.now())
+          };
+          storiesMap.set(r.id, sObj);
+          memoryStoriesFallback.set(r.id, sObj);
+        }
+      }
+    } catch (e) {
+      console.warn("Neon Postgres get stories error:", e);
+    }
+  }
+
+  return Array.from(storiesMap.values());
+}
+
+async function saveCustomStoryToDb(story: any, creatorAccount?: string): Promise<boolean> {
+  if (!story || !story.id) return false;
+  const sId = String(story.id);
+  const now = Date.now();
+  const storyObj = {
+    ...story,
+    creatorAccount: creatorAccount || story.creatorAccount || '',
+    createdAt: story.createdAt || now,
+    updatedAt: now
+  };
+  memoryStoriesFallback.set(sId, storyObj);
+
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      const discThemeJson = JSON.stringify(storyObj.discTheme || {});
+      const vocabJson = JSON.stringify(storyObj.vocabularyLoot || []);
+      const paragraphsJson = JSON.stringify(storyObj.paragraphs || []);
+
+      await sql`
+        INSERT INTO custom_radio_stories (
+          id, title, title_zh, category, category_name, narrator, duration_approx,
+          disc_theme, summary, vocabulary_loot, paragraphs, creator_account, created_at, updated_at
+        ) VALUES (
+          ${sId},
+          ${storyObj.title || ''},
+          ${storyObj.titleZh || ''},
+          ${storyObj.category || 'mc_adventure'},
+          ${storyObj.categoryName || '✨ 自定义故事'},
+          ${storyObj.narrator || 'Alex'},
+          ${storyObj.durationApprox || '3 分钟'},
+          ${discThemeJson}::jsonb,
+          ${storyObj.summary || ''},
+          ${vocabJson}::jsonb,
+          ${paragraphsJson}::jsonb,
+          ${storyObj.creatorAccount || ''},
+          ${storyObj.createdAt || now},
+          ${now}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          title_zh = EXCLUDED.title_zh,
+          category = EXCLUDED.category,
+          category_name = EXCLUDED.category_name,
+          narrator = EXCLUDED.narrator,
+          duration_approx = EXCLUDED.duration_approx,
+          disc_theme = EXCLUDED.disc_theme,
+          summary = EXCLUDED.summary,
+          vocabulary_loot = EXCLUDED.vocabulary_loot,
+          paragraphs = EXCLUDED.paragraphs,
+          creator_account = EXCLUDED.creator_account,
+          updated_at = EXCLUDED.updated_at;
+      `;
+      return true;
+    } catch (e) {
+      console.warn("Neon Postgres save story error:", e);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function deleteCustomStoryFromDb(id: string): Promise<boolean> {
+  if (!id) return false;
+  memoryStoriesFallback.delete(id);
+
+  const sql = getNeonSql();
+  if (sql) {
+    try {
+      await ensureNeonTable();
+      await sql`DELETE FROM custom_radio_stories WHERE id = ${id}`;
+      return true;
+    } catch (e) {
+      console.warn("Neon Postgres delete story error:", e);
+      return false;
+    }
+  }
+  return true;
 }
 
 app.use((req, res, next) => {
@@ -1446,6 +1594,232 @@ app.use(express.json());
       });
     } catch (err: any) {
       return res.status(200).json({ success: false, error: "读取注册用户数据失败" });
+    }
+  });
+
+  // ==========================================
+  // CUSTOM RADIO STORIES API ENDPOINTS
+  // ==========================================
+
+  // 1. Get all custom stories
+  app.get("/api/radio/stories", async (_req, res) => {
+    try {
+      const stories = await getAllCustomStoriesFromDb();
+      return res.json({
+        success: true,
+        count: stories.length,
+        stories
+      });
+    } catch (err: any) {
+      console.error("Get custom stories error:", err);
+      return res.status(200).json({ success: false, error: "读取故事列表失败", stories: [] });
+    }
+  });
+
+  // 2. Save a custom story
+  app.post("/api/radio/stories", async (req, res) => {
+    try {
+      const { story, creatorAccount } = req.body || {};
+      if (!story || !story.id || !story.paragraphs || story.paragraphs.length === 0) {
+        return res.status(200).json({ success: false, error: "故事数据不完整，至少需包含标题和一个段落" });
+      }
+
+      const saved = await saveCustomStoryToDb(story, creatorAccount);
+      if (saved) {
+        return res.json({
+          success: true,
+          message: "故事已成功保存并发布到电台！",
+          story
+        });
+      } else {
+        return res.status(200).json({ success: false, error: "保存故事失败" });
+      }
+    } catch (err: any) {
+      console.error("Save custom story error:", err);
+      return res.status(200).json({ success: false, error: "保存故事异常" });
+    }
+  });
+
+  // 3. Delete a custom story
+  app.delete("/api/radio/stories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res.status(200).json({ success: false, error: "缺少故事 ID" });
+      }
+      await deleteCustomStoryFromDb(id);
+      return res.json({ success: true, message: "故事已成功删除" });
+    } catch (err: any) {
+      console.error("Delete custom story error:", err);
+      return res.status(200).json({ success: false, error: "删除故事失败" });
+    }
+  });
+
+  // 4. AI Smart Story Parser & Bilingual Segmenter
+  app.post("/api/radio/stories/ai-parse", async (req, res) => {
+    try {
+      const { rawText, narrator = 'Alex', category = 'mc_adventure' } = req.body || {};
+      if (!rawText || !rawText.trim()) {
+        return res.status(200).json({ success: false, error: "请提供故事文本或提示词" });
+      }
+
+      const cleanText = rawText.trim();
+      const geminiKey = process.env.GEMINI_API_KEY;
+
+      // Attempt AI Parsing via Gemini if API key is present
+      if (geminiKey) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey: geminiKey,
+            httpOptions: {
+              headers: { 'User-Agent': 'aistudio-build' }
+            }
+          });
+
+          const prompt = `You are an expert children's English educator and Minecraft storyteller.
+Please parse, structure, and translate the following raw English story text or creative prompt into a structured learning story:
+
+Raw Input:
+"${cleanText}"
+
+Specifications:
+1. Divide into 3 to 8 cohesive narrative paragraphs suitable for listening (each paragraph 1-3 sentences).
+2. For each paragraph, provide accurate, natural, child-friendly Chinese translation.
+3. Extract 3 to 5 core vocabulary words from the text with IPA phonetics and Chinese meaning.
+4. Format output strictly as JSON with this schema:
+{
+  "title": "English Title",
+  "titleZh": "中文故事标题",
+  "category": "${category}",
+  "categoryName": "${category === 'mc_adventure' ? '🌲 自定义探险篇' : '🏰 自定义故事篇'}",
+  "narrator": "${narrator}",
+  "durationApprox": "3 分钟",
+  "summary": "1句简短生动的中文故事介绍",
+  "discTheme": {
+    "name": "Otherside (星空之境)",
+    "color": "from-cyan-600 via-blue-700 to-indigo-950",
+    "border": "border-cyan-400",
+    "icon": "🐺"
+  },
+  "paragraphs": [
+    {
+      "id": "p1",
+      "english": "English sentence here...",
+      "chinese": "中文翻译...",
+      "speaker": "${narrator}"
+    }
+  ],
+  "vocabularyLoot": [
+    {
+      "word": "adventure",
+      "phonetic": "/ədˈventʃə(r)/",
+      "meaning": "冒险 / 探险"
+    }
+  ]
+}
+Return pure JSON with no markdown wrapping.`;
+
+          const response = await ai.models.generateContent({
+            model: 'gemini-3.7-flash',
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+              responseMimeType: 'application/json'
+            }
+          });
+
+          let jsonStr = response.text || '';
+          if (jsonStr.startsWith('```json')) {
+            jsonStr = jsonStr.replace(/```json\s*/, '').replace(/```\s*$/, '');
+          } else if (jsonStr.startsWith('```')) {
+            jsonStr = jsonStr.replace(/```\s*/, '').replace(/```\s*$/, '');
+          }
+
+          const parsed = JSON.parse(jsonStr.trim());
+          if (parsed && Array.isArray(parsed.paragraphs) && parsed.paragraphs.length > 0) {
+            return res.json({
+              success: true,
+              story: parsed
+            });
+          }
+        } catch (aiErr) {
+          console.warn("Gemini parse story fallback:", aiErr);
+        }
+      }
+
+      // Rule-based Smart Fallback Parser
+      const rawLines = cleanText.split(/\n+/).map((l: string) => l.trim()).filter(Boolean);
+      const generatedParagraphs: any[] = [];
+      
+      let pCounter = 1;
+      for (const line of rawLines) {
+        if (!line) continue;
+        // Check if line is already dual language (contains English and Chinese)
+        const hasChinese = /[\u4e00-\u9fa5]/.test(line);
+        const hasEnglish = /[a-zA-Z]/.test(line);
+
+        let enText = line;
+        let zhText = '（待补充中文翻译）';
+
+        if (hasChinese && hasEnglish) {
+          const matchEn = line.match(/[a-zA-Z0-9\s,.'!?"-]+/);
+          const matchZh = line.match(/[\u4e00-\u9fa5，。！？“”：；（）]+/);
+          if (matchEn && matchZh) {
+            enText = matchEn[0].trim();
+            zhText = matchZh[0].trim();
+          }
+        } else if (hasEnglish && !hasChinese) {
+          enText = line;
+          zhText = line; // Fallback
+        }
+
+        generatedParagraphs.push({
+          id: `p${pCounter++}`,
+          english: enText,
+          chinese: zhText,
+          speaker: narrator
+        });
+      }
+
+      if (generatedParagraphs.length === 0) {
+        generatedParagraphs.push({
+          id: 'p1',
+          english: cleanText,
+          chinese: '（自定义段落）',
+          speaker: narrator
+        });
+      }
+
+      const totalWords = cleanText.split(/\s+/).filter(Boolean).length;
+      const estMinutes = Math.max(1, Math.ceil(totalWords / 110));
+
+      const fallbackStory = {
+        title: generatedParagraphs[0]?.english.slice(0, 30) || 'Custom Story',
+        titleZh: '自定义英语故事',
+        category,
+        categoryName: category === 'mc_adventure' ? '🌲 自定义探险篇' : '🏰 自定义故事篇',
+        narrator,
+        durationApprox: `${estMinutes} 分钟`,
+        summary: `包含 ${generatedParagraphs.length} 个段落的英语听力故事。`,
+        discTheme: {
+          name: 'Otherside (星空之境)',
+          color: 'from-cyan-600 via-blue-700 to-indigo-950',
+          border: 'border-cyan-400',
+          icon: '🐺'
+        },
+        paragraphs: generatedParagraphs,
+        vocabularyLoot: [
+          { word: 'story', phonetic: '/ˈstɔːri/', meaning: '故事' },
+          { word: 'listen', phonetic: '/ˈlɪsn/', meaning: '倾听 / 听' }
+        ]
+      };
+
+      return res.json({
+        success: true,
+        story: fallbackStory
+      });
+    } catch (err: any) {
+      console.error("AI parse story error:", err);
+      return res.status(200).json({ success: false, error: "解析故事失败，请稍后重试" });
     }
   });
 
