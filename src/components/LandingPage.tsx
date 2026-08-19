@@ -20,7 +20,7 @@ interface LandingPageProps {
   currentUser: User | null;
   isAuthenticated?: boolean;
   profile?: UserProfile;
-  onEnterApp: (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => void;
+  onEnterApp: (targetTab?: 'map' | 'radio' | 'vocab' | 'missions') => void;
   onOpenAuth: () => void;
   onOpenParentDashboard: () => void;
   onOpenCustomerService?: () => void;
@@ -37,7 +37,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  const handleEnterClick = (targetTab?: 'map' | 'chat' | 'vocab' | 'missions') => {
+  const handleEnterClick = (targetTab?: 'map' | 'radio' | 'vocab' | 'missions') => {
     playEmeraldSound();
     onEnterApp(targetTab);
   };

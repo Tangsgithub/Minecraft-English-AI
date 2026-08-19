@@ -354,10 +354,24 @@ export interface SpeakOptions {
 export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'female', explicitVoice?: string): string {
   if (explicitVoice) return explicitVoice;
 
+  const currentVoice = getSelectedEdgeVoice();
+  const voiceLower = (currentVoice || '').toLowerCase();
+  const isBritish = voiceLower.includes('gb') || voiceLower.includes('uk') || voiceLower.includes('sonia') || voiceLower.includes('ryan');
+  const isAustralian = voiceLower.includes('au') || voiceLower.includes('natasha');
+
   if (speaker) {
     const s = speaker.toLowerCase().trim();
+
+    // Child character voices (Ana, etc.)
+    const isChild = s.includes('ana') || s.includes('kid') || s.includes('child') || s.includes('peter') || s.includes('ruby');
+    if (isChild) {
+      if (isBritish) return 'en-GB-SoniaNeural';
+      if (isAustralian) return 'en-AU-NatashaNeural';
+      return 'en-US-AnaNeural';
+    }
+
     // Male character voices (Steve, Dave, Tom, Mr., etc.)
-    if (
+    const isMale = 
       s.includes('steve') ||
       s.includes('dave') ||
       s.includes('tom') ||
@@ -379,13 +393,16 @@ export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'fema
       s.includes('man') ||
       s.includes('blacksmith') ||
       s.includes('villager') ||
-      s.includes('golem')
-    ) {
+      s.includes('golem');
+
+    if (isMale) {
+      if (isBritish) return 'en-GB-RyanNeural';
+      if (isAustralian) return 'en-AU-NatashaNeural';
       return 'en-US-GuyNeural';
     }
 
     // Female character voices (Alex, Karen, Mrs., etc.)
-    if (
+    const isFemale = 
       s.includes('alex') ||
       s.includes('karen') ||
       s.includes('penny') ||
@@ -405,16 +422,28 @@ export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'fema
       s.includes('sister') ||
       s.includes('witch') ||
       s.includes('queen') ||
-      s.includes('teacher')
-    ) {
+      s.includes('teacher');
+
+    if (isFemale) {
+      if (isBritish) return 'en-GB-SoniaNeural';
+      if (isAustralian) return 'en-AU-NatashaNeural';
       return 'en-US-JennyNeural';
     }
   }
 
-  if (gender === 'male') return 'en-US-GuyNeural';
-  if (gender === 'female') return 'en-US-JennyNeural';
+  if (gender === 'male') {
+    if (isBritish) return 'en-GB-RyanNeural';
+    if (isAustralian) return 'en-AU-NatashaNeural';
+    return 'en-US-GuyNeural';
+  }
+  
+  if (gender === 'female') {
+    if (isBritish) return 'en-GB-SoniaNeural';
+    if (isAustralian) return 'en-AU-NatashaNeural';
+    return 'en-US-JennyNeural';
+  }
 
-  return getSelectedEdgeVoice();
+  return currentVoice || 'en-US-JennyNeural';
 }
 
 export async function speakText(

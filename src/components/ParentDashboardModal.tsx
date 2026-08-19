@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserProfile, ParentSettings, APP_VERSION_INFO } from '../types';
-import { Shield, Clock, Award, Eye, Volume2, Sparkles, CheckCircle, BarChart3, Lock, Heart, Gift, MessageSquare, AlertCircle, Share2, Copy, Star, Check, Zap } from 'lucide-react';
+import { Shield, Clock, Award, Eye, Volume2, Sparkles, CheckCircle, BarChart3, Lock, Heart, Gift, MessageSquare, AlertCircle, Share2, Copy, Star, Check, Zap, KeyRound, RefreshCw, Smartphone, UserCheck } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 
 interface ParentDashboardModalProps {
@@ -10,58 +10,183 @@ interface ParentDashboardModalProps {
   onTriggerEyeCareTest: () => void;
 }
 
+interface AdultChallenge {
+  id: string;
+  type: 'math_chinese' | 'trivia' | 'pinyin';
+  prompt: string;
+  subtext: string;
+  expectedAnswers: string[];
+}
+
+const ADULT_CHALLENGES: AdultChallenge[] = [
+  {
+    id: 'ch_1',
+    type: 'math_chinese',
+    prompt: '『柒拾伍 减去 贰拾捌』等于多少？',
+    subtext: '请在下方输入阿拉伯数字计算结果：',
+    expectedAnswers: ['47']
+  },
+  {
+    id: 'ch_2',
+    type: 'math_chinese',
+    prompt: '『陆拾肆 加上 叁拾柒』等于多少？',
+    subtext: '请在下方输入阿拉伯数字计算结果：',
+    expectedAnswers: ['101']
+  },
+  {
+    id: 'ch_3',
+    type: 'math_chinese',
+    prompt: '『玖拾贰 减去 肆拾伍』等于多少？',
+    subtext: '请在下方输入阿拉伯数字计算结果：',
+    expectedAnswers: ['47']
+  },
+  {
+    id: 'ch_4',
+    type: 'math_chinese',
+    prompt: '『壹佰贰拾 加上 捌拾伍』等于多少？',
+    subtext: '请在下方输入阿拉伯数字计算结果：',
+    expectedAnswers: ['205']
+  },
+  {
+    id: 'ch_5',
+    type: 'trivia',
+    prompt: '中国农历十二生肖中，排在第5位的是什么动物？',
+    subtext: '请输入该动物汉字名称（如：牛、龙等）：',
+    expectedAnswers: ['龙', '辰龙']
+  },
+  {
+    id: 'ch_6',
+    type: 'trivia',
+    prompt: '中华人民共和国成立年份是公历哪一年？',
+    subtext: '请输入 4 位数字年份（如 1949）：',
+    expectedAnswers: ['1949']
+  },
+  {
+    id: 'ch_7',
+    type: 'pinyin',
+    prompt: '成语『望子成龙』的四个字首字母拼音是什么？',
+    subtext: '请输入4个拼音首字母（大小写均可，如 wzcl）：',
+    expectedAnswers: ['wzcl', 'WZCL']
+  }
+];
+
 export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
   profile,
   onUpdateProfile,
   onClose,
   onTriggerEyeCareTest
 }) => {
-  // Simple parent lock math question to prevent child mis-touch
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [mathNum1] = useState(Math.floor(Math.random() * 5) + 4); // e.g. 4..8
-  const [mathNum2] = useState(Math.floor(Math.random() * 5) + 3); // e.g. 3..7
-  const [userAnswer, setUserAnswer] = useState('');
-  const [lockError, setLockError] = useState('');
-  const [activeTab, setActiveTab] = useState<'report' | 'phonics' | 'settings' | 'reward'>('report');
-  const [copiedPoster, setCopiedPoster] = useState(false);
-
-  // Parent settings local state
+  // Parent settings state
   const parentSettings: ParentSettings = profile.parentSettings || {
+    parentPin: undefined,
     dailyTimeLimitMinutes: 45,
     continuousTimeLimitMinutes: 20,
     eyeProtectionEnabled: true,
     speechRate: 0.9,
     correctionStrictness: 'standard',
-    customRewardTitle: '周末玩 Minecraft 30 分钟 / 去冰淇淋店'
+    customRewardTitle: '周末玩 Minecraft 30 分钟 / 奖励一套乐高'
   };
 
+  const hasPin = Boolean(parentSettings.parentPin && parentSettings.parentPin.length === 4);
+
+  // Lock Verification State
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [verifyMode, setVerifyMode] = useState<'pin' | 'adult_challenge' | 'set_new_pin'>(
+    hasPin ? 'pin' : 'adult_challenge'
+  );
+  
+  // Pin entry state
+  const [pinInput, setPinInput] = useState('');
+  // Set new PIN state
+  const [newPinInput, setNewPinInput] = useState('');
+  const [confirmPinInput, setConfirmPinInput] = useState('');
+  
+  // Adult Challenge state
+  const [challengeIdx, setChallengeIdx] = useState(() => Math.floor(Math.random() * ADULT_CHALLENGES.length));
+  const [challengeAnswer, setChallengeAnswer] = useState('');
+  const currentChallenge = ADULT_CHALLENGES[challengeIdx];
+
+  const [lockError, setLockError] = useState('');
+  const [activeTab, setActiveTab] = useState<'report' | 'phonics' | 'settings' | 'reward'>('report');
+  const [copiedPoster, setCopiedPoster] = useState(false);
+
+  // Settings Local State
   const [dailyLimit, setDailyLimit] = useState(parentSettings.dailyTimeLimitMinutes);
   const [continuousLimit, setContinuousLimit] = useState(parentSettings.continuousTimeLimitMinutes);
   const [eyeProtection, setEyeProtection] = useState(parentSettings.eyeProtectionEnabled);
   const [speechRate, setSpeechRate] = useState(parentSettings.speechRate);
   const [strictness, setStrictness] = useState(parentSettings.correctionStrictness);
   const [customReward, setCustomReward] = useState(parentSettings.customRewardTitle || '');
+  const [savedPin, setSavedPin] = useState(parentSettings.parentPin || '');
+  const [pinEditSuccess, setPinEditSuccess] = useState(false);
 
   // Parent reward dispatch state
   const [rewardAmount, setRewardAmount] = useState<number>(30);
   const [rewardNote, setRewardNote] = useState('宝贝今天练习口语非常认真，奖励绿宝石！');
   const [rewardSuccess, setRewardSuccess] = useState(false);
 
-  const handleVerifyLock = (e: React.FormEvent) => {
+  const handleRefreshChallenge = () => {
+    playClickSound();
+    setChallengeIdx((prev) => (prev + 1) % ADULT_CHALLENGES.length);
+    setChallengeAnswer('');
+    setLockError('');
+  };
+
+  // Verify PIN
+  const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (parseInt(userAnswer.trim(), 10) === mathNum1 * mathNum2) {
+    if (pinInput.trim() === parentSettings.parentPin) {
       playClickSound();
       setIsUnlocked(true);
       setLockError('');
     } else {
-      setLockError('验证错误，请重新输入（家长验证防护）');
+      setLockError('PIN 码错误，请重新输入或使用成人常识验证解锁');
     }
+  };
+
+  // Verify Adult Challenge
+  const handleVerifyChallenge = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanAnswer = challengeAnswer.trim().toLowerCase();
+    const matched = currentChallenge.expectedAnswers.some(ans => ans.toLowerCase() === cleanAnswer);
+
+    if (matched) {
+      playClickSound();
+      setIsUnlocked(true);
+      setLockError('');
+    } else {
+      setLockError('回答不正确，此验证专门用于阻断低龄儿童误触，请仔细核对');
+    }
+  };
+
+  // Set new PIN from lock screen
+  const handleSetInitialPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPinInput.length !== 4 || !/^\d{4}$/.test(newPinInput)) {
+      setLockError('请输入 4 位纯数字 PIN 码（如 1234、生日后四位等）');
+      return;
+    }
+    if (newPinInput !== confirmPinInput) {
+      setLockError('两次输入的 PIN 码不一致，请重新核对');
+      return;
+    }
+
+    playClickSound();
+    const updatedParentSettings: ParentSettings = {
+      ...parentSettings,
+      parentPin: newPinInput
+    };
+    onUpdateProfile({ parentSettings: updatedParentSettings });
+    setSavedPin(newPinInput);
+    setIsUnlocked(true);
+    setLockError('');
   };
 
   const handleSaveSettings = () => {
     playClickSound();
     const updatedParentSettings: ParentSettings = {
       ...parentSettings,
+      parentPin: savedPin.length === 4 ? savedPin : undefined,
       dailyTimeLimitMinutes: dailyLimit,
       continuousTimeLimitMinutes: continuousLimit,
       eyeProtectionEnabled: eyeProtection,
@@ -74,6 +199,18 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
       parentSettings: updatedParentSettings
     });
     onClose();
+  };
+
+  const handleUpdatePinInSettings = (pin: string) => {
+    if (pin.length === 4 && /^\d{4}$/.test(pin)) {
+      setSavedPin(pin);
+      setPinEditSuccess(true);
+      setTimeout(() => setPinEditSuccess(false), 2500);
+    } else if (pin === '') {
+      setSavedPin('');
+      setPinEditSuccess(true);
+      setTimeout(() => setPinEditSuccess(false), 2500);
+    }
   };
 
   const handleSendParentEmeralds = () => {
@@ -128,7 +265,7 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
       <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-3xl w-full max-w-2xl text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden my-auto max-h-[94dvh] flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="bg-[#487E2C] p-4 sm:p-5 border-b-4 border-[#355E20] flex items-center justify-between text-white">
+        <div className="bg-[#487E2C] p-4 sm:p-5 border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-[#FFD700] text-black border-2 border-black rounded-2xl flex items-center justify-center text-xl shadow">
               👨‍👩‍👧
@@ -141,7 +278,7 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-white/90 font-mono font-bold">
-                学习效果周报 • 音素发音诊断 • 护眼防沉迷控制
+                学情周报 • 音素发音诊断 • 护眼防沉迷 • 专属 PIN 码安全门禁
               </p>
             </div>
           </div>
@@ -154,57 +291,217 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
           </button>
         </div>
 
-        {/* Locked State: Parent Security Gate */}
+        {/* Locked State: Upgraded Child-Proof Gate */}
         {!isUnlocked ? (
-          <div className="p-8 text-center space-y-6">
-            <div className="w-16 h-16 bg-amber-100 border-4 border-amber-400 rounded-3xl mx-auto flex items-center justify-center text-3xl shadow-sm">
-              🔒
+          <div className="p-6 sm:p-8 text-center space-y-5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-amber-100 border-4 border-amber-400 rounded-3xl mx-auto flex items-center justify-center text-2xl sm:text-3xl shadow-sm">
+              <Shield className="w-8 h-8 text-amber-800" />
             </div>
 
-            <div className="space-y-2">
-              <h3 className="text-base font-black text-[#2D2D2D] font-mono">
-                家长安全验证 (Parent Lock)
+            <div className="space-y-1.5">
+              <h3 className="text-base sm:text-lg font-black text-[#2D2D2D] font-mono flex items-center justify-center gap-2">
+                <span>🛡️ 家长安全验证门禁</span>
               </h3>
-              <p className="text-xs text-slate-500 font-bold max-w-sm mx-auto">
-                为防止小朋友误操作修改学习设置，请解答计算题以进入家长中心：
+              <p className="text-xs text-slate-500 font-bold max-w-md mx-auto">
+                为彻底防止低龄小朋友自主修改护眼限制与学习时长，系统已升级为<strong>「专属 4 位 PIN 码」</strong>与<strong>「成人双重常识验证」</strong>防护机制：
               </p>
             </div>
 
-            <form onSubmit={handleVerifyLock} className="max-w-xs mx-auto space-y-4 font-mono">
-              <div className="bg-slate-100 p-4 rounded-2xl border-2 border-slate-300 font-black text-lg text-[#FF6321] flex items-center justify-center space-x-3">
-                <span>{mathNum1} × {mathNum2} = ?</span>
-              </div>
+            {/* Mode 1: 4-digit PIN entry */}
+            {verifyMode === 'pin' && (
+              <form onSubmit={handleVerifyPin} className="max-w-xs mx-auto space-y-4 font-mono">
+                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-300 space-y-2">
+                  <span className="text-xs font-bold text-slate-600 block">请输入 4 位家长专属 PIN 码</span>
+                  <input
+                    type="password"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••"
+                    className="w-full bg-white border-2 border-slate-300 rounded-xl px-4 py-2.5 text-center font-black text-2xl tracking-[0.5em] text-[#487E2C] focus:border-[#487E2C] focus:outline-none"
+                    autoFocus
+                  />
+                </div>
 
-              <input
-                type="number"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="请输入计算结果"
-                className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-2.5 text-center font-bold text-sm focus:border-[#487E2C] focus:outline-none"
-                autoFocus
-              />
+                {lockError && (
+                  <p className="text-xs font-bold text-rose-600 flex items-center justify-center space-x-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{lockError}</span>
+                  </p>
+                )}
 
-              {lockError && (
-                <p className="text-xs font-bold text-rose-600 flex items-center justify-center space-x-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>{lockError}</span>
-                </p>
-              )}
+                <button
+                  type="submit"
+                  className="w-full bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white py-2.5 rounded-xl font-mono font-black text-xs shadow-[0_3px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer"
+                >
+                  验证 PIN 码并进入
+                </button>
 
-              <button
-                type="submit"
-                className="w-full bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white py-2.5 rounded-xl font-mono font-black text-xs shadow-[0_3px_0_0_#2A4718]"
-              >
-                解锁进入家长管理界面
-              </button>
-            </form>
+                <div className="pt-2 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyMode('adult_challenge');
+                      setLockError('');
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer"
+                  >
+                    忘记 PIN 码？改用成人常识问答解锁 ➔
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Mode 2: Adult Knowledge Challenge */}
+            {verifyMode === 'adult_challenge' && (
+              <form onSubmit={handleVerifyChallenge} className="max-w-sm mx-auto space-y-4 font-mono">
+                <div className="bg-amber-50/80 p-4 rounded-2xl border-2 border-amber-300 space-y-2.5 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-amber-800 flex items-center gap-1">
+                      <KeyRound className="w-3.5 h-3.5 text-amber-700" />
+                      <span>成人认知双重防误触</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRefreshChallenge}
+                      className="text-[10px] text-amber-700 hover:text-amber-900 flex items-center gap-1 bg-amber-200/60 px-2 py-0.5 rounded-lg font-bold"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>换一题</span>
+                    </button>
+                  </div>
+
+                  <p className="font-black text-sm text-slate-800">
+                    {currentChallenge.prompt}
+                  </p>
+                  <p className="text-[11px] text-slate-600 font-bold">
+                    {currentChallenge.subtext}
+                  </p>
+
+                  <input
+                    type="text"
+                    value={challengeAnswer}
+                    onChange={(e) => setChallengeAnswer(e.target.value)}
+                    placeholder="请输入正确答案"
+                    className="w-full bg-white border-2 border-amber-300 rounded-xl px-4 py-2 text-center font-bold text-sm text-slate-900 focus:border-[#487E2C] focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                {lockError && (
+                  <p className="text-xs font-bold text-rose-600 flex items-center justify-center space-x-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{lockError}</span>
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white py-2.5 rounded-xl font-mono font-black text-xs shadow-[0_3px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer"
+                >
+                  验证进入家长管理中心
+                </button>
+
+                <div className="pt-2 flex flex-col items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyMode('set_new_pin');
+                      setLockError('');
+                    }}
+                    className="text-xs text-[#FF6321] hover:text-[#e05316] font-black underline cursor-pointer"
+                  >
+                    ✨ 立即设置 4 位专属 PIN 码 (永久便捷免答题) ➔
+                  </button>
+                  {hasPin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVerifyMode('pin');
+                        setLockError('');
+                      }}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 font-bold underline cursor-pointer"
+                    >
+                      返回使用 PIN 码解锁
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+
+            {/* Mode 3: Set Initial PIN */}
+            {verifyMode === 'set_new_pin' && (
+              <form onSubmit={handleSetInitialPin} className="max-w-xs mx-auto space-y-4 font-mono text-left">
+                <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-300 space-y-3">
+                  <span className="text-xs font-black text-emerald-900 block text-center">
+                    🔑 设置 4 位家长专属 PIN 码
+                  </span>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      输入 4 位数字密码：
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={4}
+                      value={newPinInput}
+                      onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ''))}
+                      placeholder="例如: 1234"
+                      className="w-full bg-white border-2 border-emerald-300 rounded-xl px-3 py-2 text-center font-mono font-bold text-base text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      再次确认 4 位数字：
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={4}
+                      value={confirmPinInput}
+                      onChange={(e) => setConfirmPinInput(e.target.value.replace(/\D/g, ''))}
+                      placeholder="再次输入"
+                      className="w-full bg-white border-2 border-emerald-300 rounded-xl px-3 py-2 text-center font-mono font-bold text-base text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                {lockError && (
+                  <p className="text-xs font-bold text-rose-600 flex items-center justify-center space-x-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>{lockError}</span>
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white py-2.5 rounded-xl font-mono font-black text-xs shadow-[0_3px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer"
+                >
+                  保存 PIN 码并直接进入
+                </button>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVerifyMode(hasPin ? 'pin' : 'adult_challenge');
+                      setLockError('');
+                    }}
+                    className="text-xs text-slate-500 hover:text-slate-800 font-bold underline"
+                  >
+                    返回上一步
+                  </button>
+                </div>
+              </form>
+            )}
+
           </div>
         ) : (
           /* Unlocked Parent Dashboard Content */
           <div className="flex flex-col flex-1 overflow-hidden">
             
             {/* Top Navigation Tabs */}
-            <div className="bg-slate-100 border-b-2 border-slate-200 p-2 flex items-center space-x-2 overflow-x-auto text-xs font-mono">
+            <div className="bg-slate-100 border-b-2 border-slate-200 p-2 flex items-center space-x-2 overflow-x-auto text-xs font-mono shrink-0">
               <button
                 onClick={() => {
                   playClickSound();
@@ -231,8 +528,8 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
                     : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'
                 }`}
               >
-                <Zap className="w-3.5 h-3.5" />
-                <span>🎙️ AI 音素诊断雷达</span>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>🎙️ 音素发音 AI 诊断</span>
               </button>
 
               <button
@@ -246,8 +543,8 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
                     : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-300'
                 }`}
               >
-                <Eye className="w-3.5 h-3.5" />
-                <span>🛡️ 护眼与教学偏好</span>
+                <Lock className="w-3.5 h-3.5" />
+                <span>🛡️ 护眼/PIN码与防沉迷</span>
               </button>
 
               <button
@@ -266,63 +563,67 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
               </button>
             </div>
 
-            {/* Tab Body */}
-            <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 text-xs font-mono custom-scrollbar">
+            {/* Content Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 font-mono text-xs space-y-4">
               
-              {/* TAB 1: Weekly Report & Poster */}
+              {/* TAB 1: Visual Weekly Report */}
               {activeTab === 'report' && (
                 <div className="space-y-4">
-                  {/* Top Stats Overview */}
+                  {/* Summary Highlights Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="bg-emerald-50 p-3 rounded-2xl border-2 border-emerald-200 text-center space-y-0.5">
-                      <span className="text-[10px] text-emerald-800 font-bold block">本周学习总时长</span>
-                      <span className="text-lg font-black text-emerald-700">{weeklyDailyMinutes.reduce((a, b) => a + b, 0)} 分钟</span>
+                    <div className="bg-emerald-50 border-2 border-emerald-200 p-3 rounded-2xl">
+                      <div className="text-slate-500 font-bold text-[10px]">今日口语学习</div>
+                      <div className="text-lg font-black text-[#487E2C] mt-0.5">{todayMinutes} 分钟</div>
+                      <div className="text-[10px] text-emerald-700 font-bold">每日目标达成</div>
                     </div>
 
-                    <div className="bg-amber-50 p-3 rounded-2xl border-2 border-amber-200 text-center space-y-0.5">
-                      <span className="text-[10px] text-amber-800 font-bold block">掌握高频生词</span>
-                      <span className="text-lg font-black text-amber-700">{masteredCount} 个</span>
+                    <div className="bg-blue-50 border-2 border-blue-200 p-3 rounded-2xl">
+                      <div className="text-slate-500 font-bold text-[10px]">已牢固掌握词汇</div>
+                      <div className="text-lg font-black text-blue-700 mt-0.5">{masteredCount} 词</div>
+                      <div className="text-[10px] text-blue-600 font-bold">艾宾浩斯稳固</div>
                     </div>
 
-                    <div className="bg-blue-50 p-3 rounded-2xl border-2 border-blue-200 text-center space-y-0.5">
-                      <span className="text-[10px] text-blue-800 font-bold block">口语综合得分</span>
-                      <span className="text-lg font-black text-blue-700">{fluencyScore}% 优秀</span>
+                    <div className="bg-purple-50 border-2 border-purple-200 p-3 rounded-2xl">
+                      <div className="text-slate-500 font-bold text-[10px]">综合发音流利度</div>
+                      <div className="text-lg font-black text-purple-700 mt-0.5">{fluencyScore}%</div>
+                      <div className="text-[10px] text-purple-600 font-bold">AI 原生语调打分</div>
                     </div>
 
-                    <div className="bg-purple-50 p-3 rounded-2xl border-2 border-purple-200 text-center space-y-0.5">
-                      <span className="text-[10px] text-purple-800 font-bold block">连续打卡天数</span>
-                      <span className="text-lg font-black text-purple-700">{profile.streakDays || 1} 天 🔥</span>
+                    <div className="bg-amber-50 border-2 border-amber-200 p-3 rounded-2xl">
+                      <div className="text-slate-500 font-bold text-[10px]">当前绿宝石财富</div>
+                      <div className="text-lg font-black text-amber-700 mt-0.5">{profile.emeralds} ❇️</div>
+                      <div className="text-[10px] text-amber-600 font-bold">完成任务与挑战</div>
                     </div>
                   </div>
 
-                  {/* 7-Day Study Time Bar Chart */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
+                  {/* Weekly Learning Trend Bar Chart */}
+                  <div className="bg-slate-50 border-2 border-slate-200 p-4 rounded-2xl space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-black text-slate-800 text-xs flex items-center space-x-1.5">
-                        <Clock className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>本周每日学习时长分布 (分钟)：</span>
+                      <div className="font-black text-slate-800 text-xs flex items-center space-x-1.5">
+                        <BarChart3 className="w-4 h-4 text-[#487E2C]" />
+                        <span>本周每日学习时长分布 (分钟)</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-500">
+                        本周累计: {weeklyDailyMinutes.reduce((a, b) => a + b, 0)} 分钟
                       </span>
-                      <span className="text-[10px] text-slate-500 font-bold">目标: 20分钟/天</span>
                     </div>
 
-                    <div className="flex items-end justify-between h-28 pt-4 pb-2 px-2 bg-white rounded-xl border border-slate-200">
+                    <div className="flex items-end justify-between h-28 pt-4 px-2">
                       {weeklyDailyMinutes.map((mins, idx) => {
-                        const heightPct = Math.min(100, Math.round((mins / maxMins) * 100));
+                        const heightPct = Math.max(12, Math.round((mins / maxMins) * 100));
                         const isToday = idx === 6;
                         return (
-                          <div key={idx} className="flex flex-col items-center flex-1 space-y-1">
-                            <span className="text-[10px] font-black text-slate-600">{mins}m</span>
-                            <div className="w-6 sm:w-8 bg-slate-100 rounded-t-lg overflow-hidden flex items-end h-16">
+                          <div key={idx} className="flex flex-col items-center space-y-1.5 flex-1">
+                            <span className="text-[10px] font-bold text-slate-600">{mins}m</span>
+                            <div className="w-6 sm:w-8 bg-slate-200 rounded-t-lg overflow-hidden h-20 flex items-end">
                               <div
-                                className={`w-full rounded-t-lg transition-all ${
-                                  isToday
-                                    ? 'bg-gradient-to-t from-emerald-600 to-green-400'
-                                    : 'bg-gradient-to-t from-blue-600 to-blue-400'
-                                }`}
                                 style={{ height: `${heightPct}%` }}
+                                className={`w-full rounded-t-lg transition-all ${
+                                  isToday ? 'bg-[#487E2C]' : 'bg-emerald-400'
+                                }`}
                               />
                             </div>
-                            <span className={`text-[10px] font-bold ${isToday ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
+                            <span className={`text-[10px] font-bold ${isToday ? 'text-[#487E2C] font-black' : 'text-slate-500'}`}>
                               {weekDays[idx]}
                             </span>
                           </div>
@@ -331,170 +632,193 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Alex AI Pedagogical Summary */}
-                  <div className="bg-amber-50 p-4 rounded-2xl border-2 border-amber-200 space-y-2 text-slate-700">
-                    <span className="font-black text-amber-900 flex items-center space-x-1.5">
-                      <Sparkles className="w-4 h-4 text-[#FF6321]" />
-                      <span>Alex 老师专属本周学情诊断：</span>
-                    </span>
-                    <p className="text-[11px] font-bold leading-relaxed text-slate-700">
-                      “{profile.nickname} 同学本周表现极其优异！在 <strong>新概念英语核心句型拼装</strong> 与 <strong>三场景口语打卡</strong> 中展现了出色的语感。在发音方面，长元音 /i:/ 与卷舌音 /r/ 准确率已超 90%，建议在接下来的学习中，继续多听【唱片机磨耳朵电台】的三遍精听法，加强语调起伏！”
+                  {/* Alex AI Tutor Weekly Comment */}
+                  <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-amber-900 text-xs flex items-center space-x-1.5">
+                        <span>👩‍🦰 Alex 老师的本周教研诊断与寄语</span>
+                      </span>
+                      <span className="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                        AI 智能生成
+                      </span>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed text-xs">
+                      “{profile.nickname} 同学本周在<strong>长元音 (ee/ea)</strong> 与 <strong>肯定句变一般疑问句 (Is this your...)</strong> 的语序掌握非常扎实！建议下周多使用【听力电台】的三遍精听法，重点加强 <strong>咬舌音 (th)</strong> 和 <strong>连读停顿</strong>，在对话中会更加自信自然！”
                     </p>
                   </div>
 
-                  {/* Copy / Share Weekly Certificate Poster */}
-                  <div className="bg-gradient-to-r from-emerald-800 to-green-900 p-4 rounded-2xl text-white flex items-center justify-between shadow-md">
-                    <div>
-                      <h4 className="font-black text-sm text-amber-300 flex items-center space-x-1.5">
-                        <Award className="w-4 h-4 text-amber-400" />
-                        <span>一键生成家长微信学情周报</span>
-                      </h4>
-                      <p className="text-[10px] text-emerald-200/90 mt-0.5">
-                        支持一键复制周报文本分享至朋友圈或家庭群，记录孩子成长！
-                      </p>
-                    </div>
-
+                  {/* Export & Share Report */}
+                  <div className="flex items-center justify-between pt-1">
                     <button
+                      type="button"
                       onClick={handleCopyReportText}
-                      className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl font-mono font-black text-xs flex items-center space-x-1.5 shadow-md active:scale-95 transition-all shrink-0"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center space-x-1.5 transition-all cursor-pointer shadow-sm"
                     >
-                      {copiedPoster ? <Check className="w-4 h-4 text-emerald-800" /> : <Copy className="w-4 h-4" />}
-                      <span>{copiedPoster ? '已复制周报！' : '复制周报文本'}</span>
+                      {copiedPoster ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedPoster ? '已复制学情周报文本！' : '一键复制学情周报 (发至微信群/朋友圈)'}</span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* TAB 2: Phonics Diagnostics Radar */}
+              {/* TAB 2: Phonics Diagnosis */}
               {activeTab === 'phonics' && (
-                <div className="space-y-4">
-                  <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-700 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-black text-sm text-emerald-400 flex items-center space-x-1.5">
-                        <Zap className="w-4 h-4 text-amber-400" />
-                        <span>AI 音素级发音能力诊断雷达</span>
-                      </h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        基于日常口语跟读评测大数据的多维度音素精准对齐分析
-                      </p>
-                    </div>
-                    <span className="text-xl font-black text-amber-300 font-mono">
-                      {fluencyScore} <span className="text-xs text-slate-400">综合分</span>
-                    </span>
+                <div className="space-y-3">
+                  <div className="bg-purple-50 border-2 border-purple-200 p-3 rounded-2xl">
+                    <h3 className="font-black text-purple-900 text-xs mb-1 flex items-center space-x-1.5">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span>6 维核心音素发音精准雷达诊断</span>
+                    </h3>
+                    <p className="text-slate-600 text-[11px]">
+                      基于深度自然语音模型，对孩子在口语对话、课文跟读中的真实发音进行音素级细分打分：
+                    </p>
                   </div>
 
-                  {/* Phonics Dimension Breakdown List */}
-                  <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {phonicsDimensions.map((item, idx) => (
-                      <div key={idx} className="bg-slate-50 p-3.5 rounded-2xl border-2 border-slate-200 space-y-2">
+                      <div key={idx} className="bg-white border-2 border-slate-200 p-3 rounded-xl space-y-1.5 shadow-2xs">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-black text-slate-800 text-xs">【{item.name}】</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                              item.score >= 90 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                            }`}>
-                              {item.status} ({item.score}%)
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-slate-500 font-bold">建议：{item.tip}</span>
+                          <span className="font-black text-slate-800 text-xs">{item.name}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.score >= 90
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {item.score}分 • {item.status}
+                          </span>
                         </div>
-
-                        {/* Progress Bar */}
-                        <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              item.score >= 90
-                                ? 'bg-gradient-to-r from-emerald-500 to-green-500'
-                                : 'bg-gradient-to-r from-amber-500 to-yellow-400'
-                            }`}
-                            style={{ width: `${item.score}%` }}
-                          />
+                        <p className="text-[11px] text-slate-500 leading-tight">{item.desc}</p>
+                        <div className="text-[10px] text-purple-700 font-bold bg-purple-50 p-1.5 rounded-lg">
+                          💡 辅导建议: {item.tip}
                         </div>
-
-                        <p className="text-[10px] text-slate-500 font-medium">{item.desc}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* TAB 3: Eye Care & Pedagogy Settings */}
+              {/* TAB 3: Settings (Time, Eye Care, Custom PIN) */}
               {activeTab === 'settings' && (
                 <div className="space-y-4">
-                  {/* Eye Protection & Limits */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
-                    <h3 className="font-black text-[#487E2C] text-sm flex items-center space-x-2">
+                  {/* PIN Management Section */}
+                  <div className="bg-amber-50 p-4 rounded-2xl border-2 border-amber-300 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-black text-amber-900 text-sm flex items-center space-x-2">
+                        <KeyRound className="w-4 h-4 text-amber-800" />
+                        <span>家长专属 4 位安全 PIN 码设置</span>
+                      </h3>
+                      <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                        {savedPin && savedPin.length === 4 ? '已开启 PIN 码保护' : '未设置 (使用常识验证)'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-amber-800">
+                      设置 4 位专属 PIN 码后，下次进入家长中心只需输入该 4 位密码，彻底防止小朋友误触破解。
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        maxLength={4}
+                        value={savedPin}
+                        onChange={(e) => handleUpdatePinInSettings(e.target.value.replace(/\D/g, ''))}
+                        placeholder="输入 4 位数字密码 (如 1234)"
+                        className="bg-white border-2 border-amber-300 rounded-xl px-3.5 py-2 text-slate-800 font-mono font-black tracking-widest text-sm focus:border-amber-500 focus:outline-none flex-1"
+                      />
+                      {savedPin && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePinInSettings('')}
+                          className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold text-xs"
+                        >
+                          清除密码
+                        </button>
+                      )}
+                    </div>
+
+                    {pinEditSuccess && (
+                      <p className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>PIN 码配置已更新！</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Time limit & Eye care */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
+                    <h3 className="font-black text-slate-800 text-sm flex items-center space-x-2">
                       <Eye className="w-4 h-4 text-[#487E2C]" />
-                      <span>护眼模式与防沉迷时长控制</span>
+                      <span>护眼防沉迷与使用时长管控</span>
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-slate-700 font-bold mb-1">
-                          单次连续学习休息提醒:
-                        </label>
-                        <select
-                          value={continuousLimit}
-                          onChange={(e) => setContinuousLimit(Number(e.target.value))}
-                          className="w-full bg-white border-2 border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-bold"
-                        >
-                          <option value={15}>15 分钟 (强烈建议儿童)</option>
-                          <option value={20}>20 分钟 (标准)</option>
-                          <option value={30}>30 分钟 (长时)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-slate-700 font-bold mb-1">
-                          每日单日最高学习上限:
+                          每日学习上限时长 (到达后锁定):
                         </label>
                         <select
                           value={dailyLimit}
                           onChange={(e) => setDailyLimit(Number(e.target.value))}
                           className="w-full bg-white border-2 border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-bold"
                         >
-                          <option value={30}>30 分钟 / 天</option>
-                          <option value={45}>45 分钟 / 天</option>
-                          <option value={60}>60 分钟 / 天</option>
-                          <option value={999}>无限制</option>
+                          <option value={30}>30 分钟 (适合低幼启蒙)</option>
+                          <option value={45}>45 分钟 (推荐标准日常)</option>
+                          <option value={60}>60 分钟 (周末/进阶高年级)</option>
+                          <option value={90}>90 分钟</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-700 font-bold mb-1">
+                          单次连续时长 (强制护眼休息):
+                        </label>
+                        <select
+                          value={continuousLimit}
+                          onChange={(e) => setContinuousLimit(Number(e.target.value))}
+                          className="w-full bg-white border-2 border-slate-300 rounded-xl px-3 py-2 text-slate-800 font-bold"
+                        >
+                          <option value={15}>15 分钟 (视力重点保护)</option>
+                          <option value={20}>20 分钟 (20-20-20 法则推荐)</option>
+                          <option value={30}>30 分钟</option>
                         </select>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                       <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-[#FF6321]" />
-                        <span className="font-bold text-slate-700">开启护眼自动远眺提醒</span>
+                        <input
+                          type="checkbox"
+                          id="eyeCareCheck"
+                          checked={eyeProtection}
+                          onChange={(e) => setEyeProtection(e.target.checked)}
+                          className="w-4 h-4 text-[#487E2C] rounded-sm accent-[#487E2C]"
+                        />
+                        <label htmlFor="eyeCareCheck" className="text-slate-800 font-bold cursor-pointer">
+                          开启“防蓝光疲劳护眼休息黑屏提示”
+                        </label>
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={eyeProtection}
-                        onChange={(e) => setEyeProtection(e.target.checked)}
-                        className="w-5 h-5 accent-[#487E2C] rounded cursor-pointer"
-                      />
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={onTriggerEyeCareTest}
-                      className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-xl font-bold text-[11px] flex items-center space-x-1"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-[#FF6321]" />
-                      <span>预览测试护眼休息弹窗</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={onTriggerEyeCareTest}
+                        className="text-xs text-[#487E2C] hover:underline font-bold"
+                      >
+                        测试护眼弹窗 ➔
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Alex AI Pedagogical Tuning */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-3">
-                    <h3 className="font-black text-cyan-700 text-sm flex items-center space-x-2">
-                      <Volume2 className="w-4 h-4 text-cyan-600" />
+                  {/* AI Speech & Correction Strictness */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
+                    <h3 className="font-black text-slate-800 text-sm flex items-center space-x-2">
+                      <Volume2 className="w-4 h-4 text-[#487E2C]" />
                       <span>Alex AI 教学语速与纠错偏好</span>
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-slate-700 font-bold mb-1">
-                          Alex 英文朗读语速:
+                          Alex 默认语速:
                         </label>
                         <select
                           value={speechRate}
@@ -610,7 +934,7 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveSettings}
-                  className="px-5 py-2 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl font-black text-xs shadow-[0_3px_0_0_#2A4718]"
+                  className="px-5 py-2 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl font-black text-xs shadow-[0_3px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer"
                 >
                   保存家长护航配置
                 </button>
@@ -625,4 +949,3 @@ export const ParentDashboardModal: React.FC<ParentDashboardModalProps> = ({
     </div>
   );
 };
-

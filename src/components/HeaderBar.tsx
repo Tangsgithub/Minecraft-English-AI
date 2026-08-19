@@ -18,7 +18,6 @@ interface HeaderBarProps {
   onOpenUserProfile?: () => void;
   onOpenHelpWizard: () => void;
   onOpenParentDashboard: () => void;
-  onOpenRadio?: () => void;
   onOpenCustomerService?: () => void;
   onGoToLandingPage?: () => void;
   onOpenAdminConsole?: () => void;
@@ -38,7 +37,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenUserProfile,
   onOpenHelpWizard,
   onOpenParentDashboard,
-  onOpenRadio,
   onOpenCustomerService,
   onGoToLandingPage,
   onOpenAdminConsole,
@@ -239,22 +237,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 </span>
               )}
             </button>
-
-            {/* Jukebox / Audio Immersion Radio Button */}
-            {onOpenRadio && (
-              <button
-                type="button"
-                onClick={() => {
-                  playClickSound();
-                  onOpenRadio();
-                }}
-                className="px-2 sm:px-2.5 py-1 sm:py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#311042] active:translate-y-0.5 cursor-pointer animate-pulse"
-                title="唱片机磨耳朵沉浸电台（后台自动连播）"
-              >
-                <span className="text-sm">📻</span>
-                <span className="hidden sm:inline text-amber-300">电台</span>
-              </button>
-            )}
 
             {/* Parent Center / Weekly Report Button */}
             <button

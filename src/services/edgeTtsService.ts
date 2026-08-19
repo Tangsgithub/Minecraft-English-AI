@@ -3,15 +3,66 @@ export interface EdgeVoiceOption {
   name: string;
   gender: string;
   accent: string;
+  accentType: 'US' | 'UK' | 'AU';
   description: string;
+  previewSentence: string;
 }
 
 export const EDGE_VOICES: EdgeVoiceOption[] = [
-  { id: 'en-US-AnaNeural', name: 'Ana (美音女童/小玩家)', gender: 'Female', accent: '美音 (US)', description: '活泼亲切的 Minecraft 小助手音色，极具感染力' },
-  { id: 'en-US-JennyNeural', name: 'Jenny (美音导师)', gender: 'Female', accent: '美音 (US)', description: '发音极具抑扬顿挫，标准柔和的外教老师音' },
-  { id: 'en-US-GuyNeural', name: 'Guy (美音男声)', gender: 'Male', accent: '美音 (US)', description: '清晰从容，标准阳光美音男声' },
-  { id: 'en-GB-SoniaNeural', name: 'Sonia (优雅英音)', gender: 'Female', accent: '英音 (UK)', description: '标准优雅英音，发音精准自然' },
-  { id: 'en-US-AriaNeural', name: 'Aria (情感美音)', gender: 'Female', accent: '美音 (US)', description: '自然丰富的情感表达，极具对话真实感' }
+  { 
+    id: 'en-US-JennyNeural', 
+    name: 'Jenny (美音导师 · Alex)', 
+    gender: 'Female', 
+    accent: '美音 (US)', 
+    accentType: 'US',
+    description: '标准纯正美语女声，发音抑扬顿挫，柔和亲切的外教老师音',
+    previewSentence: 'Hello! I am Alex. Welcome to Minecraft English!'
+  },
+  { 
+    id: 'en-US-AnaNeural', 
+    name: 'Ana (美音童声 · 活泼助手)', 
+    gender: 'Female', 
+    accent: '美音童声 (US)', 
+    accentType: 'US',
+    description: '活泼清脆的小玩家童声音色，极具代入感与探险趣味',
+    previewSentence: 'Let us build a craft table together and explore the cave!'
+  },
+  { 
+    id: 'en-US-GuyNeural', 
+    name: 'Guy (美音男声 · Steve)', 
+    gender: 'Male', 
+    accent: '美音 (US)', 
+    accentType: 'US',
+    description: '清晰从容、阳光自信的标准美语男声，经典史蒂夫探险家音色',
+    previewSentence: 'Watch out! There are creepers near the dark oak forest!'
+  },
+  { 
+    id: 'en-GB-SoniaNeural', 
+    name: 'Sonia (英音优雅 · 牛津音)', 
+    gender: 'Female', 
+    accent: '英音 (UK)', 
+    accentType: 'UK',
+    description: '标准优雅英伦女声，经典 RP 牛津发音，清晰高雅自然',
+    previewSentence: 'Good afternoon. Excuse me, is this your handbag?'
+  },
+  { 
+    id: 'en-GB-RyanNeural', 
+    name: 'Ryan (英音绅士 · BBC男声)', 
+    gender: 'Male', 
+    accent: '英音 (UK)', 
+    accentType: 'UK',
+    description: '沉稳绅士的伦敦男声，典雅纯正的英式英语发音',
+    previewSentence: 'Pardon me, sir. Could you please show me your passport?'
+  },
+  { 
+    id: 'en-AU-NatashaNeural', 
+    name: 'Natasha (澳音阳光 · 澳洲原声)', 
+    gender: 'Female', 
+    accent: '澳音 (AU)', 
+    accentType: 'AU',
+    description: '自然阳光的澳大利亚原声英语，开阔清亮',
+    previewSentence: 'Good day mate! Have a wonderful adventure in the outback!'
+  }
 ];
 
 // Reusable shared audio element for preserving browser autoplay gesture permission

@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import crypto from "crypto";
 import { GoogleGenAI } from "@google/genai";
-import { tts as edgeTts } from "edge-tts";
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import dotenv from "dotenv";
 import { neon } from "@neondatabase/serverless";
 
@@ -550,10 +550,10 @@ app.use(express.json());
     res.json({ status: "ok", time: new Date().toISOString() });
   });
 
-  // Edge Neural TTS High-Quality Speech Endpoint
+  // High-Quality Multi-Accent Neural Speech Endpoint (US / UK / AU / CA)
   app.post("/api/tts", async (req, res) => {
     try {
-      const { text, voice = 'en-US-AnaNeural', rate = '+0%' } = req.body;
+      const { text, voice = 'en-US-JennyNeural' } = req.body;
       if (!text || typeof text !== 'string') {
         return res.status(400).json({ error: "Text parameter is required" });
       }
@@ -568,7 +568,7 @@ app.use(express.json());
         .trim();
 
       // If voice is an English voice and text contains English + Chinese, remove Chinese and keep English punctuation
-      if (voice.startsWith('en-') && /[a-zA-Z]/.test(cleanText)) {
+      if (/[a-zA-Z]/.test(cleanText)) {
         cleanText = cleanText
           .replace(/[\u4e00-\u9fa5]/g, '')
           .replace(/[（）【】《》、]/g, ' ')
@@ -580,22 +580,68 @@ app.use(express.json());
         return res.status(400).json({ error: "Cleaned text is empty" });
       }
 
-      let audioBuffer: Buffer;
+      // 1. Try Microsoft Edge Neural TTS first for authentic human voices & accents
+      let audioBuffer: Buffer | null = null;
       try {
-        audioBuffer = await edgeTts(cleanText, {
-          voice: voice,
-          rate: rate || '+0%'
+        const edgePromise = new Promise<Buffer | null>((resolve) => {
+          try {
+            const tts = new MsEdgeTTS();
+            tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
+              .then(() => {
+                const { audioStream } = tts.toStream(cleanText);
+                const streamChunks: Buffer[] = [];
+                audioStream.on('data', (c: Buffer) => streamChunks.push(c));
+                audioStream.on('end', () => {
+                  if (streamChunks.length > 0) resolve(Buffer.concat(streamChunks));
+                  else resolve(null);
+                });
+                audioStream.on('error', () => resolve(null));
+              })
+              .catch(() => resolve(null));
+
+            setTimeout(() => resolve(null), 3500);
+          } catch {
+            resolve(null);
+          }
         });
-      } catch (_edgeErr) {
-        // Fallback to Google TTS gracefully if Edge TTS websocket endpoint is restricted in container
-        const lang = voice.toLowerCase().includes('gb') ? 'en-gb' : 'en';
-        // Split cleanText into ~150 char chunks if long
+
+        audioBuffer = await edgePromise;
+      } catch (e) {
+        console.warn("Edge TTS stream error, falling back to multi-accent synthesis:", e);
+      }
+
+      // 2. High-Fidelity Multi-Accent Fallback if Edge TTS is delayed or throttled
+      if (!audioBuffer || audioBuffer.length === 0) {
+        const voiceLower = (voice || '').toLowerCase();
+        let targetLocale = 'en-us'; // Default authentic US American accent
+
+        if (
+          voiceLower.includes('gb') || 
+          voiceLower.includes('uk') || 
+          voiceLower.includes('sonia') || 
+          voiceLower.includes('ryan') || 
+          voiceLower.includes('libby')
+        ) {
+          targetLocale = 'en-gb'; // Authentic British English (UK)
+        } else if (
+          voiceLower.includes('au') || 
+          voiceLower.includes('natasha')
+        ) {
+          targetLocale = 'en-au'; // Authentic Australian English (AU)
+        } else if (voiceLower.includes('ca')) {
+          targetLocale = 'en-ca'; // Authentic Canadian English (CA)
+        } else if (voiceLower.includes('zh') || voiceLower.includes('chinese')) {
+          targetLocale = 'zh-cn'; // Chinese Mandarin
+        }
+
+        // Split text into ~150 character chunks for smooth synthesis
         const chunks: string[] = Array.from(cleanText.match(/.{1,150}(?=\s|$)/g) || [cleanText]);
         const audioBuffers: Buffer[] = [];
 
         for (const chunk of chunks) {
-          if (!chunk.trim()) continue;
-          const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk.trim())}&tl=${lang}&client=tw-ob`;
+          const trimmedChunk = chunk.trim();
+          if (!trimmedChunk) continue;
+          const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(trimmedChunk)}&tl=${targetLocale}&client=tw-ob`;
           const resp = await fetch(url, {
             headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
@@ -607,17 +653,20 @@ app.use(express.json());
           }
         }
 
-        if (audioBuffers.length === 0) {
-          throw new Error("TTS fallback audio synthesis returned empty result");
+        if (audioBuffers.length > 0) {
+          audioBuffer = Buffer.concat(audioBuffers);
         }
-        audioBuffer = Buffer.concat(audioBuffers);
+      }
+
+      if (!audioBuffer || audioBuffer.length === 0) {
+        return res.status(500).json({ error: "Speech synthesis failed" });
       }
 
       res.setHeader("Content-Type", "audio/mpeg");
       res.setHeader("Cache-Control", "public, max-age=86400");
       return res.send(audioBuffer);
     } catch (err: any) {
-      console.error("Edge TTS Generation Error:", err);
+      console.error("TTS Generation Error:", err);
       return res.status(500).json({ error: err?.message || "Speech synthesis failed" });
     }
   });

@@ -68,12 +68,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleTestTtsSpeech = async () => {
+  const handleTestTtsSpeech = async (customVoice?: string, customSentence?: string) => {
     unlockAudio();
     playEmeraldSound();
     setIsTestingSpeech(true);
-    await speakText("Welcome to Minecraft English World! Sound is working perfectly!", {
-      lang: 'en-US',
+    const targetVoice = customVoice || edgeVoiceState;
+    const voiceObj = EDGE_VOICES.find(v => v.id === targetVoice);
+    const defaultSentence = voiceObj?.previewSentence || "Welcome to Minecraft English World! Sound is working perfectly!";
+    const testSentence = customSentence || defaultSentence;
+
+    await speakText(testSentence, {
+      voice: targetVoice,
+      lang: targetVoice.toLowerCase().includes('gb') ? 'en-GB' : targetVoice.toLowerCase().includes('au') ? 'en-AU' : 'en-US',
       rate: 1.0
     });
     setIsTestingSpeech(false);
@@ -335,33 +341,74 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Edge Voice Selector */}
             {ttsEngineState === 'edge' && (
               <div className="space-y-2 pt-1">
-                <label className="block text-xs font-bold text-slate-200">
-                  选择美音/英音优美音色 (Neural Voice):
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-200">
+                    选择美音 / 英音 / 澳音音色 (Neural Voice):
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                    已选: {EDGE_VOICES.find(v => v.id === edgeVoiceState)?.name || edgeVoiceState}
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {EDGE_VOICES.map(v => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        playClickSound();
-                        setEdgeVoiceState(v.id);
-                      }}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        edgeVoiceState === v.id
-                          ? 'bg-emerald-500/30 border-emerald-400 text-white ring-1 ring-emerald-400'
-                          : 'bg-slate-800/40 border-slate-700 text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="font-bold text-xs flex items-center justify-between text-emerald-300">
-                        <span>{v.name}</span>
-                        <span className="text-[10px] text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded font-mono">
-                          {v.accent}
-                        </span>
+                  {EDGE_VOICES.map(v => {
+                    const isSelected = edgeVoiceState === v.id;
+                    return (
+                      <div
+                        key={v.id}
+                        onClick={() => {
+                          playClickSound();
+                          setEdgeVoiceState(v.id);
+                        }}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer relative group flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-emerald-500/25 border-emerald-400 text-white ring-2 ring-emerald-400 shadow-md'
+                            : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold text-xs flex items-center justify-between">
+                            <span className={isSelected ? 'text-emerald-300 font-black' : 'text-slate-200'}>
+                              {v.name}
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                              v.accentType === 'UK'
+                                ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40'
+                                : v.accentType === 'AU'
+                                ? 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
+                                : 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40'
+                            }`}>
+                              {v.accent}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-1 leading-snug">{v.description}</div>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center justify-between">
+                          <span className="text-[9px] text-slate-400 truncate max-w-[170px] italic">
+                            "{v.previewSentence}"
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEdgeVoiceState(v.id);
+                              handleTestTtsSpeech(v.id, v.previewSentence);
+                            }}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center space-x-1 shrink-0 transition-all ${
+                              isSelected
+                                ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300'
+                                : 'bg-slate-700 text-emerald-300 hover:bg-slate-600'
+                            }`}
+                            title="试听该专属音色"
+                          >
+                            <Play className="w-2.5 h-2.5 fill-current" />
+                            <span>试听</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{v.description}</div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -371,7 +418,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="text-[11px] text-slate-300 font-mono">
                 {ttsEngineState === 'edge' ? (
                   <span className="text-emerald-400 font-bold flex items-center space-x-1">
-                    <span>✨ 云端 AI 神经网络已就绪 (在线合成)</span>
+                    <span>✨ 云端 AI 神经网络已就绪 (美英多口音)</span>
                   </span>
                 ) : (
                   <span className="text-slate-400">系统原生 TTS</span>
@@ -380,12 +427,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <button
                 type="button"
-                onClick={handleTestTtsSpeech}
+                onClick={() => handleTestTtsSpeech()}
                 disabled={isTestingSpeech}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md disabled:opacity-50"
+                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-all shadow-md disabled:opacity-50"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>{isTestingSpeech ? '播放中...' : '🔊 试听发音'}</span>
+                <span>{isTestingSpeech ? '播放中...' : '🔊 试听当前选中音色'}</span>
               </button>
             </div>
           </div>

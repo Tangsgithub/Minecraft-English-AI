@@ -18,14 +18,14 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { VipActivationModal } from './components/VipActivationModal';
-import { AudioImmersionRadioModal } from './components/AudioImmersionRadioModal';
+import { RadioImmersionView } from './components/RadioImmersionView';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
 import { auth, User, saveUserProfileToCloud, fetchUserProfileFromCloud } from './lib/firebase';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
-import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer } from 'lucide-react';
+import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer, Radio } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const getTodayDateString = () => {
@@ -244,7 +244,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>('vol1');
-  const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   // Active Lesson Context for Alex Chat
@@ -260,7 +260,6 @@ export default function App() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
-  const [isRadioOpen, setIsRadioOpen] = useState<boolean>(false);
 
   // Fetch latest cloud profile on login or user switch
   useEffect(() => {
@@ -596,7 +595,7 @@ export default function App() {
 
   const handleSelectLessonForChat = (lesson: Lesson) => {
     setSelectedLessonForChat(lesson);
-    setActiveTab('chat');
+    setActiveTab('radio');
     // Add lesson prompt context into chat history
     setChatMessages(prev => [
       ...prev,
@@ -626,12 +625,14 @@ export default function App() {
     setProfile(DEFAULT_PROFILE);
   };
 
-  const handleEnterApp = (targetTab?: 'map' | 'chat' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
+  const handleEnterApp = (targetTab?: 'map' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
     if (!currentUser) {
       setIsAuthOpen(true);
       return;
     }
-    if (targetTab) setActiveTab(targetTab);
+    if (targetTab) {
+      setActiveTab(targetTab);
+    }
     setIsLandingView(false);
   };
 
@@ -706,7 +707,6 @@ export default function App() {
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
         onOpenHelpWizard={() => setIsGuideOpen(true)}
         onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
-        onOpenRadio={() => setIsRadioOpen(true)}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
         onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
@@ -725,31 +725,31 @@ export default function App() {
               playClickSound();
               setActiveTab('map');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
               activeTab === 'map'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🗺️ 冒险地图</span>
+            <span className="whitespace-nowrap">🗺️ 地图</span>
           </button>
 
           <button
             onClick={() => {
               playClickSound();
-              setActiveTab('chat');
+              setActiveTab('radio');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all relative active:translate-y-0.5 ${
-              activeTab === 'chat'
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:translate-y-0.5 ${
+              activeTab === 'radio'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
-            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">👩‍🦰 Alex 对话</span>
+            <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">📻 磨耳朵</span>
             {selectedLessonForChat && (
-              <span className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
+              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
             )}
           </button>
 
@@ -758,14 +758,14 @@ export default function App() {
               playClickSound();
               setActiveTab('vocab');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
               activeTab === 'vocab'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">📦 词汇宝典</span>
+            <span className="whitespace-nowrap">📦 词汇</span>
           </button>
 
           <button
@@ -773,14 +773,14 @@ export default function App() {
               playClickSound();
               setActiveTab('crafting');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
               activeTab === 'crafting'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Hammer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🔨 合成实验</span>
+            <span className="whitespace-nowrap">🔨 合成</span>
           </button>
 
           <button
@@ -788,14 +788,14 @@ export default function App() {
               playClickSound();
               setActiveTab('missions');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 relative ${
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 relative ${
               activeTab === 'missions'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Scroll className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">📜 任务告示</span>
+            <span className="whitespace-nowrap">📜 任务</span>
             {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length > 0 && (
               <span className="ml-1 px-1.5 py-0.2 bg-[#FF6321] text-white text-[9px] font-black rounded-full animate-pulse">
                 {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length}
@@ -808,14 +808,14 @@ export default function App() {
               playClickSound();
               setActiveTab('achievements');
             }}
-            className={`flex-1 min-w-[80px] xs:min-w-[95px] sm:min-w-[120px] shrink-0 snap-start py-2 sm:py-3 px-2 sm:px-4 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-sm flex items-center justify-center space-x-1 sm:space-x-2 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
               activeTab === 'achievements'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🏆 成就阶梯</span>
+            <span className="whitespace-nowrap">🏆 成就</span>
           </button>
 
         </nav>
@@ -835,15 +835,18 @@ export default function App() {
             </>
           )}
 
-          {activeTab === 'chat' && (
-            <AlexChatView
+          {activeTab === 'radio' && (
+            <RadioImmersionView
+              selectedVolumeId={selectedVolumeId}
               profile={profile}
-              activeLesson={selectedLessonForChat}
-              messages={chatMessages}
-              setMessages={setChatMessages}
+              currentLessonId={profile.currentLessonId || 1}
+              activeLessonForChat={selectedLessonForChat}
+              chatMessages={chatMessages}
+              setChatMessages={setChatMessages}
               onAwardEmeralds={handleAwardEmeralds}
-              onOpenSettings={() => setIsSettingsOpen(true)}
               onCompleteLesson={handleCompleteLesson}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onSelectLessonForChat={handleSelectLessonForChat}
               onCheckMission={(text) => {
                 const lowerText = text.toLowerCase();
                 setProfile(prev => {
@@ -887,10 +890,6 @@ export default function App() {
                   saveUserProfileToCloud(next, currentUser?.uid);
                   return next;
                 });
-              }}
-              onBackToMap={() => {
-                setActiveTab('map');
-                setSelectedLessonForChat(null);
               }}
             />
           )}
@@ -1051,17 +1050,6 @@ export default function App() {
         onUpdateProfile={handleUpdateProfile}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
       />
-
-      {isRadioOpen && (
-        <AudioImmersionRadioModal
-          isOpen={true}
-          onClose={() => setIsRadioOpen(false)}
-          selectedVolumeId={selectedVolumeId}
-          profile={profile}
-          currentLessonId={profile.currentLessonId || 1}
-          onAwardEmeralds={handleAwardEmeralds}
-        />
-      )}
 
     </div>
   );
