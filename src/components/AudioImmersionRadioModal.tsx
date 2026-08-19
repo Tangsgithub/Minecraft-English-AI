@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lesson, UserProfile, CourseVolumeId } from '../types';
 import { 
   Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Repeat, Shuffle, 
-  Clock, Sparkles, Disc, List, Eye, EyeOff, Award, ChevronDown, CheckCircle2, Moon, X
+  Clock, Sparkles, Disc, List, Eye, EyeOff, Award, ChevronDown, CheckCircle2, Moon, X,
+  Filter, Layers, BookOpen
 } from 'lucide-react';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { LESSONS_DATA, getLessonById } from '../data/lessonsData';
@@ -19,6 +20,7 @@ interface AudioImmersionRadioModalProps {
 
 export type PlayMode = 'three_times' | 'sequential' | 'shuffle' | 'single_loop';
 export type SubtitleMode = 'bilingual' | 'english_only' | 'chinese_only' | 'blind_listening';
+export type PlaylistScope = 'all' | 'current' | 'recent5';
 
 interface PlaylistItem {
   id: string;
@@ -53,54 +55,15 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
 }) => {
   if (isOpen === false) return null;
 
-  // Resolve effective lessons
+  // 1. Resolve effective lessons securely
   const effectiveLessons: Lesson[] = lessons && lessons.length > 0
     ? lessons
     : (selectedVolumeId === 'vol2'
         ? Array.from({ length: 96 }, (_, i) => getLessonById(i + 1, 'vol2'))
         : LESSONS_DATA);
 
-  // Build Playlist from unlocked lessons safely
-  const unlockedIds = profile?.unlockedLessonIds || [1];
-  const unlockedLessons = effectiveLessons.filter(l => unlockedIds.includes(l.id));
-  const activeLessonList = unlockedLessons.length > 0 ? unlockedLessons : effectiveLessons.slice(0, 10);
-
-  const playlist: PlaylistItem[] = [];
-  activeLessonList.forEach((lesson, lIdx) => {
-    const discInfo = MINECRAFT_DISCS[lIdx % MINECRAFT_DISCS.length];
-
-    // Add Dialogue turns
-    if (lesson.dialogueScript && lesson.dialogueScript.length > 0) {
-      lesson.dialogueScript.forEach((turn, tIdx) => {
-        playlist.push({
-          id: `l${lesson.id}_turn_${tIdx}`,
-          lessonId: lesson.id,
-          lessonTitle: `L${lesson.id}: ${lesson.title}`,
-          speaker: turn.speaker,
-          english: turn.text,
-          chinese: turn.translation,
-          type: 'dialogue',
-          discName: discInfo.name,
-          discColor: discInfo.color
-        });
-      });
-    } else if (lesson.targetSentences && lesson.targetSentences.length > 0) {
-      lesson.targetSentences.forEach((sentence, sIdx) => {
-        playlist.push({
-          id: `l${lesson.id}_sent_${sIdx}`,
-          lessonId: lesson.id,
-          lessonTitle: `L${lesson.id}: ${lesson.title}`,
-          speaker: 'Alex',
-          english: sentence,
-          chinese: lesson.targetSentenceTranslations?.[sIdx] || lesson.grammarNote || '核心重点句型',
-          type: 'target_sentence',
-          discName: discInfo.name,
-          discColor: discInfo.color
-        });
-      });
-    }
-  });
-
+  // Scope filter state: all, current lesson, or recent 5 lessons
+  const [playlistScope, setPlaylistScope] = useState<PlaylistScope>('all');
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playMode, setPlayMode] = useState<PlayMode>('three_times');
@@ -113,9 +76,123 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
   const [discRotation, setDiscRotation] = useState<number>(0);
   const [listenedMinutes, setListenedMinutes] = useState<number>(0);
 
-  const currentItem = playlist[currentIndex] || playlist[0];
+  // Refs for bulletproof async closure synchronization (Patch 1 & 2)
   const isPlayingRef = useRef(isPlaying);
   isPlayingRef.current = isPlaying;
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+  const playModeRef = useRef(playMode);
+  playModeRef.current = playMode;
+  const speechRateRef = useRef(speechRate);
+  speechRateRef.current = speechRate;
+  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 2. Build Playlist dynamically with Scope Filter & Robust Fallbacks (Patch 4)
+  const unlockedIds = profile?.unlockedLessonIds || [1];
+  const unlockedLessons = effectiveLessons.filter(l => unlockedIds.includes(l.id));
+  const baseLessonPool = unlockedLessons.length > 0 ? unlockedLessons : effectiveLessons.slice(0, 10);
+
+  const playlist = useMemo<PlaylistItem[]>(() => {
+    let scopedLessons = [...baseLessonPool];
+    if (playlistScope === 'current') {
+      scopedLessons = baseLessonPool.filter(l => l.id === currentLessonId);
+      if (scopedLessons.length === 0 && baseLessonPool.length > 0) {
+        scopedLessons = [baseLessonPool[baseLessonPool.length - 1]];
+      }
+    } else if (playlistScope === 'recent5') {
+      scopedLessons = baseLessonPool.slice(-5);
+    }
+
+    const items: PlaylistItem[] = [];
+    scopedLessons.forEach((lesson, lIdx) => {
+      const discInfo = MINECRAFT_DISCS[lIdx % MINECRAFT_DISCS.length];
+
+      // A. Dialogue script turns
+      if (lesson.dialogueScript && lesson.dialogueScript.length > 0) {
+        lesson.dialogueScript.forEach((turn, tIdx) => {
+          items.push({
+            id: `l${lesson.id}_turn_${tIdx}`,
+            lessonId: lesson.id,
+            lessonTitle: `L${lesson.id}: ${lesson.title}`,
+            speaker: turn.speaker || 'Alex',
+            english: turn.text,
+            chinese: turn.translation || '课文情境对话',
+            type: 'dialogue',
+            discName: discInfo.name,
+            discColor: discInfo.color
+          });
+        });
+      }
+      
+      // B. Target key grammar sentences
+      if (lesson.targetSentences && lesson.targetSentences.length > 0) {
+        lesson.targetSentences.forEach((sentence, sIdx) => {
+          items.push({
+            id: `l${lesson.id}_sent_${sIdx}`,
+            lessonId: lesson.id,
+            lessonTitle: `L${lesson.id}: ${lesson.title}`,
+            speaker: 'Alex',
+            english: sentence,
+            chinese: lesson.targetSentenceTranslations?.[sIdx] || lesson.grammarNote || '核心重点句型',
+            type: 'target_sentence',
+            discName: discInfo.name,
+            discColor: discInfo.color
+          });
+        });
+      }
+
+      // C. Fallback to Vocabulary if dialogue & target sentences are both empty
+      if ((!lesson.dialogueScript || lesson.dialogueScript.length === 0) &&
+          (!lesson.targetSentences || lesson.targetSentences.length === 0) &&
+          lesson.vocabulary && lesson.vocabulary.length > 0) {
+        lesson.vocabulary.slice(0, 5).forEach((v, vIdx) => {
+          items.push({
+            id: `l${lesson.id}_vocab_${vIdx}`,
+            lessonId: lesson.id,
+            lessonTitle: `L${lesson.id}: ${lesson.title}`,
+            speaker: 'Alex',
+            english: v.word,
+            chinese: `${v.phonetic ? `[${v.phonetic}] ` : ''}${v.meaning || '核心词汇'}`,
+            type: 'vocab',
+            discName: discInfo.name,
+            discColor: discInfo.color
+          });
+        });
+      }
+    });
+
+    // Ultimate fallback to prevent empty array
+    if (items.length === 0) {
+      items.push({
+        id: 'fallback_track_1',
+        lessonId: 1,
+        lessonTitle: 'L1: Excuse me!',
+        speaker: 'Alex',
+        english: 'Excuse me! Is this your handbag?',
+        chinese: '对不起，打扰一下！这是您的手提包吗？',
+        type: 'target_sentence',
+        discName: 'Cat',
+        discColor: 'from-emerald-500 to-teal-700'
+      });
+    }
+
+    return items;
+  }, [baseLessonPool, playlistScope, currentLessonId]);
+
+  const playlistRef = useRef(playlist);
+  playlistRef.current = playlist;
+
+  // Safe current track reference
+  const safeCurrentIndex = currentIndex < playlist.length ? currentIndex : 0;
+  const currentItem = playlist[safeCurrentIndex] || playlist[0];
+
+  // Helper to clear pending timeouts (Patch 2)
+  const clearPendingPlaybackTimer = () => {
+    if (playbackTimerRef.current) {
+      clearTimeout(playbackTimerRef.current);
+      playbackTimerRef.current = null;
+    }
+  };
 
   // Disc rotation animation
   useEffect(() => {
@@ -132,7 +209,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
     };
   }, [isPlaying]);
 
-  // Sleep Timer Countdown & Listening tracker
+  // Sleep Timer Countdown
   useEffect(() => {
     let timer: any;
     if (sleepRemainingSeconds !== null && sleepRemainingSeconds > 0 && isPlaying) {
@@ -166,67 +243,81 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
       }, 60000);
     }
     return () => clearInterval(listenTimer);
-  }, [isPlaying]);
+  }, [isPlaying, onAwardEmeralds]);
 
-  // Cleanup speech when component unmounts
+  // Cleanup speech and pending timers on unmount (Patch 2)
   useEffect(() => {
     return () => {
+      clearPendingPlaybackTimer();
       stopSpeech();
     };
   }, []);
 
   const stopPlayback = () => {
+    clearPendingPlaybackTimer();
     stopSpeech();
     setIsPlaying(false);
   };
 
+  // Robust play track with Speaker parameter (Patch 3) & Timer handle (Patch 2)
   const playCurrentTrack = (indexToPlay?: number, customRepeatStep: number = 1) => {
-    const idx = typeof indexToPlay === 'number' ? indexToPlay : currentIndex;
-    const item = playlist[idx];
+    clearPendingPlaybackTimer();
+    stopSpeech();
+
+    const currentList = playlistRef.current;
+    const targetIdx = typeof indexToPlay === 'number' 
+      ? Math.max(0, Math.min(indexToPlay, currentList.length - 1))
+      : currentIndexRef.current;
+    
+    const item = currentList[targetIdx];
     if (!item) return;
 
-    stopSpeech();
+    setCurrentIndex(targetIdx);
+    currentIndexRef.current = targetIdx;
     setIsPlaying(true);
     setRepeatCount(customRepeatStep);
 
-    // Speak using Edge-TTS with current rate
+    // Speak using Edge-TTS with multi-role voice (Alex vs Steve) & current rate (Patch 3)
     speakText(item.english, () => {
       if (!isPlayingRef.current) return;
 
+      const activeMode = playModeRef.current;
+
       // Handle Play Modes
-      if (playMode === 'three_times') {
+      if (activeMode === 'three_times') {
         if (customRepeatStep < 3) {
           // Play next repeat of the same sentence (with brief pause)
-          setTimeout(() => {
+          playbackTimerRef.current = setTimeout(() => {
             if (isPlayingRef.current) {
-              playCurrentTrack(idx, customRepeatStep + 1);
+              playCurrentTrack(targetIdx, customRepeatStep + 1);
             }
           }, 800);
-          return;
         } else {
           // Move to next item after 3 repeats
-          setTimeout(() => {
+          playbackTimerRef.current = setTimeout(() => {
             if (isPlayingRef.current) {
-              handleNextTrack();
+              handleNextTrack(targetIdx);
             }
           }, 1200);
-          return;
         }
-      } else if (playMode === 'single_loop') {
-        setTimeout(() => {
+      } else if (activeMode === 'single_loop') {
+        playbackTimerRef.current = setTimeout(() => {
           if (isPlayingRef.current) {
-            playCurrentTrack(idx, 1);
+            playCurrentTrack(targetIdx, 1);
           }
         }, 800);
       } else {
         // Sequential or Shuffle
-        setTimeout(() => {
+        playbackTimerRef.current = setTimeout(() => {
           if (isPlayingRef.current) {
-            handleNextTrack();
+            handleNextTrack(targetIdx);
           }
         }, 800);
       }
-    }, { rate: speechRate });
+    }, { 
+      rate: speechRateRef.current,
+      speaker: item.speaker
+    });
   };
 
   const handleTogglePlay = () => {
@@ -234,37 +325,65 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
     if (isPlaying) {
       stopPlayback();
     } else {
-      playCurrentTrack(currentIndex, 1);
+      playCurrentTrack(currentIndexRef.current, 1);
     }
   };
 
-  const handleNextTrack = () => {
-    let nextIdx = currentIndex + 1;
-    if (playMode === 'shuffle') {
-      nextIdx = Math.floor(Math.random() * playlist.length);
-    } else if (nextIdx >= playlist.length) {
+  const handleNextTrack = (fromIdx?: number) => {
+    clearPendingPlaybackTimer();
+    const currentList = playlistRef.current;
+    if (currentList.length === 0) return;
+
+    const baseIdx = typeof fromIdx === 'number' ? fromIdx : currentIndexRef.current;
+    let nextIdx = baseIdx + 1;
+    if (playModeRef.current === 'shuffle') {
+      nextIdx = Math.floor(Math.random() * currentList.length);
+    } else if (nextIdx >= currentList.length) {
       nextIdx = 0;
     }
+
     setCurrentIndex(nextIdx);
-    if (isPlaying) {
+    currentIndexRef.current = nextIdx;
+    if (isPlayingRef.current) {
       playCurrentTrack(nextIdx, 1);
     }
   };
 
   const handlePrevTrack = () => {
-    let prevIdx = currentIndex - 1;
-    if (prevIdx < 0) prevIdx = playlist.length - 1;
+    clearPendingPlaybackTimer();
+    const currentList = playlistRef.current;
+    if (currentList.length === 0) return;
+
+    let prevIdx = currentIndexRef.current - 1;
+    if (prevIdx < 0) prevIdx = currentList.length - 1;
+
     setCurrentIndex(prevIdx);
-    if (isPlaying) {
+    currentIndexRef.current = prevIdx;
+    if (isPlayingRef.current) {
       playCurrentTrack(prevIdx, 1);
     }
   };
 
   const handleSelectTrack = (idx: number) => {
     playClickSound();
+    clearPendingPlaybackTimer();
     setCurrentIndex(idx);
+    currentIndexRef.current = idx;
     setShowPlaylistDrawer(false);
     playCurrentTrack(idx, 1);
+  };
+
+  const handleScopeChange = (newScope: PlaylistScope) => {
+    playClickSound();
+    clearPendingPlaybackTimer();
+    setPlaylistScope(newScope);
+    setCurrentIndex(0);
+    currentIndexRef.current = 0;
+    if (isPlaying) {
+      setTimeout(() => {
+        playCurrentTrack(0, 1);
+      }, 100);
+    }
   };
 
   const setTimerPreset = (minutes: number | null) => {
@@ -279,40 +398,46 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const handleClose = () => {
+    clearPendingPlaybackTimer();
+    stopPlayback();
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
       <div className="bg-[#18181b] border-2 sm:border-4 border-[#3b82f6] rounded-2xl sm:rounded-3xl w-full max-w-xl text-slate-100 shadow-[0_0_40px_rgba(59,130,246,0.35)] overflow-hidden my-auto max-h-[94dvh] flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header: Jukebox Title & Close */}
-        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 p-4 sm:p-5 border-b-2 border-blue-500/40 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-amber-400 border-2 border-black rounded-2xl flex items-center justify-center text-xl shadow-md text-black">
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 p-3.5 sm:p-5 border-b-2 border-blue-500/40 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-amber-400 border-2 border-black rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl shadow-md text-black shrink-0">
               📻
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-black font-mono text-white flex items-center space-x-2">
-                <span>Minecraft 唱片机 · 听力磨耳朵电台</span>
-                <span className="text-[10px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full font-bold">Jukebox</span>
+              <h2 className="text-sm sm:text-lg font-black font-mono text-white flex items-center space-x-1.5 sm:space-x-2">
+                <span>Minecraft 磨耳朵电台</span>
+                <span className="text-[9px] sm:text-[10px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-full font-bold">Jukebox</span>
               </h2>
-              <p className="text-xs text-blue-200/90 font-mono">
-                纯正美音随身听 • 三遍精听法 • 睡前/碎片时间沉浸磨音
+              <p className="text-[10px] sm:text-xs text-blue-200/90 font-mono">
+                纯正美音随身听 • 三遍精听法 • 睡前/碎片时间磨耳朵
               </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
             <button
               onClick={() => setShowPlaylistDrawer(!showPlaylistDrawer)}
-              className="px-2.5 py-1.5 bg-blue-500/20 hover:bg-blue-500/40 text-blue-200 text-xs font-mono font-bold rounded-xl border border-blue-400/40 flex items-center space-x-1 transition-all"
+              className="px-2 sm:px-2.5 py-1.5 bg-blue-500/20 hover:bg-blue-500/40 text-blue-200 text-xs font-mono font-bold rounded-xl border border-blue-400/40 flex items-center space-x-1 transition-all"
             >
               <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">曲目清单</span>
+              <span className="hidden sm:inline">曲目</span>
               <span>({playlist.length})</span>
             </button>
 
             <button
-              onClick={onClose}
-              className="text-slate-300 hover:text-white text-xs font-mono font-bold bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl border border-white/20 transition-colors"
+              onClick={handleClose}
+              className="text-slate-300 hover:text-white text-xs font-mono font-bold bg-white/10 hover:bg-white/20 px-2.5 sm:px-3 py-1.5 rounded-xl border border-white/20 transition-colors"
             >
               ✕ 关闭
             </button>
@@ -320,27 +445,55 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
         </div>
 
         {/* Modal Main Content */}
-        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+        <div className="p-3 sm:p-6 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1 custom-scrollbar">
           
           {/* Main Jukebox Visualizer & Vinyl Disc */}
-          <div className="relative bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-slate-700/80 rounded-2xl p-4 sm:p-6 text-center shadow-inner overflow-hidden">
+          <div className="relative bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-slate-700/80 rounded-2xl p-3.5 sm:p-5 text-center shadow-inner overflow-hidden">
             
             {/* Ambient Background Disc Glow */}
             <div className="absolute inset-0 bg-radial from-blue-500/10 via-transparent to-transparent pointer-events-none" />
 
-            {/* Top Track Info & Lesson Badge */}
-            <div className="flex items-center justify-between mb-4 text-xs font-mono">
-              <span className="bg-slate-800 text-blue-300 px-2.5 py-1 rounded-lg border border-slate-700 font-bold flex items-center space-x-1">
+            {/* Top Track Info & Scope Selector */}
+            <div className="flex items-center justify-between mb-3 text-xs font-mono">
+              <span className="bg-slate-800 text-blue-300 px-2 sm:px-2.5 py-1 rounded-lg border border-slate-700 font-bold flex items-center space-x-1 text-[11px] sm:text-xs">
                 <span>🎵 Disc: {currentItem?.discName || 'Cat'}</span>
               </span>
 
-              <span className="text-slate-400">
-                {currentIndex + 1} / {playlist.length} 句
+              {/* Scope Quick Selector Badge (Patch 4) */}
+              <div className="flex items-center space-x-1 bg-slate-950/80 p-0.5 rounded-lg border border-slate-700 text-[10px]">
+                <button
+                  onClick={() => handleScopeChange('all')}
+                  className={`px-1.5 py-0.5 rounded transition-all font-bold ${
+                    playlistScope === 'all' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  全部
+                </button>
+                <button
+                  onClick={() => handleScopeChange('current')}
+                  className={`px-1.5 py-0.5 rounded transition-all font-bold ${
+                    playlistScope === 'current' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  本课
+                </button>
+                <button
+                  onClick={() => handleScopeChange('recent5')}
+                  className={`px-1.5 py-0.5 rounded transition-all font-bold ${
+                    playlistScope === 'recent5' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  近5课
+                </button>
+              </div>
+
+              <span className="text-slate-400 text-[11px]">
+                {safeCurrentIndex + 1} / {playlist.length} 句
               </span>
             </div>
 
             {/* Spinning Minecraft Vinyl Record */}
-            <div className="relative w-36 h-36 sm:w-44 sm:h-44 mx-auto my-2 flex items-center justify-center">
+            <div className="relative w-32 h-32 sm:w-40 sm:h-40 mx-auto my-1 sm:my-2 flex items-center justify-center">
               {/* Outer Grooves */}
               <div 
                 className={`w-full h-full rounded-full border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_25px_rgba(0,0,0,0.8)] relative flex items-center justify-center`}
@@ -352,34 +505,34 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                 <div className="absolute inset-7 rounded-full border border-slate-700/40" />
                 
                 {/* Center Disc Color Core */}
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr ${currentItem?.discColor || 'from-emerald-500 to-teal-700'} border-2 border-black flex flex-col items-center justify-center text-white shadow-md relative`}>
-                  <div className="w-4 h-4 bg-slate-950 rounded-full border border-white/50" />
-                  <span className="text-[9px] font-mono font-black mt-1 uppercase tracking-tighter">MC DISK</span>
+                <div className={`w-14 h-14 sm:w-18 sm:h-18 rounded-full bg-gradient-to-tr ${currentItem?.discColor || 'from-emerald-500 to-teal-700'} border-2 border-black flex flex-col items-center justify-center text-white shadow-md relative`}>
+                  <div className="w-3.5 h-3.5 bg-slate-950 rounded-full border border-white/50" />
+                  <span className="text-[8px] sm:text-[9px] font-mono font-black mt-1 uppercase tracking-tighter">MC DISK</span>
                 </div>
               </div>
 
               {/* Tonearm Stylus needle */}
               <div 
-                className={`absolute top-0 right-2 w-10 h-16 sm:w-12 sm:h-20 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right ${
+                className={`absolute top-0 right-2 w-10 h-14 sm:w-12 sm:h-18 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right ${
                   isPlaying ? 'rotate-12' : '-rotate-12 opacity-60'
                 }`}
               />
             </div>
 
-            {/* Lesson Title & Speaker */}
-            <div className="space-y-1 mt-3">
+            {/* Lesson Title & Speaker Badge with multi-role identity */}
+            <div className="space-y-1 mt-2 sm:mt-3">
               <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
                 {currentItem?.lessonTitle}
               </span>
               <p className="text-xs text-slate-400 font-mono font-semibold">
-                Speaker: <span className="text-white font-bold">{currentItem?.speaker}</span>
+                发音人: <span className="text-white font-bold">{currentItem?.speaker === 'Steve' ? '👨 Steve (美音男声)' : '👩‍🦰 Alex (美音女声)'}</span>
               </p>
             </div>
 
             {/* Subtitles Box */}
-            <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-4 my-3 text-center space-y-2 min-h-[90px] flex flex-col justify-center shadow-sm">
+            <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-3.5 sm:p-4 my-2.5 sm:my-3 text-center space-y-1.5 min-h-[85px] sm:min-h-[90px] flex flex-col justify-center shadow-sm">
               {subtitleMode !== 'blind_listening' && (
-                <p className="font-mono text-base sm:text-lg font-black text-white leading-snug">
+                <p className="font-mono text-sm sm:text-lg font-black text-white leading-snug">
                   {currentItem?.english}
                 </p>
               )}
@@ -411,45 +564,46 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
           </div>
 
           {/* Player Transport Controls */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-3.5 sm:space-y-4">
             
             {/* Play/Pause/Prev/Next Bar */}
             <div className="flex items-center justify-center space-x-4 sm:space-x-6">
               <button
                 onClick={handlePrevTrack}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-sm"
+                className="p-2.5 sm:p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-sm"
                 title="上一句"
               >
-                <SkipBack className="w-5 h-5" />
+                <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
               <button
                 onClick={handleTogglePlay}
-                className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center transition-all shadow-xl active:scale-95 ${
+                className={`w-13 h-13 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center transition-all shadow-xl active:scale-95 ${
                   isPlaying
                     ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)]'
                     : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white border-blue-400 hover:from-blue-500 hover:to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]'
                 }`}
                 title={isPlaying ? '暂停' : '开始连播'}
               >
-                {isPlaying ? <Pause className="w-7 h-7 fill-slate-950" /> : <Play className="w-7 h-7 fill-white ml-0.5" />}
+                {isPlaying ? <Pause className="w-6 h-6 sm:w-7 sm:h-7 fill-slate-950" /> : <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-white ml-0.5" />}
               </button>
 
               <button
-                onClick={handleNextTrack}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-sm"
+                onClick={() => handleNextTrack()}
+                className="p-2.5 sm:p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-sm"
                 title="下一句"
               >
-                <SkipForward className="w-5 h-5" />
+                <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
 
             {/* Play Modes Grid Selector */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs font-mono">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 pt-1 text-xs font-mono">
               <button
                 onClick={() => {
                   playClickSound();
                   setPlayMode('three_times');
+                  playModeRef.current = 'three_times';
                 }}
                 className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all ${
                   playMode === 'three_times'
@@ -465,6 +619,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                 onClick={() => {
                   playClickSound();
                   setPlayMode('sequential');
+                  playModeRef.current = 'sequential';
                 }}
                 className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all ${
                   playMode === 'sequential'
@@ -480,6 +635,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                 onClick={() => {
                   playClickSound();
                   setPlayMode('shuffle');
+                  playModeRef.current = 'shuffle';
                 }}
                 className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all ${
                   playMode === 'shuffle'
@@ -495,6 +651,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                 onClick={() => {
                   playClickSound();
                   setPlayMode('single_loop');
+                  playModeRef.current = 'single_loop';
                 }}
                 className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all ${
                   playMode === 'single_loop'
@@ -508,10 +665,10 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
             </div>
 
             {/* Playback Settings Controls (Speed, Subtitles, Sleep Timer) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800 text-xs font-mono">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 pt-2 border-t border-slate-800 text-xs font-mono">
               
               {/* Speed control */}
-              <div className="bg-slate-800/70 p-2.5 rounded-xl border border-slate-700/80 space-y-1.5">
+              <div className="bg-slate-800/70 p-2 sm:p-2.5 rounded-xl border border-slate-700/80 space-y-1.5">
                 <span className="text-[11px] text-slate-400 font-bold block">⚡ 语速调节：</span>
                 <div className="flex items-center space-x-1">
                   {[0.75, 1.0, 1.25].map(rate => (
@@ -520,6 +677,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                       onClick={() => {
                         playClickSound();
                         setSpeechRate(rate);
+                        speechRateRef.current = rate;
                       }}
                       className={`flex-1 py-1 rounded-lg text-xs font-black border transition-all ${
                         speechRate === rate
@@ -534,7 +692,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
               </div>
 
               {/* Subtitle visibility control */}
-              <div className="bg-slate-800/70 p-2.5 rounded-xl border border-slate-700/80 space-y-1.5">
+              <div className="bg-slate-800/70 p-2 sm:p-2.5 rounded-xl border border-slate-700/80 space-y-1.5">
                 <span className="text-[11px] text-slate-400 font-bold block">👁️ 字幕模式：</span>
                 <div className="grid grid-cols-2 gap-1">
                   <button
@@ -567,7 +725,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
               </div>
 
               {/* Sleep timer control */}
-              <div className="bg-slate-800/70 p-2.5 rounded-xl border border-slate-700/80 space-y-1.5">
+              <div className="bg-slate-800/70 p-2 sm:p-2.5 rounded-xl border border-slate-700/80 space-y-1.5">
                 <span className="text-[11px] text-slate-400 font-bold flex items-center justify-between">
                   <span className="flex items-center space-x-1">
                     <Moon className="w-3 h-3 text-indigo-400" />
@@ -613,13 +771,36 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
           {showPlaylistDrawer && (
             <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl p-3 space-y-2 animate-in fade-in">
               <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-300 pb-2 border-b border-slate-800">
-                <span>📜 当前播放列表（点击立即切歌）：</span>
-                <button
-                  onClick={() => setShowPlaylistDrawer(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  ✕ 收起
-                </button>
+                <span className="flex items-center space-x-2">
+                  <BookOpen className="w-4 h-4 text-amber-400" />
+                  <span>当前曲目清单（点击切歌）：</span>
+                </span>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleScopeChange('all')}
+                    className={`px-2 py-0.5 rounded text-[10px] ${playlistScope === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+                  >
+                    全部已解锁
+                  </button>
+                  <button
+                    onClick={() => handleScopeChange('current')}
+                    className={`px-2 py-0.5 rounded text-[10px] ${playlistScope === 'current' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+                  >
+                    仅本课
+                  </button>
+                  <button
+                    onClick={() => handleScopeChange('recent5')}
+                    className={`px-2 py-0.5 rounded text-[10px] ${playlistScope === 'recent5' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+                  >
+                    近5课
+                  </button>
+                  <button
+                    onClick={() => setShowPlaylistDrawer(false)}
+                    className="text-slate-400 hover:text-white ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
@@ -628,7 +809,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                     key={item.id}
                     onClick={() => handleSelectTrack(idx)}
                     className={`w-full text-left p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
-                      idx === currentIndex
+                      idx === safeCurrentIndex
                         ? 'bg-blue-600/30 border-blue-400 text-white font-bold'
                         : 'bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 text-slate-300'
                     }`}
@@ -640,7 +821,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                         <p className="text-[10px] text-slate-400 truncate">{item.lessonTitle} • {item.chinese}</p>
                       </div>
                     </div>
-                    {idx === currentIndex && (
+                    {idx === safeCurrentIndex && (
                       <span className="shrink-0 text-blue-400 animate-pulse">▶ 播放中</span>
                     )}
                   </button>
@@ -655,3 +836,4 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
     </div>
   );
 };
+
