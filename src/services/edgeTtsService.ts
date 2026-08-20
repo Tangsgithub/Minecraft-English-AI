@@ -197,6 +197,9 @@ export async function speakEdgeTtsText(
     const ctx = getAudioContext();
     if (ctx) {
       try {
+        if (ctx.state === 'suspended') {
+          await ctx.resume().catch(() => {});
+        }
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;

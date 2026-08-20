@@ -321,26 +321,28 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
     targetSentenceTranslations: genSentences.map(s => s.zh),
     dialogueScript: (volumeId === 'vol1')
       ? getCleanedLessonDialogue(lessonId, AUTHENTIC_LESSON_DIALOGUES[lessonId], cleanTitle, cleanTitleZh, genSentences, genVocab)
-      : [
-          {
-            speaker: 'Alex',
-            text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! Let's explore grammar and redstone mechanics together.`,
-            translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！让我们一起探索核心语法与红石机械。`,
-            avatar: '👩‍🦰'
-          },
-          {
-            speaker: 'Steve',
-            text: genSentences[0]?.en || `I am ready to master this lesson and complete the redstone challenge!`,
-            translation: genSentences[0]?.zh || `我已经准备好掌握本课知识并完成红石挑战！`,
-            avatar: '👦'
-          },
-          {
-            speaker: 'Alex',
-            text: genSentences[1]?.en || `Remember the core rule: ${titleData.grammar}.`,
-            translation: genSentences[1]?.zh || `请牢记本课核心语法要点：${titleData.grammar}。`,
-            avatar: '👩‍🦰'
-          }
-        ],
+      : ((volumeId === 'vol2' && (NCE_BOOK2_UNIT1_DATA[lessonId]?.dialogue || NCE_BOOK2_UNIT2_DATA[lessonId]?.dialogue || NCE_BOOK2_UNITS2_TO_4_DATA[lessonId]?.dialogue))
+          ? (NCE_BOOK2_UNIT1_DATA[lessonId]?.dialogue || NCE_BOOK2_UNIT2_DATA[lessonId]?.dialogue || NCE_BOOK2_UNITS2_TO_4_DATA[lessonId]?.dialogue)!
+          : [
+              {
+                speaker: 'Alex',
+                text: `Welcome to Lesson ${lessonId}: "${cleanTitle}"! Let's explore grammar and redstone mechanics together.`,
+                translation: `欢迎来到第 ${lessonId} 课《${cleanTitleZh}》！让我们一起探索核心语法与红石机械。`,
+                avatar: '👩‍🦰'
+              },
+              {
+                speaker: 'Steve',
+                text: genSentences[0]?.en || `I am ready to master this lesson and complete the redstone challenge!`,
+                translation: genSentences[0]?.zh || `我已经准备好掌握本课知识并完成红石挑战！`,
+                avatar: '👦'
+              },
+              {
+                speaker: 'Alex',
+                text: genSentences[1]?.en || `Remember the core rule: ${titleData.grammar}.`,
+                translation: genSentences[1]?.zh || `请牢记本课核心语法要点：${titleData.grammar}。`,
+                avatar: '👩‍🦰'
+              }
+            ]),
     grammarNote: grammarNoteText
   };
 }
@@ -581,6 +583,12 @@ function getCleanedLessonDialogue(
 function generateSentencesForLesson(lessonId: number, title: string, titleZh: string, vocab: any[], volumeId: string) {
   if (volumeId === 'vol1' && AUTHENTIC_LESSON_DIALOGUES[lessonId]) {
     return AUTHENTIC_LESSON_DIALOGUES[lessonId].sentences;
+  }
+  if (volumeId === 'vol2') {
+    const detailed = NCE_BOOK2_UNIT1_DATA[lessonId] || NCE_BOOK2_UNIT2_DATA[lessonId] || NCE_BOOK2_UNITS2_TO_4_DATA[lessonId];
+    if (detailed && detailed.sentences && detailed.sentences.length > 0) {
+      return detailed.sentences;
+    }
   }
   return [
     { en: `${title}`, zh: `${titleZh}` },

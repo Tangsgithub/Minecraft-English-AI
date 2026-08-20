@@ -437,6 +437,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
   const currentIndexRef = useRef<number>(safeCurrentIndex);
   const storyParagraphIdxRef = useRef<number>(storyParagraphIdx);
   const selectedStoryIdRef = useRef<string>(selectedStoryId);
+  const enableEchoPauseRef = useRef<boolean>(enableEchoPause);
+  const playlistRef = useRef<PlaylistItem[]>(playlist);
   const echoTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
@@ -447,6 +449,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
   useEffect(() => { currentIndexRef.current = safeCurrentIndex; }, [safeCurrentIndex]);
   useEffect(() => { storyParagraphIdxRef.current = storyParagraphIdx; }, [storyParagraphIdx]);
   useEffect(() => { selectedStoryIdRef.current = selectedStoryId; }, [selectedStoryId]);
+  useEffect(() => { enableEchoPauseRef.current = enableEchoPause; }, [enableEchoPause]);
+  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
 
   // Vinyl Spin Animation loop
   useEffect(() => {
@@ -504,6 +508,23 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
     };
   }, [isPlaying, onAwardEmeralds]);
 
+  // Component unmount audio & timer cleanup
+  useEffect(() => {
+    return () => {
+      isPlayingRef.current = false;
+      stopSpeech();
+      clearEchoTimers();
+    };
+  }, []);
+
+  // Smooth autoscroll for currently active item in playlist
+  const activeItemRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [safeCurrentIndex, storyParagraphIdx]);
+
   const clearEchoTimers = () => {
     if (echoTimerRef.current) {
       clearInterval(echoTimerRef.current);
@@ -514,14 +535,21 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
     setEchoTotalSeconds(0);
   };
 
-  // Play a single Lesson Item with Three-Times Support
-  const playLessonItem = (idx: number, currentRepeat: number) => {
-    const item = playlist[idx];
+  // Play a single Lesson Item with Three-Times / Sequential / Loop Support
+  const playLessonItem = (idx: number, currentRepeat: number = 1) => {
+    const list = playlistRef.current;
+    if (!list || list.length === 0) return;
+    const safeIdx = Math.max(0, Math.min(idx, list.length - 1));
+    const item = list[safeIdx];
     if (!item) return;
 
     clearEchoTimers();
     setIsPlaying(true);
     isPlayingRef.current = true;
+    setCurrentIndex(safeIdx);
+    currentIndexRef.current = safeIdx;
+    setRepeatCount(currentRepeat);
+    repeatCountRef.current = currentRepeat;
 
     // Rate calculation for Three-Times Mode
     let effectiveRate = speechRateRef.current;
@@ -534,15 +562,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
     speakText(item.english, () => {
       if (!isPlayingRef.current) return;
 
-      // Check if echo pause is enabled on 3rd repeat or regular
-      const shouldEchoPause = enableEchoPause && (
-        playModeRef.current !== 'three_times' || currentRepeat === 3
-      );
+      // Check if echo pause is enabled
+      const isThreeTimes = playModeRef.current === 'three_times';
+      const shouldEchoPause = enableEchoPauseRef.current && (!isThreeTimes || currentRepeat >= 3);
 
       if (shouldEchoPause) {
         // Calculate echo duration based on word count
-        const wordCount = item.english.split(' ').length;
-        const echoDuration = Math.max(3, Math.min(8, Math.round(wordCount * 0.75)));
+        const wordCount = item.english.split(' ').filter(Boolean).length;
+        const echoDuration = Math.max(2, Math.min(6, Math.round(wordCount * 0.6)));
         setIsEchoPausing(true);
         setEchoTotalSeconds(echoDuration);
         setEchoRemainingSeconds(echoDuration);
@@ -553,15 +580,15 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
           setEchoRemainingSeconds(left);
           if (left <= 0) {
             clearEchoTimers();
-            onAfterLessonSentenceEnded(idx, currentRepeat);
+            onAfterLessonSentenceEnded(safeIdx, currentRepeat);
           }
         }, 1000);
       } else {
         setTimeout(() => {
           if (isPlayingRef.current) {
-            onAfterLessonSentenceEnded(idx, currentRepeat);
+            onAfterLessonSentenceEnded(safeIdx, currentRepeat);
           }
-        }, 700);
+        }, 350);
       }
     }, { speaker: item.speaker, rate: effectiveRate });
   };
@@ -569,7 +596,9 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
   const onAfterLessonSentenceEnded = (idx: number, currentRepeat: number) => {
     if (!isPlayingRef.current) return;
 
-    if (playModeRef.current === 'three_times') {
+    const currentMode = playModeRef.current;
+
+    if (currentMode === 'three_times') {
       if (currentRepeat < 3) {
         const nextRepeat = currentRepeat + 1;
         setRepeatCount(nextRepeat);
@@ -579,22 +608,41 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
         // Done with 3 times! Move to next track
         setRepeatCount(1);
         repeatCountRef.current = 1;
-        handleNextTrack();
+        handleNextTrack(idx);
       }
-    } else if (playModeRef.current === 'single_loop') {
+    } else if (currentMode === 'single_loop') {
+      setRepeatCount(1);
+      repeatCountRef.current = 1;
       playLessonItem(idx, 1);
     } else {
-      handleNextTrack();
+      // Sequential or Shuffle: advance to next track
+      setRepeatCount(1);
+      repeatCountRef.current = 1;
+      handleNextTrack(idx);
     }
   };
 
-  const handleNextTrack = () => {
+  const handleNextTrack = (fromIdx?: number) => {
     clearEchoTimers();
-    if (currentChannel === 'lessons') {
-      let nextIdx = safeCurrentIndex + 1;
+    if (currentChannelRef.current === 'lessons') {
+      const list = playlistRef.current;
+      if (!list || list.length === 0) return;
+      const baseIdx = fromIdx !== undefined ? fromIdx : currentIndexRef.current;
+      let nextIdx = baseIdx + 1;
+
       if (playModeRef.current === 'shuffle') {
-        nextIdx = Math.floor(Math.random() * playlist.length);
-      } else if (nextIdx >= playlist.length) {
+        if (list.length > 1) {
+          let rnd = Math.floor(Math.random() * list.length);
+          let attempts = 0;
+          while (rnd === baseIdx && attempts < 10) {
+            rnd = Math.floor(Math.random() * list.length);
+            attempts++;
+          }
+          nextIdx = rnd;
+        } else {
+          nextIdx = 0;
+        }
+      } else if (nextIdx >= list.length) {
         nextIdx = 0;
       }
       setCurrentIndex(nextIdx);
@@ -605,11 +653,13 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
         if (isPlayingRef.current) {
           playLessonItem(nextIdx, 1);
         }
-      }, 300);
+      }, 250);
     } else {
       // Next story paragraph
-      const totalP = currentStory.paragraphs.length;
-      let nextP = storyParagraphIdx + 1;
+      const story = allStories.find(s => s.id === selectedStoryIdRef.current) || allStories[0];
+      const totalP = story.paragraphs.length;
+      const baseP = fromIdx !== undefined ? fromIdx : storyParagraphIdxRef.current;
+      let nextP = baseP + 1;
       if (nextP >= totalP) {
         nextP = 0;
       }
@@ -617,16 +667,19 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
       storyParagraphIdxRef.current = nextP;
       setTimeout(() => {
         if (isPlayingRef.current) {
-          playStoryParagraph(currentStory, nextP);
+          playStoryParagraph(story, nextP);
         }
-      }, 300);
+      }, 250);
     }
   };
 
   const handlePrevTrack = () => {
     clearEchoTimers();
-    if (currentChannel === 'lessons') {
-      const prevIdx = safeCurrentIndex > 0 ? safeCurrentIndex - 1 : playlist.length - 1;
+    if (currentChannelRef.current === 'lessons') {
+      const list = playlistRef.current;
+      if (!list || list.length === 0) return;
+      const cur = currentIndexRef.current;
+      const prevIdx = cur > 0 ? cur - 1 : list.length - 1;
       setCurrentIndex(prevIdx);
       currentIndexRef.current = prevIdx;
       setRepeatCount(1);
@@ -635,16 +688,18 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
         if (isPlayingRef.current) {
           playLessonItem(prevIdx, 1);
         }
-      }, 300);
+      }, 250);
     } else {
-      const prevP = storyParagraphIdx > 0 ? storyParagraphIdx - 1 : currentStory.paragraphs.length - 1;
+      const story = allStories.find(s => s.id === selectedStoryIdRef.current) || allStories[0];
+      const curP = storyParagraphIdxRef.current;
+      const prevP = curP > 0 ? curP - 1 : story.paragraphs.length - 1;
       setStoryParagraphIdx(prevP);
       storyParagraphIdxRef.current = prevP;
       setTimeout(() => {
         if (isPlayingRef.current) {
-          playStoryParagraph(currentStory, prevP);
+          playStoryParagraph(story, prevP);
         }
-      }, 300);
+      }, 250);
     }
   };
 
@@ -656,6 +711,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
     clearEchoTimers();
     setIsPlaying(true);
     isPlayingRef.current = true;
+    setStoryParagraphIdx(pIdx);
+    storyParagraphIdxRef.current = pIdx;
 
     speakText(p.english, () => {
       if (!isPlayingRef.current) return;
@@ -680,7 +737,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
           setIsPlaying(false);
           isPlayingRef.current = false;
         }
-      }, 1000);
+      }, 800);
     }, { speaker: p.speaker, rate: speechRateRef.current });
   };
 
@@ -696,10 +753,11 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
   const handlePlay = () => {
     setIsPlaying(true);
     isPlayingRef.current = true;
-    if (currentChannel === 'lessons') {
-      playLessonItem(safeCurrentIndex, repeatCount);
+    if (currentChannelRef.current === 'lessons') {
+      playLessonItem(currentIndexRef.current, repeatCountRef.current || 1);
     } else {
-      playStoryParagraph(currentStory, storyParagraphIdx);
+      const story = allStories.find(s => s.id === selectedStoryIdRef.current) || allStories[0];
+      playStoryParagraph(story, storyParagraphIdxRef.current);
     }
   };
 
@@ -713,7 +771,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
   const handleSkipEchoPause = () => {
     playClickSound();
     clearEchoTimers();
-    onAfterLessonSentenceEnded(safeCurrentIndex, repeatCountRef.current);
+    onAfterLessonSentenceEnded(currentIndexRef.current, repeatCountRef.current);
   };
 
   const handleChannelSwitch = (channel: RadioChannel) => {
@@ -1019,6 +1077,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       text={currentChannel === 'lessons' ? currentLessonItem?.english : (currentParagraph?.english || '')} 
                       showProsody={showProsodyCues} 
                       onWordClick={(word) => {
+                        handlePause();
                         speakText(word, { speaker: 'Alex', rate: 0.85 });
                       }}
                     />
@@ -1124,6 +1183,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       playClickSound();
                       setPlayMode('three_times');
                       playModeRef.current = 'three_times';
+                      setRepeatCount(1);
+                      repeatCountRef.current = 1;
                     }}
                     className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
                       playMode === 'three_times'
@@ -1140,6 +1201,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       playClickSound();
                       setPlayMode('sequential');
                       playModeRef.current = 'sequential';
+                      setRepeatCount(1);
+                      repeatCountRef.current = 1;
                     }}
                     className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
                       playMode === 'sequential'
@@ -1156,6 +1219,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       playClickSound();
                       setPlayMode('shuffle');
                       playModeRef.current = 'shuffle';
+                      setRepeatCount(1);
+                      repeatCountRef.current = 1;
                     }}
                     className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
                       playMode === 'shuffle'
@@ -1172,6 +1237,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       playClickSound();
                       setPlayMode('single_loop');
                       playModeRef.current = 'single_loop';
+                      setRepeatCount(1);
+                      repeatCountRef.current = 1;
                     }}
                     className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
                       playMode === 'single_loop'
@@ -1191,7 +1258,13 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                   <button
                     onClick={() => {
                       playClickSound();
-                      setEnableEchoPause(!enableEchoPause);
+                      const nextVal = !enableEchoPause;
+                      setEnableEchoPause(nextVal);
+                      enableEchoPauseRef.current = nextVal;
+                      if (!nextVal && isEchoPausing) {
+                        clearEchoTimers();
+                        onAfterLessonSentenceEnded(currentIndexRef.current, repeatCountRef.current);
+                      }
                     }}
                     className={`px-2.5 py-1 rounded-lg border font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
                       enableEchoPause 
@@ -1481,6 +1554,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                                 return (
                                   <div
                                     key={item.id}
+                                    ref={isCurrent ? activeItemRef : undefined}
                                     onClick={() => {
                                       playClickSound();
                                       setCurrentIndex(globalIndex);
@@ -1540,6 +1614,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     return (
                       <div
                         key={pIdx}
+                        ref={isCurrent ? activeItemRef : undefined}
                         onClick={() => {
                           playClickSound();
                           setStoryParagraphIdx(pIdx);

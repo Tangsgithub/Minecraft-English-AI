@@ -553,7 +553,7 @@ app.use(express.json());
   // High-Quality Multi-Accent Neural Speech Endpoint (US / UK / AU / CA)
   app.post("/api/tts", async (req, res) => {
     try {
-      const { text, voice = 'en-US-JennyNeural' } = req.body;
+      const { text, voice = 'en-US-JennyNeural', rate = '+0%', pitch = '+0Hz' } = req.body;
       if (!text || typeof text !== 'string') {
         return res.status(400).json({ error: "Text parameter is required" });
       }
@@ -580,6 +580,16 @@ app.use(express.json());
         return res.status(400).json({ error: "Cleaned text is empty" });
       }
 
+      // Escape XML characters for SSML safety
+      const ssmlSafeText = cleanText
+        .replace(/&/g, ' and ')
+        .replace(/</g, ' ')
+        .replace(/>/g, ' ')
+        .replace(/"/g, ' ')
+        .replace(/'/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
       // 1. Try Microsoft Edge Neural TTS first for authentic human voices & accents
       let audioBuffer: Buffer | null = null;
       try {
@@ -588,18 +598,27 @@ app.use(express.json());
             const tts = new MsEdgeTTS();
             tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3)
               .then(() => {
-                const { audioStream } = tts.toStream(cleanText);
+                const { audioStream } = tts.toStream(ssmlSafeText, {
+                  rate: typeof rate === 'string' ? rate : '+0%',
+                  pitch: typeof pitch === 'string' ? pitch : '+0Hz'
+                });
                 const streamChunks: Buffer[] = [];
                 audioStream.on('data', (c: Buffer) => streamChunks.push(c));
                 audioStream.on('end', () => {
                   if (streamChunks.length > 0) resolve(Buffer.concat(streamChunks));
                   else resolve(null);
                 });
-                audioStream.on('error', () => resolve(null));
+                audioStream.on('error', (err) => {
+                  console.warn("Edge TTS audioStream error:", err);
+                  resolve(null);
+                });
               })
-              .catch(() => resolve(null));
+              .catch((err) => {
+                console.warn("Edge TTS setMetadata error:", err);
+                resolve(null);
+              });
 
-            setTimeout(() => resolve(null), 3500);
+            setTimeout(() => resolve(null), 4000);
           } catch {
             resolve(null);
           }

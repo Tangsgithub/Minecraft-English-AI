@@ -87,51 +87,38 @@ export function getFullBook1VocabList(): VocabItem[] {
     }
   });
 
-  // 3. 均衡注入新概念第一册全量生词（填充各课至 6~7 词，总计达 900+ 词）
-  const remainingNceEntries = NCE_BOOK1_FULL_VOCAB.filter(
-    v => !registeredWords.has(v.word.toLowerCase())
-  );
-
-  let currentTargetLesson = 1;
-  remainingNceEntries.forEach((entry, idx) => {
-    // 寻找词汇数少于 7 个的课次进行平稳填充
-    while (
-      currentTargetLesson < 144 &&
-      lessonBuckets.get(currentTargetLesson)!.length >= (currentTargetLesson <= 21 ? 6 : 7)
-    ) {
-      currentTargetLesson++;
-    }
-
+  // 3. 注入新概念第一册全量生词（按真实课次 entry.lessonId 分配）
+  NCE_BOOK1_FULL_VOCAB.forEach((entry, idx) => {
+    const targetLesson = Math.max(1, Math.min(144, entry.lessonId || 1));
     const key = entry.word.toLowerCase();
-    registeredWords.add(key);
-
-    const enhanced = VOCAB_ENHANCER_MAP[key] || {};
-    const finalPhonetic = enhanced.phonetic || entry.phonetic || `/${entry.word}/`;
-    const finalMeaning = enhanced.meaning || (entry.meaning.startsWith('新概念词汇：') ? `核心词汇：${entry.word}` : entry.meaning);
     
-    // 如果例句为通用占位句，则自动优化为自然场景例句
-    let finalSentence = enhanced.sampleSentence || entry.sampleSentence;
-    let finalTranslation = enhanced.sampleTranslation || entry.sampleTranslation;
-    if (!finalSentence || finalSentence.includes('Practice writing')) {
-      finalSentence = `Steve learns the key word '${entry.word}' in his lesson.`;
-      finalTranslation = `史蒂夫在课程中认真学习核心词汇 '${entry.word}'。`;
-    }
+    const bucket = lessonBuckets.get(targetLesson) || [];
+    const exists = bucket.some(v => v.word.toLowerCase() === key);
+    if (!exists) {
+      const enhanced = VOCAB_ENHANCER_MAP[key] || {};
+      const finalPhonetic = enhanced.phonetic || entry.phonetic || `/${entry.word}/`;
+      const finalMeaning = enhanced.meaning || (entry.meaning.startsWith('新概念词汇：') ? `核心词汇：${entry.word}` : entry.meaning);
+      
+      let finalSentence = enhanced.sampleSentence || entry.sampleSentence;
+      let finalTranslation = enhanced.sampleTranslation || entry.sampleTranslation;
+      if (!finalSentence || finalSentence.includes('Practice writing')) {
+        finalSentence = `Steve learns the key word '${entry.word}' in his lesson.`;
+        finalTranslation = `史蒂夫在课程中认真学习核心词汇 '${entry.word}'。`;
+      }
 
-    lessonBuckets.get(currentTargetLesson)!.push({
-      id: `nce_book1_${currentTargetLesson}_${idx}`,
-      word: entry.word,
-      phonetic: finalPhonetic,
-      meaning: finalMeaning,
-      category: 'Course',
-      mcItem: enhanced.mcItem || entry.mcItem || 'Paper',
-      mcItemIcon: enhanced.mcItemIcon || entry.mcItemIcon || '📜',
-      sampleSentence: finalSentence,
-      sampleTranslation: finalTranslation,
-      requiredLessonId: currentTargetLesson
-    });
-
-    if (currentTargetLesson >= 144 && lessonBuckets.get(currentTargetLesson)!.length >= 7) {
-      currentTargetLesson = 1;
+      bucket.push({
+        id: `nce_book1_${targetLesson}_${idx}`,
+        word: entry.word,
+        phonetic: finalPhonetic,
+        meaning: finalMeaning,
+        category: 'Course',
+        mcItem: enhanced.mcItem || entry.mcItem || 'Paper',
+        mcItemIcon: enhanced.mcItemIcon || entry.mcItemIcon || '📜',
+        sampleSentence: finalSentence,
+        sampleTranslation: finalTranslation,
+        requiredLessonId: targetLesson
+      });
+      lessonBuckets.set(targetLesson, bucket);
     }
   });
 
