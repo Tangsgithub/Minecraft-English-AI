@@ -473,6 +473,11 @@ export async function speakText(
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
     .trim();
 
+  // Standardize curly/fancy apostrophes to standard straight single quote '
+  cleanText = cleanText
+    .replace(/[‘’′`]/g, "'")
+    .replace(/[“”″]/g, '"');
+
   // If we are reading English words, strip remaining Chinese characters and Chinese-only punctuation, keeping English punctuation intact
   const hasEnglish = /[a-zA-Z]/.test(cleanText);
   const hasChinese = /[\u4e00-\u9fa5]/.test(cleanText);
@@ -481,7 +486,7 @@ export async function speakText(
   if (targetLang.startsWith('en') && hasEnglish && hasChinese) {
     cleanText = cleanText.replace(/[\u4e00-\u9fa5]/g, '').trim();
     // Remove Chinese-specific punctuation, keep English .,!?'"
-    cleanText = cleanText.replace(/[，。！？：；“”‘’【】《》、（）]/g, ' ').replace(/\s+/g, ' ').trim();
+    cleanText = cleanText.replace(/[，。！？：；【】《》、（）]/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   if (!cleanText) return;

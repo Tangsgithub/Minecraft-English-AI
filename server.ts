@@ -580,13 +580,17 @@ app.use(express.json());
         return res.status(400).json({ error: "Cleaned text is empty" });
       }
 
-      // Escape XML characters for SSML safety
+      // Standardize curly/fancy apostrophes to standard straight apostrophe '
+      cleanText = cleanText
+        .replace(/[‘’′`]/g, "'")
+        .replace(/[“”″]/g, '"');
+
+      // Escape XML characters for SSML safety while preserving English contraction apostrophes and punctuation
       const ssmlSafeText = cleanText
         .replace(/&/g, ' and ')
         .replace(/</g, ' ')
         .replace(/>/g, ' ')
         .replace(/"/g, ' ')
-        .replace(/'/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 

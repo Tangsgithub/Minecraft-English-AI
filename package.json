@@ -19,6 +19,7 @@
     "@vitalets/google-translate-api": "^9.2.1",
     "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",
+    "docx": "^9.7.1",
     "dotenv": "^17.2.3",
     "edge-tts": "^1.0.1",
     "express": "^4.21.2",
