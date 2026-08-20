@@ -5,7 +5,8 @@ import {
   Clock, Sparkles, Disc, List, Eye, EyeOff, Award, ChevronDown, CheckCircle2, Moon, X,
   Filter, Layers, BookOpen, Mic, Music, HelpCircle, Brain, ArrowRight, BookMarked,
   Sparkle, Volume1, ChevronRight, Bookmark, Plus, Wand2, MessageSquare, Radio, PhoneCall,
-  Volume, Check, Search, Folder, FolderOpen
+  Volume, Check, Search, Folder, FolderOpen, SlidersHorizontal, Maximize2, Minimize2,
+  Headphones, Settings2, Sliders, Zap
 } from 'lucide-react';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { LESSONS_DATA, getLessonById } from '../data/lessonsData';
@@ -217,6 +218,11 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
   const [storyParagraphIdx, setStoryParagraphIdx] = useState<number>(0);
   const [showVocabLoot, setShowVocabLoot] = useState<boolean>(true);
   const [collectedVocabWords, setCollectedVocabWords] = useState<Set<string>>(new Set());
+
+  // UI Mode Toggles: Zen Immersion Mode & Settings Drawer
+  const [zenMode, setZenMode] = useState<boolean>(false);
+  const [zenShowSubtitlesTemp, setZenShowSubtitlesTemp] = useState<boolean>(false);
+  const [showSettingsDrawer, setShowSettingsDrawer] = useState<boolean>(false);
 
   // Lesson Playback State
   const [playlistScope, setPlaylistScope] = useState<PlaylistScope>('all');
@@ -888,16 +894,48 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
         </div>
 
         {/* Global Radio Controls & Listening Stats */}
-        <div className="flex items-center space-x-2 shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           {currentChannel !== 'alex_chat' && (
-            <button
-              onClick={() => setShowCustomImporter(true)}
-              className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 text-slate-950 border border-yellow-300 rounded-xl text-xs font-mono font-black flex items-center space-x-1 transition-all active:scale-95 shadow-sm"
-              title="导入或创作自定义英语故事"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>导入故事</span>
-            </button>
+            <>
+              {/* Zen Immersion Blind Listening Toggle */}
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setZenMode(!zenMode);
+                }}
+                className={`px-2.5 py-1 rounded-xl font-mono font-black text-xs flex items-center space-x-1.5 transition-all active:scale-95 border cursor-pointer ${
+                  zenMode
+                    ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                    : 'bg-slate-900 text-amber-300 hover:text-amber-200 border-amber-500/40 hover:bg-slate-800'
+                }`}
+                title="切换至 Zen 盲听沉浸模式 (大唱盘·音波起伏·专注听辨)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-current" />
+                <span>{zenMode ? '普通视图' : '✨ 盲听禅意'}</span>
+              </button>
+
+              {/* Radio Tuning Console (Settings Drawer) */}
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setShowSettingsDrawer(true);
+                }}
+                className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/60 text-slate-300 hover:text-white hover:bg-slate-800 font-mono font-bold text-xs flex items-center space-x-1.5 transition-all active:scale-95 cursor-pointer shadow-xs"
+                title="打开电台调音台 (语速/字幕/连读/定时)"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">调音台</span>
+              </button>
+
+              <button
+                onClick={() => setShowCustomImporter(true)}
+                className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 text-slate-950 border border-yellow-300 rounded-xl text-xs font-mono font-black flex items-center space-x-1 transition-all active:scale-95 shadow-sm cursor-pointer"
+                title="导入或创作自定义英语故事"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">导入故事</span>
+              </button>
+            </>
           )}
 
           {/* Sleep Timer */}
@@ -905,14 +943,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             <button
               onClick={() => {
                 playClickSound();
-                const timers: (number | null)[] = [null, 15, 30, 45];
+                const timers: (number | null)[] = [null, 15, 30, 45, 60];
                 const curIdx = timers.indexOf(sleepTimerMinutes);
                 const next = timers[(curIdx + 1) % timers.length];
                 setSleepTimerMinutes(next);
               }}
-              className={`px-2.5 py-1 rounded-xl border text-xs font-mono font-bold flex items-center space-x-1 transition-all ${
+              className={`px-2.5 py-1 rounded-xl border text-xs font-mono font-bold flex items-center space-x-1 transition-all cursor-pointer ${
                 sleepTimerMinutes !== null
-                  ? 'bg-purple-900/80 border-purple-400 text-purple-200'
+                  ? 'bg-purple-900/80 border-purple-400 text-purple-200 shadow-xs'
                   : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
               }`}
               title="睡眠定时器"
@@ -948,8 +986,221 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             }}
           />
         </div>
+      ) : zenMode ? (
+        /* ================= ZEN BLIND LISTENING FULL IMMERSION VIEW ================= */
+        <div className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 animate-in fade-in zoom-in-95 duration-300">
+          
+          {/* Ambient Glow */}
+          <div 
+            className="absolute inset-0 pointer-events-none transition-all duration-1000 opacity-25"
+            style={{ background: `radial-gradient(circle at center, ${displayDisc.glow || 'rgba(16,185,129,0.4)'} 0%, transparent 65%)` }}
+          />
+
+          {/* Top Zen Bar */}
+          <div className="w-full max-w-xl flex items-center justify-between gap-2 mb-4 relative z-10">
+            <div className="flex items-center space-x-2">
+              <span className="bg-slate-900/90 text-amber-300 px-3 py-1 rounded-xl border border-slate-800 font-mono font-bold text-xs flex items-center space-x-1.5 shadow-sm">
+                <span>{displayDisc.icon} Disc: {displayDisc.name}</span>
+              </span>
+              <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold rounded-xl border border-emerald-500/40 flex items-center gap-1.5">
+                <Headphones className="w-3.5 h-3.5" />
+                <span>Zen 纯听力沉浸</span>
+              </span>
+            </div>
+
+            <button
+              onClick={() => {
+                playClickSound();
+                setZenMode(false);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-mono text-xs font-bold flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+              title="退出 Zen 沉浸模式"
+            >
+              <Minimize2 className="w-3.5 h-3.5" />
+              <span>退出禅意</span>
+            </button>
+          </div>
+
+          {/* Giant Vinyl Record with Stylus in Zen Mode */}
+          <div className="relative py-4 sm:py-6 flex items-center justify-center relative z-10">
+            <div className="relative w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center">
+              <div 
+                className="w-full h-full rounded-full border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_50px_rgba(0,0,0,0.95)] relative flex items-center justify-center"
+                style={{ transform: `rotate(${discRotation}deg)` }}
+              >
+                {/* Concentric Groove Rings */}
+                <div className="absolute inset-3 rounded-full border border-slate-700/30" />
+                <div className="absolute inset-6 rounded-full border border-slate-700/50" />
+                <div className="absolute inset-9 rounded-full border border-slate-700/30" />
+                <div className="absolute inset-12 rounded-full border border-slate-700/40" />
+                <div className="absolute inset-16 rounded-full border border-slate-700/30" />
+                
+                {/* Vinyl Center Core Label */}
+                <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-xl relative`}>
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-slate-950 rounded-full border border-white/60 shadow-inner" />
+                  <span className="text-[9px] sm:text-xs font-mono font-black mt-1.5 uppercase tracking-wider text-amber-200">
+                    {displayDisc.name}
+                  </span>
+                </div>
+              </div>
+
+              {/* Stylus Tonearm Needle */}
+              <div 
+                className={`absolute top-0 right-1 w-12 h-20 sm:w-16 sm:h-28 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right drop-shadow-xl ${
+                  isPlaying ? 'rotate-12' : '-rotate-12 opacity-60'
+                }`}
+              >
+                <div className="absolute -bottom-1 -right-1.5 w-3.5 h-3.5 bg-amber-300 rounded-full border border-black" />
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic Audio Visualizer Waves */}
+          <div className="flex items-center justify-center space-x-1.5 h-8 my-2 relative z-10">
+            {[35, 75, 100, 50, 90, 60, 95, 45, 85, 70, 100, 40, 65, 80].map((heightPct, barIdx) => (
+              <div
+                key={barIdx}
+                className={`w-1.5 rounded-full transition-all duration-300 ${
+                  isPlaying
+                    ? 'bg-gradient-to-t from-[#487E2C] via-emerald-400 to-amber-300 animate-pulse'
+                    : 'bg-slate-800'
+                }`}
+                style={{
+                  height: isPlaying ? `${Math.max(20, heightPct)}%` : '5px',
+                  animationDelay: `${barIdx * 60}ms`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Track Headline in Zen Mode */}
+          <div className="text-center space-y-1 my-2 max-w-lg relative z-10">
+            <span className="text-sm font-mono text-amber-300 font-bold bg-amber-950/80 px-4 py-1 rounded-full border border-amber-500/40 inline-block shadow-sm">
+              {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}
+            </span>
+            <p className="text-xs text-slate-400 font-mono">
+              主讲: <span className="text-white font-bold">{currentChannel === 'lessons' ? currentLessonItem?.speaker || 'Alex' : currentParagraph?.speaker || 'Alex'}</span>
+              {currentChannel === 'lessons' && (
+                <span className="ml-2 text-emerald-400">· 进度 {safeCurrentIndex + 1} / {playlist.length} 句</span>
+              )}
+            </p>
+          </div>
+
+          {/* Interactive Shadow Echo Pause Bar (Zen Mode) */}
+          {isEchoPausing && (
+            <div className="w-full max-w-md bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-2 border-amber-400/90 rounded-2xl p-3.5 my-2 animate-in fade-in zoom-in-95 duration-200 z-10 shadow-lg">
+              <div className="flex items-center justify-between text-xs font-mono mb-2">
+                <div className="flex items-center space-x-2 text-amber-300 font-black">
+                  <Mic className="w-4 h-4 text-amber-400 animate-bounce" />
+                  <span>🎙️ 影子跟读：大声复述刚才听到的句子！</span>
+                </div>
+                <button
+                  onClick={handleSkipEchoPause}
+                  className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-black text-xs flex items-center space-x-1 active:scale-95 transition-all shadow-sm cursor-pointer"
+                >
+                  <span>跳过</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-amber-400/40">
+                <div 
+                  className="bg-gradient-to-r from-amber-400 to-yellow-300 h-full rounded-full transition-all duration-1000 ease-linear"
+                  style={{ width: `${echoTotalSeconds > 0 ? (echoRemainingSeconds / echoTotalSeconds) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-amber-200 font-mono mt-1 text-right font-bold">
+                剩余练习时间: {echoRemainingSeconds} 秒
+              </div>
+            </div>
+          )}
+
+          {/* Subtitle Peek Strip in Zen Mode */}
+          <div className="w-full max-w-lg my-2 relative z-10">
+            {zenShowSubtitlesTemp ? (
+              <div className="p-4 bg-slate-950/95 border border-slate-700/80 rounded-2xl text-center space-y-2 animate-in fade-in zoom-in-95 duration-200 shadow-xl">
+                <div className="text-lg sm:text-xl font-black text-white font-mono">
+                  <ProsodicSentence 
+                    text={currentChannel === 'lessons' ? currentLessonItem?.english : (currentParagraph?.english || '')} 
+                    showProsody={showProsodyCues} 
+                    onWordClick={(word) => {
+                      handlePause();
+                      speakText(word, { speaker: 'Alex', rate: 0.85 });
+                    }}
+                  />
+                </div>
+                <p className="text-xs sm:text-sm text-emerald-300 font-medium font-mono">
+                  {currentChannel === 'lessons' ? currentLessonItem?.chinese : (currentParagraph?.chinese || '')}
+                </p>
+                <button
+                  onClick={() => setZenShowSubtitlesTemp(false)}
+                  className="text-[11px] text-slate-400 hover:text-white font-mono underline cursor-pointer pt-1"
+                >
+                  隐藏字幕返回纯盲听
+                </button>
+              </div>
+            ) : (
+              <div className="text-center">
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    setZenShowSubtitlesTemp(true);
+                  }}
+                  className="px-4 py-2 rounded-2xl bg-slate-950/70 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-amber-300 font-mono text-xs flex items-center justify-center space-x-2 mx-auto transition-all cursor-pointer shadow-xs"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>🙈 盲听磨耳朵中 · 点击偷看原文字幕</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Three Times Method Status */}
+          {currentChannel === 'lessons' && playMode === 'three_times' && isPlaying && !isEchoPausing && (
+            <div className="flex justify-center my-1 relative z-10">
+              <div className="inline-flex items-center space-x-2 bg-[#1B3314] border border-[#7CFC00]/60 px-4 py-1.5 rounded-full text-xs font-mono text-emerald-300 shadow-sm animate-pulse">
+                <span>🎧 三遍精听: </span>
+                <span className="font-black text-amber-300">
+                  {repeatCount === 1 ? '第 1 遍（听音律）' : repeatCount === 2 ? '第 2 遍（辨词义）' : '第 3 遍（跟读）'}
+                </span>
+                <span className="text-[10px] text-slate-400">({repeatCount}/3)</span>
+              </div>
+            </div>
+          )}
+
+          {/* Zen Mode Big Transport Controls */}
+          <div className="flex items-center justify-center space-x-6 sm:space-x-10 mt-4 relative z-10">
+            <button
+              onClick={handlePrevTrack}
+              className="p-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-md cursor-pointer"
+              title="上一句 / 上一段"
+            >
+              <SkipBack className="w-6 h-6" />
+            </button>
+
+            <button
+              onClick={handleTogglePlay}
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all shadow-2xl active:scale-95 cursor-pointer ${
+                isPlaying
+                  ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 border-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.7)]'
+                  : 'bg-gradient-to-tr from-[#487E2C] to-emerald-600 text-white border-[#7CFC00] hover:from-[#355E20] hover:to-emerald-500 shadow-[0_0_35px_rgba(72,126,44,0.7)]'
+              }`}
+              title={isPlaying ? '暂停' : '开始播讲'}
+            >
+              {isPlaying ? <Pause className="w-8 h-8 fill-slate-950" /> : <Play className="w-8 h-8 fill-white ml-1" />}
+            </button>
+
+            <button
+              onClick={() => handleNextTrack()}
+              className="p-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-md cursor-pointer"
+              title="下一句 / 下一段"
+            >
+              <SkipForward className="w-6 h-6" />
+            </button>
+          </div>
+
+        </div>
       ) : (
-        /* Immersive 2-Column Responsive Bento Layout */
+        /* ================= IMMERSIVE 2-COLUMN RESPONSIVE BENTO LAYOUT ================= */
         <div className="p-3 sm:p-5 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           
           {/* ================= LEFT COLUMN: Jukebox Player & Subtitle Prompter (7 Cols) ================= */}
@@ -1025,22 +1276,22 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
               </div>
 
               {/* Jukebox Vinyl Record Stage with Stylus */}
-              <div className="relative py-3 sm:py-5 flex items-center justify-center">
+              <div className="relative py-2 sm:py-4 flex items-center justify-center">
                 
                 {/* Vinyl Record */}
-                <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center">
+                <div className="relative w-32 h-32 sm:w-44 sm:h-44 flex items-center justify-center">
                   <div 
                     className="w-full h-full rounded-full border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.9)] relative flex items-center justify-center"
                     style={{ transform: `rotate(${discRotation}deg)` }}
                   >
                     {/* Concentric Groove Rings */}
-                    <div className="absolute inset-3 rounded-full border border-slate-700/30" />
-                    <div className="absolute inset-6 rounded-full border border-slate-700/50" />
-                    <div className="absolute inset-9 rounded-full border border-slate-700/30" />
-                    <div className="absolute inset-12 rounded-full border border-slate-700/40" />
+                    <div className="absolute inset-2.5 rounded-full border border-slate-700/30" />
+                    <div className="absolute inset-5 rounded-full border border-slate-700/50" />
+                    <div className="absolute inset-8 rounded-full border border-slate-700/30" />
+                    <div className="absolute inset-11 rounded-full border border-slate-700/40" />
                     
                     {/* Vinyl Center Core Label */}
-                    <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-lg relative`}>
+                    <div className={`w-14 h-14 sm:w-18 sm:h-18 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-lg relative`}>
                       <div className="w-3.5 h-3.5 bg-slate-950 rounded-full border border-white/60 shadow-inner" />
                       <span className="text-[8px] sm:text-[9px] font-mono font-black mt-1 uppercase tracking-tighter text-amber-200">
                         {displayDisc.name}
@@ -1050,13 +1301,31 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
                   {/* Stylus Tonearm Needle */}
                   <div 
-                    className={`absolute top-0 right-2 w-10 h-16 sm:w-12 sm:h-20 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right drop-shadow-md ${
+                    className={`absolute top-0 right-1 w-10 h-16 sm:w-12 sm:h-20 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right drop-shadow-md ${
                       isPlaying ? 'rotate-12' : '-rotate-12 opacity-60'
                     }`}
                   >
                     <div className="absolute -bottom-1 -right-1.5 w-3 h-3 bg-amber-300 rounded-full border border-black" />
                   </div>
                 </div>
+              </div>
+
+              {/* Dynamic Audio Visualizer Waves (Normal View) */}
+              <div className="flex items-center justify-center space-x-1 sm:space-x-1.5 h-6 my-1 relative z-10">
+                {[30, 65, 100, 45, 80, 50, 90, 40, 75, 55, 95, 35].map((heightPct, barIdx) => (
+                  <div
+                    key={barIdx}
+                    className={`w-1 sm:w-1.5 rounded-full transition-all duration-300 ${
+                      isPlaying
+                        ? 'bg-gradient-to-t from-emerald-500 to-amber-300 animate-pulse'
+                        : 'bg-slate-800'
+                    }`}
+                    style={{
+                      height: isPlaying ? `${Math.max(20, heightPct)}%` : '4px',
+                      animationDelay: `${barIdx * 75}ms`
+                    }}
+                  />
+                ))}
               </div>
 
               {/* Narrator & Track Headline */}
@@ -1070,8 +1339,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
               </div>
 
               {/* Subtitle Teleprompter Board */}
-              <div className="my-3 p-4 sm:p-5 bg-slate-950/90 rounded-2xl border border-slate-800/90 min-h-[110px] flex flex-col justify-center items-center space-y-2 shadow-inner relative z-10">
-                {subtitleMode !== 'chinese_only' && (
+              <div className="my-2.5 p-4 sm:p-5 bg-slate-950/90 rounded-2xl border border-slate-800/90 min-h-[105px] flex flex-col justify-center items-center space-y-2 shadow-inner relative z-10">
+                {subtitleMode !== 'chinese_only' && subtitleMode !== 'blind_listening' && (
                   <div className="text-base sm:text-2xl font-black text-white leading-relaxed tracking-wide text-center">
                     <ProsodicSentence 
                       text={currentChannel === 'lessons' ? currentLessonItem?.english : (currentParagraph?.english || '')} 
@@ -1091,10 +1360,21 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                 )}
 
                 {subtitleMode === 'blind_listening' && (
-                  <p className="text-xs text-amber-400/80 font-mono italic flex items-center gap-1.5">
-                    <span>🙈</span>
-                    <span>盲听磨耳朵模式中，全神贯注辨听原声音律</span>
-                  </p>
+                  <div className="text-center space-y-1.5 py-1">
+                    <p className="text-xs text-amber-300 font-mono italic flex items-center justify-center gap-1.5">
+                      <span>🙈</span>
+                      <span>盲听磨耳朵模式 · 专注辨听原声音调与连读</span>
+                    </p>
+                    <button
+                      onClick={() => {
+                        playClickSound();
+                        setSubtitleMode('bilingual');
+                      }}
+                      className="text-[10px] text-slate-400 hover:text-white font-mono underline cursor-pointer"
+                    >
+                      点击显示双语对照
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -1108,7 +1388,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     </div>
                     <button
                       onClick={handleSkipEchoPause}
-                      className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-black text-xs flex items-center space-x-1 active:scale-95 transition-all shadow-sm"
+                      className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-black text-xs flex items-center space-x-1 active:scale-95 transition-all shadow-sm cursor-pointer"
                     >
                       <span>跳过</span>
                       <ArrowRight className="w-3 h-3" />
@@ -1252,8 +1532,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                 </div>
               )}
 
-              {/* Subtitle & Audio Feature Buttons */}
-              <div className="bg-slate-900 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+              {/* Subtitle & Audio Feature Buttons (Cleaned Up & Streamlined) */}
+              <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => {
@@ -1283,7 +1563,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     }}
                     className={`px-2.5 py-1 rounded-lg border font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
                       showProsodyCues 
-                        ? 'bg-blue-500/20 border-blue-400/70 text-blue-300' 
+                        ? 'bg-emerald-500/20 border-emerald-400/70 text-emerald-300' 
                         : 'bg-slate-950 border-slate-800 text-slate-400'
                     }`}
                   >
@@ -1296,23 +1576,13 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                   <button
                     onClick={() => {
                       playClickSound();
-                      setSpeechRate(prev => (prev === 1.0 ? 0.8 : prev === 0.8 ? 1.2 : 1.0));
+                      setShowSettingsDrawer(true);
                     }}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-800 text-xs font-bold cursor-pointer"
+                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-emerald-300 hover:text-emerald-200 rounded-lg border border-slate-800 text-xs font-bold cursor-pointer flex items-center space-x-1"
+                    title="展开调音台设置"
                   >
-                    {speechRate}x 语速
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      playClickSound();
-                      const modes: SubtitleMode[] = ['bilingual', 'english_only', 'chinese_only', 'blind_listening'];
-                      const next = modes[(modes.indexOf(subtitleMode) + 1) % modes.length];
-                      setSubtitleMode(next);
-                    }}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-amber-300 rounded-lg border border-slate-800 text-xs font-bold cursor-pointer"
-                  >
-                    {subtitleMode === 'bilingual' ? '双语' : subtitleMode === 'english_only' ? '纯英' : subtitleMode === 'chinese_only' ? '纯中' : '盲听'}
+                    <Sliders className="w-3 h-3 text-emerald-400" />
+                    <span>{speechRate}x · {subtitleMode === 'bilingual' ? '双语' : subtitleMode === 'english_only' ? '纯英' : subtitleMode === 'chinese_only' ? '纯中' : '盲听'}</span>
                   </button>
                 </div>
               </div>
@@ -1711,6 +1981,271 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           </div>
 
+        </div>
+      )}
+
+      {/* Mobile Sticky Bottom Floating Playback Capsule */}
+      {!zenMode && currentChannel !== 'alex_chat' && (
+        <div className="lg:hidden fixed bottom-3 left-3 right-3 z-40 bg-slate-950/95 backdrop-blur-md border-2 border-emerald-500/50 rounded-2xl p-2.5 shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-bottom-3 duration-300">
+          <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+            <div 
+              className="w-8 h-8 rounded-full border border-black bg-gradient-to-tr from-slate-900 to-slate-800 flex items-center justify-center shrink-0 shadow-sm"
+              style={{ transform: `rotate(${discRotation}deg)` }}
+            >
+              <div className={`w-3.5 h-3.5 rounded-full bg-gradient-to-tr ${displayDisc.color}`} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-mono font-black text-xs text-white truncate">
+                {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}
+              </div>
+              <div className="text-[10px] text-emerald-300 font-mono truncate">
+                {currentChannel === 'lessons' ? currentLessonItem?.english : currentParagraph?.english}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-1.5 shrink-0">
+            <button
+              onClick={handlePrevTrack}
+              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 active:scale-95 cursor-pointer"
+              title="上一句"
+            >
+              <SkipBack className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleTogglePlay}
+              className={`w-9 h-9 rounded-full flex items-center justify-center active:scale-95 border cursor-pointer shadow-md ${
+                isPlaying
+                  ? 'bg-amber-400 text-slate-950 border-amber-300'
+                  : 'bg-[#487E2C] text-white border-[#7CFC00]'
+              }`}
+              title={isPlaying ? '暂停' : '播放'}
+            >
+              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+            </button>
+            <button
+              onClick={() => handleNextTrack()}
+              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 active:scale-95 cursor-pointer"
+              title="下一句"
+            >
+              <SkipForward className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                playClickSound();
+                setShowSettingsDrawer(true);
+              }}
+              className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-emerald-400 active:scale-95 cursor-pointer"
+              title="调音台"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Radio Tuning Console Settings Modal (调音台抽屉/弹窗) */}
+      {showSettingsDrawer && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-950 border-2 sm:border-4 border-[#355E20] rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 text-slate-100 font-sans shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3.5">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#487E2C] border border-[#7CFC00] flex items-center justify-center text-white shadow-sm">
+                  <SlidersHorizontal className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black font-mono text-white flex items-center gap-2">
+                    <span>🎛️ 电台调音台 (Radio Console)</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">自定义磨耳朵语速、字幕提词与沉浸模式</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setShowSettingsDrawer(false);
+                }}
+                className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 1. Speech Speed Control */}
+            <div className="space-y-2">
+              <label className="text-xs font-mono font-bold text-amber-300 flex items-center justify-between">
+                <span>🎚️ 播讲语速 (Speech Speed)</span>
+                <span className="text-emerald-400 font-black">{speechRate}x</span>
+              </label>
+              <div className="grid grid-cols-5 gap-1.5 font-mono text-xs">
+                {[
+                  { rate: 0.7, label: '0.7x 慢速' },
+                  { rate: 0.85, label: '0.85x 舒适' },
+                  { rate: 1.0, label: '1.0x 标准' },
+                  { rate: 1.15, label: '1.15x 进阶' },
+                  { rate: 1.25, label: '1.25x 极速' }
+                ].map(({ rate, label }) => (
+                  <button
+                    key={rate}
+                    onClick={() => {
+                      playClickSound();
+                      setSpeechRate(rate);
+                      speechRateRef.current = rate;
+                    }}
+                    className={`py-2 rounded-xl border text-center font-bold transition-all cursor-pointer ${
+                      speechRate === rate
+                        ? 'bg-[#487E2C] border-[#7CFC00] text-white shadow-sm'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850'
+                    }`}
+                  >
+                    <span className="block text-[11px]">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Subtitle Display Mode */}
+            <div className="space-y-2">
+              <label className="text-xs font-mono font-bold text-amber-300 flex items-center justify-between">
+                <span>📝 字幕提词方式 (Subtitles)</span>
+                <span className="text-slate-400 text-[11px]">
+                  {subtitleMode === 'bilingual' ? '双语对照' : subtitleMode === 'english_only' ? '纯英文' : subtitleMode === 'chinese_only' ? '纯中文' : '盲听磨耳'}
+                </span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
+                {[
+                  { mode: 'bilingual', title: '双语对照', desc: '英汉同行' },
+                  { mode: 'english_only', title: '纯英文', desc: '原声浸润' },
+                  { mode: 'chinese_only', title: '纯中文', desc: '释义先导' },
+                  { mode: 'blind_listening', title: '盲听磨耳', desc: '隐藏文字' }
+                ].map(({ mode, title, desc }) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      playClickSound();
+                      setSubtitleMode(mode as SubtitleMode);
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      subtitleMode === mode
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-sm'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="font-bold text-xs">{title}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Prosody & Connected Speech Toggles */}
+            <div className="space-y-2 bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-mono font-bold text-xs text-white flex items-center gap-1.5">
+                    <Sparkle className="w-3.5 h-3.5 text-blue-400" />
+                    <span>连读与音律标注 (Connected Speech)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    在英文句子中显示连读符号 ‿ 、重音着重号与弱读虚化
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    setShowProsodyCues(!showProsodyCues);
+                  }}
+                  className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer ${
+                    showProsodyCues ? 'bg-[#487E2C]' : 'bg-slate-800'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${showProsodyCues ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* 4. Shadow Echo Pause Toggle */}
+            <div className="space-y-2 bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-mono font-bold text-xs text-white flex items-center gap-1.5">
+                    <Mic className="w-3.5 h-3.5 text-amber-400" />
+                    <span>影子跟读停顿槽 (Echo Shadow Pause)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    每句播讲完毕后预留 1~1.5x 句子时长的跟读停顿
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    const nextVal = !enableEchoPause;
+                    setEnableEchoPause(nextVal);
+                    enableEchoPauseRef.current = nextVal;
+                  }}
+                  className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer ${
+                    enableEchoPause ? 'bg-amber-500' : 'bg-slate-800'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enableEchoPause ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* 5. Sleep Timer */}
+            <div className="space-y-2">
+              <label className="text-xs font-mono font-bold text-purple-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5" />
+                  <span>🌙 睡眠定时器 (Sleep Timer)</span>
+                </span>
+                <span className="text-slate-400 text-[11px]">
+                  {sleepTimerMinutes !== null ? `剩余约 ${Math.ceil((sleepRemainingSeconds || 0) / 60)} 分钟` : '关闭'}
+                </span>
+              </label>
+              <div className="grid grid-cols-5 gap-1.5 font-mono text-xs">
+                {[
+                  { min: null, label: '关闭' },
+                  { min: 15, label: '15分钟' },
+                  { min: 30, label: '30分钟' },
+                  { min: 45, label: '45分钟' },
+                  { min: 60, label: '60分钟' }
+                ].map(({ min, label }) => (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      playClickSound();
+                      setSleepTimerMinutes(min);
+                    }}
+                    className={`py-2 rounded-xl border text-center font-bold transition-all cursor-pointer ${
+                      sleepTimerMinutes === min
+                        ? 'bg-purple-900/80 border-purple-400 text-purple-200 shadow-sm'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span className="block text-[11px]">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Save & Confirm Button */}
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  playClickSound();
+                  setShowSettingsDrawer(false);
+                }}
+                className="w-full py-3 bg-[#487E2C] hover:bg-[#355E20] text-white font-mono font-black text-xs rounded-xl border-2 border-[#7CFC00] shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center space-x-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>保存调音并返回电台</span>
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 

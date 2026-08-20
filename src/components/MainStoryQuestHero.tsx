@@ -28,7 +28,7 @@ export const MainStoryQuestHero: React.FC<MainStoryQuestHeroProps> = ({
   const volProg = getVolumeProgress(profile, selectedVolumeId);
   const currentLessonId = volProg.currentLessonId;
   const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
-  const currentUnit = Math.ceil(currentLessonId / 12);
+  const currentUnit = Math.min(6, Math.max(1, Math.ceil(currentLessonId / 24)));
   const biomeChapter = getBiomeChapterByUnit(currentUnit);
 
   // Story snippet for current lesson
@@ -48,13 +48,13 @@ export const MainStoryQuestHero: React.FC<MainStoryQuestHeroProps> = ({
     speakText(alexGreetingEn, { lang: 'en-US', speaker: 'Alex' });
   };
 
-  // Calculate Unit Progress (e.g. lesson 3 in unit 1 => 3/12 completed or in progress)
-  const unitStartId = (currentUnit - 1) * 12 + 1;
-  const unitEndId = currentUnit * 12;
+  // Calculate Unit Progress (e.g. lesson 3 in unit 1 => 3/24 completed or in progress)
+  const unitStartId = (currentUnit - 1) * 24 + 1;
+  const unitEndId = currentUnit * 24;
   const completedInUnit = (volProg.completedLessonIds || []).filter(
     id => id >= unitStartId && id <= unitEndId
   ).length;
-  const progressPercent = Math.min(100, Math.round((completedInUnit / 12) * 100));
+  const progressPercent = Math.min(100, Math.round((completedInUnit / 24) * 100));
 
   return (
     <div className="relative bg-gradient-to-br from-[#2D471E] via-[#3C6424] to-[#1E3314] border-3 sm:border-4 border-[#14240C] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.3)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.35)] overflow-hidden text-white">
@@ -171,7 +171,7 @@ export const MainStoryQuestHero: React.FC<MainStoryQuestHeroProps> = ({
                 <Compass className="w-3.5 h-3.5 text-emerald-400" />
                 <span>领地主线通关进度</span>
               </span>
-              <span className="text-amber-300 font-black">{completedInUnit}/12 课 ({progressPercent}%)</span>
+              <span className="text-amber-300 font-black">{completedInUnit}/24 课 ({progressPercent}%)</span>
             </div>
             
             {/* Minecraft Block Progress Bar */}

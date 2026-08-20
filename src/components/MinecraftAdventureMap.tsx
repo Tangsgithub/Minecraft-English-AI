@@ -1,25 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { UserProfile, Lesson } from '../types';
-import { BIOME_CHAPTERS, getBiomeChapterByUnit, getBiomeChapterByLesson, BiomeChapter } from '../data/storyData';
-import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
-import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPaywallLocked, getLessonUnlockStatus, LessonUnlockStatus } from '../utils/volumeProgress';
+import React, { useState, useRef, useEffect } from 'react';
+import { Lesson, UserProfile } from '../types';
+import { BiomeChapter, getBiomeChapterByUnit, getBiomeChapterByLesson } from '../data/storyData';
 import { MinecraftAvatar } from './MinecraftAvatar';
+import { getFullLessonsCatalog, getLessonById } from '../data/lessonsData';
+import { getVolumeProgress, isVolumeFullyUnlocked, getLessonUnlockStatus, LessonUnlockStatus } from '../utils/volumeProgress';
 import {
-  CheckCircle, Lock, Play, Sparkles, Volume2, MessageSquare, Compass,
-  Award, Star, ChevronRight, BookOpen, Trophy, Flame, Shield, Flag, MapPin, Mic
+  Lock, CheckCircle, Sparkles, Volume2, MessageSquare, Play,
+  ChevronRight, Award, Trophy, MapPin, Compass, Shield, Flame,
+  HelpCircle, Zap, BookOpen
 } from 'lucide-react';
-import { playClickSound, speakText, playBlockBreakSound, playAnvilSound } from '../utils/audio';
+import { speakText, playClickSound, playBlockBreakSound, playAnvilSound } from '../utils/audio';
 
 interface MinecraftAdventureMapProps {
   profile: UserProfile;
   selectedUnit: number;
   onSelectLesson: (lessonId: number) => void;
   onStartChat: (lesson: Lesson) => void;
-  onOralTest?: (target: { text: string; translation?: string; phonetic?: string }) => void;
+  onOralTest?: (lesson: Lesson) => void;
   onOpenVipModal?: () => void;
 }
 
-// Rich Minecraft Biome Theme Data
 interface BiomeStyle {
   name: string;
   nameZh: string;
@@ -71,152 +71,56 @@ const BIOME_THEMES: Record<number, BiomeStyle> = {
     particleIcon: '🌿'
   },
   3: {
-    name: 'Desert Temple & Oasis',
-    nameZh: '烈日沙漠与金字塔遗迹',
-    bgGradient: 'from-amber-800 via-yellow-700 to-amber-900',
+    name: 'Desert Temple & Ocean Ruins',
+    nameZh: '烈日沙漠与深海遗迹',
+    bgGradient: 'from-amber-800 via-teal-800 to-amber-900',
     containerBg: 'bg-[#3b1d03]',
     blockBg: 'bg-[#D97706]',
     blockBorder: 'border-[#854304]',
     blockShadow: 'shadow-[0_8px_0_0_#542a02]',
     pathColor: 'border-amber-400/80',
     activeRing: 'ring-amber-300',
-    decorEmblems: ['🏜️', '🌵', '🏺', '🕌', '📜'],
-    mobs: ['🐫', '🐍', '🏜️', '🦂'],
-    bossEmblem: '🏺 沙漠木乃伊王',
+    decorEmblems: ['🏜️', '🌵', '🏺', '🌊', '⛵', '🐬'],
+    mobs: ['🐫', '🦈', '🦂', '🧜‍♂️'],
+    bossEmblem: '🏺 远古法老与深海守卫者',
     cardBannerBg: 'bg-amber-800',
     particleIcon: '✨'
   },
   4: {
-    name: 'Snowy Taiga & Ice Spikes',
-    nameZh: '极寒雪原与冰刺峰',
-    bgGradient: 'from-sky-900 via-blue-800 to-indigo-950',
+    name: 'Mineshaft & Ice Taiga',
+    nameZh: '地下矿道与极寒雪原',
+    bgGradient: 'from-sky-900 via-blue-900 to-indigo-950',
     containerBg: 'bg-[#0b2742]',
     blockBg: 'bg-[#0284C7]',
     blockBorder: 'border-[#034f78]',
     blockShadow: 'shadow-[0_8px_0_0_#02344f]',
     pathColor: 'border-sky-300/80',
     activeRing: 'ring-sky-200',
-    decorEmblems: ['❄️', '🏔️', '🪵', '🧊', '☃️'],
-    mobs: ['☃️', '🐻‍❄️', '🐧', '🐺'],
-    bossEmblem: '🧊 霜冻巨魔霸主',
+    decorEmblems: ['⛏️', '🚂', '💎', '❄️', '🏔️', '☃️'],
+    mobs: ['🕷️', '☃️', '🐻‍❄️', '⚙️'],
+    bossEmblem: '🧊 霜冻巨魔与矿洞蜘蛛皇',
     cardBannerBg: 'bg-sky-800',
     particleIcon: '❄️'
   },
   5: {
-    name: 'Ocean Monument & Coral Reef',
-    nameZh: '深海沉船与海底神殿',
-    bgGradient: 'from-teal-950 via-cyan-900 to-blue-950',
-    containerBg: 'bg-[#072a2e]',
-    blockBg: 'bg-[#0D9488]',
-    blockBorder: 'border-[#095750]',
-    blockShadow: 'shadow-[0_8px_0_0_#053a36]',
-    pathColor: 'border-teal-300/80',
-    activeRing: 'ring-teal-200',
-    decorEmblems: ['🌊', '⛵', '⚓', '🐬', '🦪'],
-    mobs: ['🦈', '🐙', '🐠', '🧜‍♂️'],
-    bossEmblem: '🔱 远古守卫者',
-    cardBannerBg: 'bg-teal-900',
-    particleIcon: '💧'
-  },
-  6: {
-    name: 'Abandoned Mineshaft',
-    nameZh: '地下大矿坑与红石铁道',
-    bgGradient: 'from-amber-950 via-orange-950 to-stone-900',
-    containerBg: 'bg-[#210e03]',
-    blockBg: 'bg-[#78350F]',
-    blockBorder: 'border-[#421d07]',
-    blockShadow: 'shadow-[0_8px_0_0_#2b1304]',
-    pathColor: 'border-amber-500/80',
-    activeRing: 'ring-amber-400',
-    decorEmblems: ['⛏️', '🚂', '💎', '🪙', '🕸️'],
-    mobs: ['🕷️', '🦇', '⚙️', '🧟'],
-    bossEmblem: '🕷️ 洞穴蜘蛛母体',
-    cardBannerBg: 'bg-amber-950',
-    particleIcon: '💎'
-  },
-  7: {
-    name: 'Mushroom Fields',
-    nameZh: '神秘蘑菇岛与孢子平原',
-    bgGradient: 'from-purple-950 via-fuchsia-950 to-pink-950',
-    containerBg: 'bg-[#280938]',
-    blockBg: 'bg-[#7E22CE]',
-    blockBorder: 'border-[#49127a]',
-    blockShadow: 'shadow-[0_8px_0_0_#2f0a52]',
-    pathColor: 'border-purple-300/80',
-    activeRing: 'ring-purple-300',
-    decorEmblems: ['🍄', '🌸', '🔮', '🥣', '✨'],
-    mobs: ['🐮', '🍄', '🦋', '🧙‍♀️'],
-    bossEmblem: '🍄 巨型蘑菇牛王',
-    cardBannerBg: 'bg-purple-900',
-    particleIcon: '✨'
-  },
-  8: {
-    name: 'Ancient City & Sculk Realm',
-    nameZh: '深暗古城与幽匿遗迹',
-    bgGradient: 'from-[#0b132b] via-[#1c2541] to-[#0b132b]',
-    containerBg: 'bg-[#080d1a]',
-    blockBg: 'bg-[#1E293B]',
-    blockBorder: 'border-[#0d1421]',
-    blockShadow: 'shadow-[0_8px_0_0_#05080e]',
-    pathColor: 'border-cyan-400/80',
-    activeRing: 'ring-cyan-300',
-    decorEmblems: ['🏛️', '👁️', '📜', '💎', '🕯️'],
-    mobs: ['👻', '🦇', '💀', ' Warden'],
-    bossEmblem: '👁️ 喧嚣监守者 (Warden)',
-    cardBannerBg: 'bg-slate-950',
-    particleIcon: '🌌'
-  },
-  9: {
-    name: 'Nether Fortress',
-    nameZh: '下界地狱要塞与岩浆湖',
-    bgGradient: 'from-rose-950 via-red-900 to-amber-950',
+    name: 'Nether Fortress & Ancient City',
+    nameZh: '下界熔岩要塞与深暗古城',
+    bgGradient: 'from-rose-950 via-red-900 to-slate-950',
     containerBg: 'bg-[#330707]',
     blockBg: 'bg-[#991B1B]',
     blockBorder: 'border-[#590e0e]',
     blockShadow: 'shadow-[0_8px_0_0_#380808]',
     pathColor: 'border-rose-400/80',
     activeRing: 'ring-rose-300',
-    decorEmblems: ['🔥', '🧱', '🧪', '👺', '🌋'],
-    mobs: ['👹', '🔥', '🐖', '💀'],
-    bossEmblem: '🔥 烈焰人霸主',
+    decorEmblems: ['🔥', '🧱', '🧪', '👺', '👁️', '🕯️'],
+    mobs: ['👹', '🔥', '💀', '👁️'],
+    bossEmblem: '🔥 烈焰领主与喧嚣监守者',
     cardBannerBg: 'bg-rose-950',
     particleIcon: '🔥'
   },
-  10: {
-    name: 'Warped & Crimson Forest',
-    nameZh: '诡异森林与紫晶迷宫',
-    bgGradient: 'from-teal-950 via-emerald-900 to-teal-950',
-    containerBg: 'bg-[#062423]',
-    blockBg: 'bg-[#0D9488]',
-    blockBorder: 'border-[#074741]',
-    blockShadow: 'shadow-[0_8px_0_0_#042c28]',
-    pathColor: 'border-teal-300/80',
-    activeRing: 'ring-teal-200',
-    decorEmblems: ['🔮', '🌌', '🎃', '💎', '🌿'],
-    mobs: ['👽', '👁️', '👾', '🐗'],
-    bossEmblem: '🔮 猪灵蛮兵大元帅',
-    cardBannerBg: 'bg-teal-950',
-    particleIcon: '🔮'
-  },
-  11: {
-    name: 'Ender Stronghold',
-    nameZh: '末地传送门与要塞地牢',
-    bgGradient: 'from-purple-950 via-indigo-950 to-slate-950',
-    containerBg: 'bg-[#1a082b]',
-    blockBg: 'bg-[#581C87]',
-    blockBorder: 'border-[#330f52]',
-    blockShadow: 'shadow-[0_8px_0_0_#200933]',
-    pathColor: 'border-purple-400/80',
-    activeRing: 'ring-purple-300',
-    decorEmblems: ['🐉', '💎', '🏹', '🔮', '🌌'],
-    mobs: ['🐲', '🐲', '💥', '👁️'],
-    bossEmblem: '👁️ 末影使者元老',
-    cardBannerBg: 'bg-purple-950',
-    particleIcon: '✨'
-  },
-  12: {
-    name: 'The End & Dragon Spire',
-    nameZh: '末地顶峰与终极龙巢',
+  6: {
+    name: 'The End & Grand Spire',
+    nameZh: '末地龙巢与毕业大舞台',
     bgGradient: 'from-fuchsia-950 via-purple-900 to-black',
     containerBg: 'bg-[#17021c]',
     blockBg: 'bg-[#C026D3]',
@@ -224,7 +128,7 @@ const BIOME_THEMES: Record<number, BiomeStyle> = {
     blockShadow: 'shadow-[0_8px_0_0_#4c0b54]',
     pathColor: 'border-fuchsia-400/80',
     activeRing: 'ring-fuchsia-300',
-    decorEmblems: ['🏰', '🪽', '🎓', '🏆', '🎉'],
+    decorEmblems: ['🏰', '🪽', '🎓', '🏆', '🎉', '🐉'],
     mobs: ['🎓', '🎉', '👑', '🐉'],
     bossEmblem: '🐉 末影龙 (Ender Dragon)',
     cardBannerBg: 'bg-fuchsia-950',
@@ -255,7 +159,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   const unlockedLessonIds = volProg.unlockedLessonIds;
   const completedLessonIds = volProg.completedLessonIds;
 
-  // Filter lessons based on selectedUnit (0 = all, 1-12 = unit 1-12)
+  // Filter lessons based on selectedUnit (0 = all, 1-6 = unit 1-6)
   const displayLessons = catalog.filter(l => selectedUnit === 0 || l.unit === selectedUnit);
 
   const currentChapter: BiomeChapter = selectedUnit > 0
@@ -310,7 +214,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
   const activeTheme = BIOME_THEMES[selectedUnit] || BIOME_THEMES[1];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
       {/* Chapter Story Header Banner */}
       <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border-4 border-black bg-gradient-to-r ${currentChapter.bgGradient} text-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.25)] relative overflow-hidden`}>
         {/* Background Pixel Pattern */}
@@ -387,7 +291,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
           <div className="flex items-center space-x-2">
             <span className="w-3.5 h-3.5 rounded-full bg-lime-400 animate-ping border border-white" />
             <span className="text-lime-300 text-sm font-mono font-black">
-              🎮 Minecraft 2D 像素大世界地图
+              🎮 Minecraft 2D 像素大世界地图 (6大生态领地)
             </span>
             <span className="text-slate-400 hidden sm:inline">|</span>
             <span className="text-amber-200 hidden sm:inline">点击关卡方块开启英语冒险对话与预习</span>
@@ -421,8 +325,8 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
             const isTrial = currentVolId === 'vol1' && item.id <= 20 && !isVolumeFullyUnlocked(profile, 'vol1');
 
-            const isBossNode = item.id % 12 === 0;
-            const isFirstInUnit = (item.id - 1) % 12 === 0;
+            const isBossNode = item.id % 24 === 0;
+            const isFirstInUnit = (item.id - 1) % 24 === 0;
 
             // Sinuous serpentine winding pathway calculation
             const stepMod = index % 6;
@@ -447,163 +351,96 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
 
             return (
               <div key={item.id} className="relative w-full">
-                {/* Biome Divider Banner (When viewing all or unit header) */}
-                {isFirstInUnit && (selectedUnit === 0 || index === 0) && (
+                {/* Biome Divider Banner (When viewing all and arriving at unit start) */}
+                {selectedUnit === 0 && isFirstInUnit && (
                   <div className="my-8 relative z-20">
-                    <div className={`p-4 sm:p-5 rounded-2xl border-4 border-black ${theme.cardBannerBg} text-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3`}>
-                      <div className="flex items-center space-x-3">
-                        <span className="text-4xl bg-black/40 p-2.5 rounded-2xl border-2 border-white/20 shadow-inner">
+                    <div className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-4 border-black bg-gradient-to-r ${chapter.bgGradient} text-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] flex items-center justify-between`}>
+                      <div className="flex items-center space-x-3 sm:space-x-4">
+                        <span className="text-3xl sm:text-4xl bg-black/30 p-2 rounded-2xl border-2 border-white/30">
                           {chapter.icon}
                         </span>
                         <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[10px] font-mono font-black uppercase tracking-wider text-amber-300 bg-black/40 px-2.5 py-0.5 rounded-full border border-white/10">
-                              Unit {chapter.unit} 生态领地
-                            </span>
-                          </div>
-                          <h3 className="text-lg sm:text-xl font-mono font-black text-white mt-1">
-                            {chapter.titleZh} ({chapter.biomeNameZh})
+                          <span className={`text-[10px] font-mono font-black uppercase text-white px-2.5 py-0.5 rounded-full border border-black/40 ${chapter.badgeBg}`}>
+                            Unit {chapter.unit} • {chapter.biomeName}
+                          </span>
+                          <h3 className="text-base sm:text-xl font-mono font-black text-white mt-1">
+                            {chapter.titleZh}
                           </h3>
+                          <p className="text-xs text-amber-100 font-bold hidden sm:block">
+                            {chapter.storyOverview}
+                          </p>
                         </div>
                       </div>
-
-                      <div className="flex items-center space-x-2 bg-black/50 px-3.5 py-2 rounded-xl text-xs font-mono border border-amber-400/30 text-amber-200">
-                        <span>领地首领:</span>
-                        <span className="text-base">{chapter.bossIcon}</span>
-                        <span className="font-black text-white">{chapter.bossName}</span>
+                      <div className="text-right font-mono text-xs hidden md:block">
+                        <span className="text-amber-300 font-bold block">驻守首领</span>
+                        <span className="text-white font-black">{chapter.bossIcon} {chapter.bossName}</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div
-                  ref={isCurrent ? activeNodeRef : null}
-                  className={`relative flex ${alignClass} transition-all duration-300 z-10`}
-                >
-                  {/* Animated Connecting Pathway Wire */}
-                  {index < displayLessons.length - 1 && (() => {
-                    const nextLesson = displayLessons[index + 1];
-                    const isNextCompleted = nextLesson && (nextLesson.id < currentLessonId || (unlockedLessonIds.includes(item.id) && unlockedLessonIds.includes(nextLesson.id)));
-                    const isSegmentCompleted = isCompleted && isNextCompleted;
-                    const isSegmentActive = isCompleted && nextLesson && nextLesson.id === currentLessonId;
+                {/* Sinuous Node Row */}
+                <div className={`flex items-center ${alignClass} relative`}>
+                  {/* Decorative Environmental Pixel Sprite on side */}
+                  <div className="hidden sm:flex items-center space-x-2 text-2xl select-none opacity-80 pointer-events-none px-4">
+                    <span>{decorItem}</span>
+                    {decorMob && <span className="animate-bounce" style={{ animationDuration: '3s' }}>{decorMob}</span>}
+                  </div>
 
-                    return (
-                      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-4 h-24 -z-10 pointer-events-none flex flex-col items-center justify-center">
-                        {isSegmentCompleted ? (
-                          <div className="w-3.5 h-full bg-gradient-to-b from-lime-400 via-emerald-400 to-green-500 rounded-full border-2 border-black shadow-[0_0_15px_rgba(74,222,128,0.9)] relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.4)_50%,transparent_75%)] bg-[length:14px_14px] animate-pulse" />
-                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-[10px] animate-bounce">
-                              ❇️
-                            </div>
-                          </div>
-                        ) : isSegmentActive ? (
-                          <div className="w-3.5 h-full bg-gradient-to-b from-amber-300 via-orange-400 to-amber-500 rounded-full border-2 border-black shadow-[0_0_20px_rgba(251,191,36,0.9)] animate-pulse relative overflow-hidden">
-                            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-2 h-4 bg-white rounded-full blur-[1px] animate-ping" />
-                          </div>
-                        ) : (
-                          <div className="w-1.5 h-full border-l-4 border-dashed border-slate-700/80" />
-                        )}
-
-                        {/* Mid-path Progress Badge */}
-                        {isSegmentCompleted && (
-                          <div className="absolute top-1/2 -translate-y-1/2 bg-emerald-500 border border-black rounded-full w-5 h-5 flex items-center justify-center shadow-md text-[9px]">
-                            ⚡
-                          </div>
-                        )}
-                        {isSegmentActive && (
-                          <div className="absolute top-1/2 -translate-y-1/2 bg-amber-400 border border-black rounded-full w-5 h-5 flex items-center justify-center shadow-md text-[9px] animate-bounce">
-                            ✨
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Node Wrapper */}
-                  <div className={`relative group ${offsetClass}`}>
-
-                    {/* Hover Tooltip Badge */}
-                    {isUnlocked && (
-                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-40 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none transform group-hover:-translate-y-1">
-                        <div className="bg-amber-300 text-amber-950 font-mono font-black text-xs px-3 py-1 rounded-xl border-2 border-black shadow-lg flex items-center space-x-1.5 whitespace-nowrap">
-                          <span>✨ 挖掘关卡 L{item.id}</span>
-                        </div>
-                        <div className="w-2.5 h-2.5 bg-amber-300 rotate-45 -mt-1 mx-auto border-r border-b border-black" />
-                      </div>
-                    )}
-
-                    {/* Left Decorative Terrain Item */}
-                    <div className="absolute -left-12 top-2 text-2xl select-none hidden sm:block animate-bounce opacity-90">
-                      {decorItem}
-                    </div>
-
-                    {/* Right Decorative Mob */}
-                    {decorMob && (
-                      <div className="absolute -right-12 top-4 text-2xl select-none hidden sm:block opacity-90">
-                        {decorMob}
-                      </div>
-                    )}
-
-                    {/* Steve Player Character Avatar above Current Node */}
+                  {/* Main Block Node */}
+                  <div
+                    ref={isCurrent ? activeNodeRef : null}
+                    className={`relative flex flex-col items-center transition-transform ${offsetClass}`}
+                  >
+                    {/* Steve Floating Head for Current Node */}
                     {isCurrent && (
-                      <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center animate-bounce">
-                        <div className="bg-[#FF6321] text-white px-3 py-1.5 rounded-2xl font-mono font-black text-xs shadow-[0_5px_0_0_#992E00] border-2 border-black flex items-center space-x-2 whitespace-nowrap">
-                          <MinecraftAvatar speaker={profile.nickname || 'Steve'} size={22} />
-                          <span>探险者 {profile.nickname || 'Steve'} 在此关</span>
+                      <div className="absolute -top-16 z-30 flex flex-col items-center animate-bounce">
+                        <div className="bg-[#FF6321] text-white border-2 border-black px-2.5 py-1 rounded-xl text-xs font-mono font-black shadow-lg flex items-center space-x-1.5 whitespace-nowrap">
+                          <MinecraftAvatar speaker={profile.nickname || 'Steve'} size={20} />
+                          <span>{profile.nickname || 'Steve'} 在这里！</span>
                         </div>
-                        <div className="w-3.5 h-3.5 bg-[#FF6321] rotate-45 -mt-2 border-r-2 border-b-2 border-black" />
+                        <div className="w-3 h-3 bg-[#FF6321] rotate-45 -mt-1.5 border-r-2 border-b-2 border-black" />
                       </div>
                     )}
 
-                    {/* Block Breaking Particles Burst Overlay */}
-                    {breakingNodeId === item.id && (
-                      <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center">
-                        <div className="absolute w-3.5 h-3.5 bg-amber-400 border border-black animate-ping -translate-x-7 -translate-y-7" />
-                        <div className="absolute w-3 h-3 bg-green-500 border border-black animate-ping translate-x-7 -translate-y-6" />
-                        <div className="absolute w-3.5 h-3.5 bg-[#FF6321] border border-black animate-ping -translate-x-6 translate-y-7" />
-                        <div className="absolute w-3 h-3 bg-yellow-300 border border-black animate-ping translate-x-7 translate-y-6" />
-                        <div className="absolute w-4 h-4 bg-stone-300 border border-black animate-ping -translate-y-10" />
-                        <div className="absolute w-4 h-4 bg-stone-600 border border-black animate-ping translate-y-10" />
-                        <div className="absolute w-2.5 h-2.5 bg-amber-200 border border-black animate-ping -translate-x-10" />
-                        <div className="absolute w-2.5 h-2.5 bg-emerald-400 border border-black animate-ping translate-x-10" />
-                      </div>
-                    )}
-
-                    {/* 3D Minecraft Pixel Block Button */}
+                    {/* Block Node Button */}
                     <button
                       type="button"
                       onClick={() => handleOpenNodeModal(item.id, unlockStatus)}
-                      className={`w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
+                      className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-4 font-mono font-black flex flex-col items-center justify-center transition-all duration-300 transform active:scale-95 group cursor-pointer ${
                         breakingNodeId === item.id ? 'scale-125 rotate-6 brightness-150' : ''
                       } ${
                         isCurrent
-                          ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_8px_0_0_#992E00] ring-4 ring-amber-400/80 scale-110 z-20 group-hover:-translate-y-2 group-hover:scale-120 group-hover:shadow-[0_0_30px_rgba(251,191,36,0.9)] group-hover:ring-amber-300 cursor-pointer'
+                          ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_10px_0_0_#992E00] ring-4 ring-amber-400 scale-110 z-20 group-hover:-translate-y-2 group-hover:scale-120 group-hover:shadow-[0_0_30px_rgba(251,191,36,0.9)]'
                           : isPaywallLocked
-                          ? 'bg-amber-950/80 border-amber-500/80 shadow-[0_6px_0_0_#451a03] text-amber-200 group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-400 group-hover:z-30 cursor-pointer'
+                          ? 'bg-amber-950/90 border-amber-500 shadow-[0_8px_0_0_#451a03] text-amber-200 group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-400 group-hover:z-30'
                           : isCompleted
-                          ? `${theme.blockBg} ${theme.blockBorder} ${theme.blockShadow} text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(72,126,44,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30 cursor-pointer`
+                          ? `${theme.blockBg} ${theme.blockBorder} ${theme.blockShadow} text-white group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(92,138,47,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30`
                           : isUnlocked
-                          ? 'bg-amber-600 border-amber-900 shadow-[0_6px_0_0_#542803] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-300 group-hover:z-30 cursor-pointer'
-                          : 'bg-slate-900 border-slate-950 shadow-[0_4px_0_0_#020617] text-slate-500 hover:bg-slate-800 hover:border-slate-700 hover:text-slate-300 cursor-pointer opacity-75 active:scale-95'
+                          ? 'bg-amber-600 border-amber-900 shadow-[0_8px_0_0_#542a02] text-white group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-300 group-hover:z-30'
+                          : 'bg-black/70 border-black shadow-[0_6px_0_0_#0a0a0a] text-slate-500 opacity-70 group-hover:opacity-90'
                       }`}
                     >
-                      {/* Boss Badge Crown */}
+                      {/* Top Pixel Bevel */}
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/30 rounded-t-xl pointer-events-none" />
+
+                      {/* Boss Crown Badge */}
                       {isBossNode && (
-                        <div className="absolute -top-3 -right-3 bg-amber-400 border-2 border-black rounded-xl p-1 text-sm shadow-md animate-pulse">
+                        <div className="absolute -top-3 -right-3 bg-amber-400 border-2 border-black rounded-xl p-1 text-sm shadow-md animate-bounce">
                           👑
                         </div>
                       )}
 
                       {/* Trial Badge */}
                       {isTrial && (
-                        <div className="absolute -top-2.5 -left-2 bg-emerald-500 border-2 border-black rounded-lg px-1 py-0.2 text-[9px] font-black text-white shadow-md">
+                        <div className="absolute -top-3 -left-3 bg-emerald-500 border-2 border-black rounded-xl px-1.5 py-0.5 text-[9px] font-black text-white shadow-md">
                           试学
                         </div>
                       )}
 
                       {/* Paywall Lock Badge */}
                       {isPaywallLocked && (
-                        <div className="absolute -top-2.5 -left-2 bg-amber-500 border-2 border-black rounded-lg px-1 py-0.2 text-[9px] font-black text-black shadow-md flex items-center space-x-0.5">
+                        <div className="absolute -top-3 -left-3 bg-amber-500 border-2 border-black rounded-xl px-1.5 py-0.5 text-[9px] font-black text-black shadow-md flex items-center space-x-0.5">
                           <Lock className="w-2.5 h-2.5" />
                           <span>VIP</span>
                         </div>
@@ -611,39 +448,39 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
 
                       {/* Progression Lock Badge */}
                       {isProgressionLocked && !isPaywallLocked && (
-                        <div className="absolute -top-2.5 -left-2 bg-slate-800 border-2 border-slate-600 rounded-lg px-1 py-0.2 text-[8px] font-mono font-bold text-slate-300 shadow-md flex items-center space-x-0.5">
-                          <Lock className="w-2 h-2" />
+                        <div className="absolute -top-3 -left-3 bg-slate-900 border border-slate-700 rounded-xl px-1.5 py-0.5 text-[9px] font-mono font-bold text-slate-300 shadow-md flex items-center space-x-0.5">
+                          <Lock className="w-2.5 h-2.5" />
                           <span>锁定</span>
                         </div>
                       )}
 
-                      {/* Top Bevel Pixel Highlight */}
-                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/30 rounded-t-xl pointer-events-none" />
-
                       {/* Status Icon */}
-                      {isPaywallLocked ? (
-                        <Lock className="w-7 h-7 text-amber-400 drop-shadow-md" />
-                      ) : isCompleted ? (
-                        <CheckCircle className="w-8 h-8 text-amber-300 drop-shadow-[0_2px_0_rgba(0,0,0,0.6)]" />
-                      ) : isCurrent ? (
-                        <Compass className="w-8 h-8 text-white animate-spin-slow drop-shadow-md" />
-                      ) : isUnlocked ? (
-                        <Play className="w-7 h-7 fill-white text-white drop-shadow-md" />
-                      ) : (
-                        <Lock className="w-6 h-6 text-slate-500" />
-                      )}
+                      <div className="mb-0.5">
+                        {isPaywallLocked ? (
+                          <Lock className="w-6 h-6 text-amber-400 drop-shadow-md" />
+                        ) : isCompleted ? (
+                          <CheckCircle className="w-7 h-7 text-amber-300 drop-shadow-md" />
+                        ) : isCurrent ? (
+                          <Compass className="w-7 h-7 text-white animate-spin-slow drop-shadow-md" />
+                        ) : isUnlocked ? (
+                          <Play className="w-6 h-6 fill-white text-white drop-shadow-md" />
+                        ) : (
+                          <Lock className="w-6 h-6 text-slate-500" />
+                        )}
+                      </div>
 
-                      <span className="text-xs sm:text-sm font-black font-mono mt-0.5 tracking-wider drop-shadow-md">
+                      {/* Lesson Number */}
+                      <span className="text-xs sm:text-sm font-black tracking-wider">
                         L{item.id}
                       </span>
                     </button>
 
-                    {/* Title Box below block */}
-                    <div className="mt-2.5 text-center max-w-[140px] mx-auto bg-black/80 border-2 border-white/20 rounded-xl p-1.5 shadow-md backdrop-blur-sm">
+                    {/* Lesson Title & Dialogue Snippet Tag */}
+                    <div className="mt-2.5 text-center max-w-[140px] bg-black/80 border-2 border-white/20 rounded-xl p-1.5 shadow-md">
                       <p className={`text-[11px] font-mono font-black truncate ${isCurrent ? 'text-amber-300' : isPaywallLocked ? 'text-amber-300' : isUnlocked ? 'text-white' : 'text-slate-400'}`}>
-                        {item.title.split(':')[0]}
+                        {item.title}
                       </p>
-                      <p className="text-[10px] font-bold text-slate-300 truncate">
+                      <p className="text-[10px] text-slate-300 truncate font-bold">
                         {item.titleZh}
                       </p>
                     </div>
@@ -667,7 +504,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                             击败 {chapter.bossName} • 解锁下一生态
                           </h4>
                           <p className="text-xs font-bold text-amber-100 mt-0.5">
-                            完成前 12 课对话训练即可参与答辩，赢取限定勋章与 100 绿宝石！
+                            完成前 24 课对话训练即可参与答辩，赢取限定勋章与 100 绿宝石！
                           </p>
                         </div>
                       </div>
@@ -714,7 +551,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
               <button
                 type="button"
                 onClick={() => setModalLesson(null)}
-                className="bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-xl font-mono text-base font-black border-2 border-white/30 flex items-center justify-center transition-colors shrink-0"
+                className="bg-black/30 hover:bg-black/50 text-white w-9 h-9 rounded-xl font-mono text-base font-black border-2 border-white/30 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
               >
                 ✕
               </button>
@@ -762,7 +599,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                       <button
                         type="button"
                         onClick={() => speakText(sentence)}
-                        className="p-1.5 bg-green-50 hover:bg-green-100 text-[#487E2C] border border-[#487E2C] rounded-lg shrink-0"
+                        className="p-1.5 bg-green-50 hover:bg-green-100 text-[#487E2C] border border-[#487E2C] rounded-lg shrink-0 cursor-pointer"
                         title="播放语音"
                       >
                         <Volume2 className="w-3.5 h-3.5" />
@@ -801,7 +638,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                   setModalLesson(null);
                   onSelectLesson(lessonId);
                 }}
-                className="w-full bg-white hover:bg-slate-50 text-slate-800 border-2 border-black py-3 rounded-2xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5"
+                className="w-full bg-white hover:bg-slate-50 text-slate-800 border-2 border-black py-3 rounded-2xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 cursor-pointer"
               >
                 <BookOpen className="w-4 h-4 text-[#487E2C]" />
                 <span>📖 预习课件与语法秘籍</span>
@@ -814,7 +651,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
                   setModalLesson(null);
                   onStartChat(currentL);
                 }}
-                className="w-full bg-[#487E2C] hover:bg-[#355E20] text-white border-2 border-black py-3 rounded-2xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5"
+                className="w-full bg-[#487E2C] hover:bg-[#355E20] text-white border-2 border-black py-3 rounded-2xl text-xs font-mono font-black flex items-center justify-center space-x-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4 text-amber-300" />
                 <span>💬 与 Alex 老师实战对话</span>
@@ -834,7 +671,7 @@ export const MinecraftAdventureMap: React.FC<MinecraftAdventureMapProps> = ({
             <button
               type="button"
               onClick={() => setLockedNotice(null)}
-              className="ml-2 text-slate-400 hover:text-white text-xs bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700"
+              className="ml-2 text-slate-400 hover:text-white text-xs bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700 cursor-pointer"
             >
               知道了
             </button>

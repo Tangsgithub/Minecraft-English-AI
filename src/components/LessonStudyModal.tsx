@@ -550,8 +550,9 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                 {isAllTasksCompleted ? '✓ 学习已达标' : `学习任务: ${completedTaskCount}/4`}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black font-mono leading-tight">
-              {lesson.title}
+            <h2 className="text-xl sm:text-2xl font-black font-mono leading-tight flex flex-wrap items-baseline gap-2">
+              <span>{lesson.title}</span>
+              <span className="text-sm sm:text-base font-normal text-amber-200 font-sans">({lesson.titleZh})</span>
             </h2>
           </div>
 

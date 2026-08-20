@@ -251,7 +251,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </div>
                 <div className="flex items-center space-x-1.5 bg-black/10 px-2 py-1 rounded-lg">
                   <span>🏰</span>
-                  <span>Unit 12 终末之城无限制</span>
+                  <span>Unit 6 终末之城与毕业答辩无限制</span>
                 </div>
               </div>
 

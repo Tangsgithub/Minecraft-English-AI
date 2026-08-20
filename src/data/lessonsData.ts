@@ -2,6 +2,7 @@ import { Lesson, CourseVolumeId } from '../types';
 import { getAuthenticVocabForLesson } from './authenticLessonVocab';
 import { getVocabForLessonFromManager } from './book1VocabManager';
 import { AUTHENTIC_LESSON_DIALOGUES } from './authenticLessonDialogues';
+import { NCE_BOOK1_FULL_LESSONS } from './nceBook1FullCurriculum';
 import { NCE_BOOK2_UNIT1_DATA } from './nceBook2Unit1Data';
 import { NCE_BOOK2_UNIT2_DATA } from './nceBook2Unit2Data';
 import { NCE_BOOK2_UNITS2_TO_4_DATA } from './nceBook2Units2to4Data';
@@ -226,11 +227,48 @@ export const NCE_BOOK3_TITLES: Record<number, { title: string; titleZh: string; 
 // ============================================================================
 
 export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1'): Lesson {
-  // 1. 若为第二册，检查是否有 100% 真实教研打磨数据 (Unit 1: 1-24课 或 Unit 2: 25-48课 或 Units 3-4: 49-96课)
+  // 1. 若为第一册 (1-144课)，优先读取 100% 逐课严格审校的原版真实教材语料库
+  if (volumeId === 'vol1') {
+    const verified = NCE_BOOK1_FULL_LESSONS[lessonId];
+    if (verified) {
+      const vocabWithIds = (verified.words && verified.words.length > 0)
+        ? verified.words.map((w, idx) => ({
+            id: `nce1_l${lessonId}_${idx + 1}`,
+            word: w.word,
+            phonetic: w.phonetic,
+            meaning: w.meaning,
+            mcItem: w.mcItem || 'Book',
+            mcItemIcon: w.mcItemIcon || '📖',
+            sampleSentence: w.sampleSentence || (verified.sentences[0]?.en || w.word),
+            sampleTranslation: w.sampleTranslation || (verified.sentences[0]?.zh || w.meaning),
+            requiredLessonId: lessonId
+          }))
+        : getVocabForLessonFromManager(lessonId);
+
+      return {
+        id: lessonId,
+        unit: verified.unit || Math.ceil(lessonId / 24),
+        title: verified.title,
+        titleZh: verified.titleZh,
+        topic: verified.topic,
+        topicZh: verified.topicZh,
+        difficulty: verified.difficulty,
+        minecraftScene: `新概念大厅 (第 ${lessonId} 关)`,
+        sceneDescription: `Steve 和 Alex 在新概念英语实景课堂中，开展《${verified.titleZh}》原版互动学习。`,
+        vocabulary: vocabWithIds,
+        targetSentences: verified.sentences.map(s => s.en),
+        targetSentenceTranslations: verified.sentences.map(s => s.zh),
+        dialogueScript: verified.dialogue,
+        grammarNote: `【语法要点】${verified.grammar}。${verified.grammarNote || ''}`
+      };
+    }
+  }
+
+  // 2. 若为第二册，检查是否有 100% 真实教研打磨数据 (Unit 1: 1-24课 或 Unit 2: 25-48课 或 Units 3-4: 49-96课)
   if (volumeId === 'vol2') {
     const detailedData = NCE_BOOK2_UNIT1_DATA[lessonId] || NCE_BOOK2_UNIT2_DATA[lessonId] || NCE_BOOK2_UNITS2_TO_4_DATA[lessonId];
     if (detailedData) {
-      const unit = Math.ceil(lessonId / 12);
+      const unit = Math.ceil(lessonId / 24);
       const vocabWithIds = detailedData.vocab.map((v, idx) => ({
         ...v,
         id: `vol2_l${lessonId}_${idx + 1}`,
@@ -240,8 +278,8 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
       return {
         id: lessonId,
         unit: unit,
-        title: `Lesson ${lessonId}: ${detailedData.title}`,
-        titleZh: `第 ${lessonId} 课：${detailedData.titleZh}`,
+        title: detailedData.title,
+        titleZh: detailedData.titleZh,
         topic: detailedData.topic,
         topicZh: detailedData.topicZh,
         difficulty: lessonId <= 32 ? 'easy' : lessonId <= 64 ? 'medium' : 'hard',
@@ -290,7 +328,7 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
     };
   }
 
-  const unit = Math.ceil(lessonId / 12);
+  const unit = Math.ceil(lessonId / 24);
   const cleanTitle = titleData.title;
   const cleanTitleZh = titleData.titleZh;
 
@@ -309,8 +347,8 @@ export function getLessonById(lessonId: number, volumeId: CourseVolumeId = 'vol1
   return {
     id: lessonId,
     unit: unit,
-    title: `Lesson ${lessonId}: ${cleanTitle}`,
-    titleZh: `第 ${lessonId} 课：${cleanTitleZh}`,
+    title: cleanTitle,
+    titleZh: cleanTitleZh,
     topic: titleData.topic,
     topicZh: titleData.topicZh,
     difficulty: lessonId <= 48 ? 'easy' : lessonId <= 96 ? 'medium' : 'hard',

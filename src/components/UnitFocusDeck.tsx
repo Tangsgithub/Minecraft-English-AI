@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 interface UnitFocusDeckProps {
-  selectedUnit: number; // 0 = all, 1..12
+  selectedUnit: number; // 0 = all, 1..6
   onSelectUnit: (unit: number) => void;
   profile: UserProfile;
   selectedVolumeId: CourseVolumeId;
@@ -27,18 +27,18 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // If selectedUnit is 0 (All), pick current player's unit or 1 for display
-  const activeUnit = selectedUnit === 0 ? (Math.ceil((profile.currentLessonId || 1) / 12)) : selectedUnit;
+  const activeUnit = selectedUnit === 0 ? (Math.min(6, Math.max(1, Math.ceil((profile.currentLessonId || 1) / 24)))) : selectedUnit;
   const currentChapter: BiomeChapter = getBiomeChapterByUnit(activeUnit);
   const currentLessonId = profile.currentLessonId || 1;
   const completedList = profile.completedLessonIds || [];
   const unlockedList = profile.unlockedLessonIds || [1];
 
-  const unitStartId = (activeUnit - 1) * 12 + 1;
-  const unitEndId = activeUnit * 12;
+  const unitStartId = (activeUnit - 1) * 24 + 1;
+  const unitEndId = activeUnit * 24;
 
   // Calculate unit completion
   const completedInUnit = completedList.filter(id => id >= unitStartId && id <= unitEndId).length;
-  const unitProgress = Math.min(100, Math.round((completedInUnit / 12) * 100));
+  const unitProgress = Math.min(100, Math.round((completedInUnit / 24) * 100));
 
   // Determine if this unit is completely locked or active
   const isUnitUnlocked = activeUnit === 1 || unlockedList.some(id => id >= unitStartId);
@@ -53,7 +53,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 1. Biome Navigator Deck (12 Minecraft Biome Cards) */}
+      {/* 1. Biome Navigator Deck (6 Minecraft Biome Cards) */}
       <div className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] space-y-3">
         
         {/* Header with Title & Mode Toggles */}
@@ -65,10 +65,10 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-xs sm:text-sm font-black font-mono text-[#2D2D2D]">
-                  选择探险生态领地 (Unit 1 - 12)
+                  选择探险生态领地 (Unit 1 - 6)
                 </h3>
                 <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.2 rounded-full text-[10px] font-mono font-black">
-                  12大领地全览
+                  6大核心单元全览
                 </span>
               </div>
             </div>
@@ -88,10 +88,10 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                     ? 'bg-[#487E2C] text-white shadow-xs border border-black'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 }`}
-                title="12大生态全景平铺展示"
+                title="6大生态全景平铺展示"
               >
                 <LayoutGrid className="w-3 h-3" />
-                <span>12领地平铺</span>
+                <span>6单元平铺</span>
               </button>
 
               <button
@@ -114,7 +114,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
           </div>
         </div>
 
-        {/* Quick 1~12 Jump Pills */}
+        {/* Quick 1~6 Jump Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <span className="text-[11px] font-mono font-black text-slate-500 shrink-0 flex items-center space-x-1 mr-1">
             <Zap className="w-3 h-3 text-amber-500" />
@@ -122,8 +122,8 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
           </span>
           {BIOME_CHAPTERS.map(ch => {
             const isSelected = activeUnit === ch.unit;
-            const startId = (ch.unit - 1) * 12 + 1;
-            const endId = ch.unit * 12;
+            const startId = (ch.unit - 1) * 24 + 1;
+            const endId = ch.unit * 24;
             const isPlayerHere = currentLessonId >= startId && currentLessonId <= endId;
             return (
               <button
@@ -133,7 +133,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                   playClickSound();
                   onSelectUnit(ch.unit);
                 }}
-                className={`px-2 py-0.5 rounded-lg text-xs font-mono font-black border transition-all shrink-0 flex items-center space-x-1 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-all shrink-0 flex items-center space-x-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-[#487E2C] text-white border-black shadow-[0_2px_0_0_#2A4718] scale-105'
                     : isPlayerHere
@@ -142,7 +142,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                 }`}
               >
                 <span>{ch.icon}</span>
-                <span>U{ch.unit}</span>
+                <span>Unit {ch.unit}</span>
                 {isPlayerHere && <span className="w-1.5 h-1.5 rounded-full bg-[#FF6321] animate-pulse" />}
               </button>
             );
@@ -151,13 +151,13 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
 
         {/* Display Container: Grid Mode or Scroll Mode */}
         {deckLayout === 'grid' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1">
             {BIOME_CHAPTERS.map((ch) => {
               const isSelected = activeUnit === ch.unit;
-              const startId = (ch.unit - 1) * 12 + 1;
-              const endId = ch.unit * 12;
+              const startId = (ch.unit - 1) * 24 + 1;
+              const endId = ch.unit * 24;
               const unitDone = completedList.filter(id => id >= startId && id <= endId).length;
-              const isUnitFinished = unitDone === 12;
+              const isUnitFinished = unitDone === 24;
               const isPlayerHere = currentLessonId >= startId && currentLessonId <= endId;
 
               return (
@@ -189,7 +189,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                         ? 'bg-emerald-200 text-emerald-900'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {isPlayerHere ? '当前' : isUnitFinished ? '✓' : `${unitDone}/12`}
+                      {isPlayerHere ? '当前' : isUnitFinished ? '✓' : `${unitDone}/24`}
                     </span>
                   </div>
 
@@ -220,7 +220,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
               type="button"
               onClick={() => handleScrollDeck('right')}
               className="absolute -right-2.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 bg-white border-2 border-black rounded-full flex items-center justify-center text-slate-800 shadow-md hover:bg-amber-300 transition-all active:scale-90"
-              title="向右滚动 (至 Unit 12)"
+              title="向右滚动 (至 Unit 6)"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -231,10 +231,10 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
             >
               {BIOME_CHAPTERS.map((ch) => {
                 const isSelected = activeUnit === ch.unit;
-                const startId = (ch.unit - 1) * 12 + 1;
-                const endId = ch.unit * 12;
+                const startId = (ch.unit - 1) * 24 + 1;
+                const endId = ch.unit * 24;
                 const unitDone = completedList.filter(id => id >= startId && id <= endId).length;
-                const isUnitFinished = unitDone === 12;
+                const isUnitFinished = unitDone === 24;
                 const isPlayerHere = currentLessonId >= startId && currentLessonId <= endId;
 
                 return (
@@ -270,7 +270,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                         )}
                       </div>
                       <p className={`text-[10px] font-mono truncate max-w-[100px] sm:max-w-[120px] ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
-                        {ch.biomeNameZh.split('·')[0]} ({unitDone}/12)
+                        {ch.biomeNameZh.split('·')[0]} ({unitDone}/24)
                       </p>
                     </div>
                   </button>
@@ -281,8 +281,8 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
         )}
       </div>
 
-      {/* 2. Active Unit Stage Hero Card (Overview of the 12 lessons) */}
-      <div className={`relative bg-gradient-to-r ${currentChapter.bgGradient} border-2 sm:border-4 border-[${currentChapter.borderColor}] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden transition-all duration-300`}>
+      {/* 2. Active Unit Stage Hero Card (Overview of the 24 lessons) */}
+      <div className={`relative bg-gradient-to-r ${currentChapter.bgGradient} border-2 sm:border-4 rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden transition-all duration-300`}>
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
@@ -291,7 +291,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                 <span>Unit {currentChapter.unit} · {currentChapter.titleZh}</span>
               </span>
               <span className="text-xs font-mono font-bold bg-white/80 border border-slate-300 px-2 py-0.5 rounded-lg text-slate-700">
-                涵盖课程：第 {unitStartId} - {unitEndId} 课 (共 12 课)
+                涵盖课程：第 {unitStartId} - {unitEndId} 课 (共 24 课)
               </span>
             </div>
 
@@ -310,7 +310,7 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
                 <Trophy className="w-3.5 h-3.5 text-amber-500" />
                 <span>领地探险进度</span>
               </span>
-              <span className="text-[#487E2C] font-black">{completedInUnit}/12 课 ({unitProgress}%)</span>
+              <span className="text-[#487E2C] font-black">{completedInUnit}/24 课 ({unitProgress}%)</span>
             </div>
 
             {/* Block Progress Bar */}
@@ -332,9 +332,9 @@ export const UnitFocusDeck: React.FC<UnitFocusDeckProps> = ({
         </div>
       </div>
 
-      {/* 3. The 12 Focused Lessons in this Unit (Clean 3-column / 4-column Grid) */}
+      {/* 3. The 24 Focused Lessons in this Unit (Clean Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        {Array.from({ length: 12 }, (_, idx) => {
+        {Array.from({ length: 24 }, (_, idx) => {
           const lessonId = unitStartId + idx;
           const lessonData = getLessonById(lessonId, selectedVolumeId);
           const isCompleted = completedList.includes(lessonId) || lessonId < currentLessonId;

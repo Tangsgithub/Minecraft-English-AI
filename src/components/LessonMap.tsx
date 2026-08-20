@@ -38,7 +38,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   const completedList = volProg.completedLessonIds;
 
   // Default to current player's unit, or Unit 1
-  const initialUnit = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
+  const initialUnit = Math.min(6, Math.max(1, Math.ceil(currentLessonId / 24)));
   const [selectedUnit, setSelectedUnit] = useState<number>(initialUnit);
   const [viewMode, setViewMode] = useState<'grid' | 'world' | 'map'>('grid'); // Default to clean, efficient grid
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -48,7 +48,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
   const [lockedNotice, setLockedNotice] = useState<{ lessonId: number; msg: string } | null>(null);
 
   const currentLesson = getLessonById(currentLessonId, selectedVolumeId);
-  const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
+  const currentUnitNum = Math.min(6, Math.max(1, Math.ceil(currentLessonId / 24)));
   const currentBiome = getBiomeChapterByUnit(currentUnitNum);
   const hasCurrentLessonAccess = hasLessonAccess(profile, selectedVolumeId, currentLesson.id);
 
@@ -287,12 +287,12 @@ export const LessonMap: React.FC<LessonMapProps> = ({
               全部 (1-144)
             </button>
 
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(uNum => {
+            {Array.from({ length: 6 }, (_, i) => i + 1).map(uNum => {
               const ch = getBiomeChapterByUnit(uNum);
               const isSelected = selectedUnit === uNum;
               const isCurrentUnit = currentUnitNum === uNum;
-              const uStart = (uNum - 1) * 12 + 1;
-              const uEnd = uNum * 12;
+              const uStart = (uNum - 1) * 24 + 1;
+              const uEnd = uNum * 24;
               const uDone = completedList.filter(id => id >= uStart && id <= uEnd).length;
 
               return (
@@ -304,7 +304,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                     playClickSound();
                     setSelectedUnit(uNum);
                   }}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-all shrink-0 flex items-center space-x-1.5 cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold whitespace-nowrap transition-all shrink-0 flex items-center space-x-1.5 cursor-pointer ${
                     isSelected
                       ? 'bg-[#487E2C] text-white shadow-xs font-black'
                       : isCurrentUnit
@@ -316,7 +316,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                   <span>Unit {uNum}</span>
                   {uDone > 0 && (
                     <span className={`text-[10px] ${isSelected ? 'text-emerald-200' : 'text-slate-500'}`}>
-                      ({uDone}/12)
+                      ({uDone}/24)
                     </span>
                   )}
                   {isCurrentUnit && (
@@ -353,7 +353,7 @@ export const LessonMap: React.FC<LessonMapProps> = ({
                   ({getBiomeChapterByUnit(selectedUnit).biomeNameZh})
                 </span>
               </div>
-              <span className="text-slate-500">第 {(selectedUnit - 1) * 12 + 1} - {selectedUnit * 12} 课</span>
+              <span className="text-slate-500">第 {(selectedUnit - 1) * 24 + 1} - {selectedUnit * 24} 课</span>
             </div>
           )}
 

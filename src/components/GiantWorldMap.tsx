@@ -64,12 +64,12 @@ const MAP_NPCS: MapNPC[] = [
   {
     id: 'npc_unit_3',
     unit: 3,
-    name: 'Desert Pharaoh',
-    nameZh: '金字塔守卫 · 阿蒙',
-    avatar: '🏺',
-    locationName: '沙漠金字塔神殿',
-    greetingEn: 'Halt! Where is the secret chest in the pyramid?',
-    greetingZh: '站住！金字塔里的秘密宝箱在什么地方？',
+    name: 'Desert & Sea Captain',
+    nameZh: '沙漠与深海航海家 · 德雷克',
+    avatar: '🦈',
+    locationName: '沙漠金字塔与深海神殿',
+    greetingEn: 'Ahoy! We discovered ancient treasures in both pyramid and sunken ship!',
+    greetingZh: '嗨，伙伴！我们在金字塔与沉船里都发现了远古宝藏！',
     triviaEn: 'Which preposition means "在...里面"? (on, in, or under)',
     triviaZh: '哪个介词表示“在...里面”？(on, in, 还是 under)',
     rewardEmeralds: 5
@@ -77,110 +77,32 @@ const MAP_NPCS: MapNPC[] = [
   {
     id: 'npc_unit_4',
     unit: 4,
-    name: 'Frost Snowman',
-    nameZh: '冰雪守护者 · 雪人小白',
-    avatar: '☃️',
-    locationName: '雪山极寒避难所',
-    greetingEn: 'Brrr! It is so cold! Put on your coat and hat!',
-    greetingZh: '好冷啊！快穿上你的外套，戴上你的帽子！',
-    triviaEn: 'What is the English word for "帽子"?',
-    triviaZh: '“帽子”的英文单词是什么？',
-    rewardEmeralds: 5
-  },
-  {
-    id: 'npc_unit_5',
-    unit: 5,
-    name: 'Sea Captain',
-    nameZh: '深海航海家 · 德雷克',
-    avatar: '🦈',
-    locationName: '深海沉船与神殿',
-    greetingEn: 'Ahoy matey! Yesterday we found an ancient treasure!',
-    greetingZh: '嗨，伙伴！昨天我们找到了一份远古宝藏！',
-    triviaEn: 'What is the past tense of "is" and "are"?',
-    triviaZh: '“is” 和 “are” 的过去式分别是什么？',
-    rewardEmeralds: 5
-  },
-  {
-    id: 'npc_unit_6',
-    unit: 6,
-    name: 'Redstone Miner',
+    name: 'Redstone & Frost Explorer',
     nameZh: '红石工程师 · 凯文',
     avatar: '🚂',
-    locationName: '废弃矿井铁道',
-    greetingEn: 'All aboard! How many diamonds did you mine today?',
+    locationName: '废弃矿井与极寒雪山',
+    greetingEn: 'All aboard the minecart! How many diamonds did you mine today?',
     greetingZh: '准备出发！你今天采掘了多少颗钻石？',
     triviaEn: 'Which word is used for plural countable items: "many" or "much"?',
     triviaZh: '对于可数名词复数，用 "many" 还是 "much"？',
     rewardEmeralds: 5
   },
   {
-    id: 'npc_unit_7',
-    unit: 7,
-    name: 'Mooshroom Chef',
-    nameZh: '蘑菇岛厨师 · 哞哞',
-    avatar: '🐮',
-    locationName: '紫菌蘑菇岛',
-    greetingEn: 'Welcome! This mushroom soup is warmer and tastier!',
-    greetingZh: '欢迎！这碗蘑菇煲比刚才的更烫、更美味！',
-    triviaEn: 'What is the comparative form of "tall"?',
-    triviaZh: '单词 "tall"（高的）的比较级形式是什么？',
-    rewardEmeralds: 5
-  },
-  {
-    id: 'npc_unit_8',
-    unit: 8,
-    name: 'Ancient Warden Guard',
-    nameZh: '古城守卫 · 幽影',
-    avatar: '👁️',
-    locationName: '暗黑古城中心',
-    greetingEn: 'Shh... Have you seen the Warden? Keep quiet!',
-    greetingZh: '嘘... 你看见 Warden 监守者了吗？保持安静！',
-    triviaEn: 'How do you form the present perfect tense? (have/has + _____)',
-    triviaZh: '现在完成时的结构是：have/has + 动词的什么形式？',
-    rewardEmeralds: 5
-  },
-  {
-    id: 'npc_unit_9',
-    unit: 9,
-    name: 'Blaze Fire Lord',
+    id: 'npc_unit_5',
+    unit: 5,
+    name: 'Blaze & Sculk Guardian',
     nameZh: '下界要塞·烈焰领主',
     avatar: '👺',
-    locationName: '下界熔岩要塞',
-    greetingEn: 'If it gets too hot, drink a fire resistance potion!',
-    greetingZh: '如果感觉太热，就喝下一瓶抗火药水吧！',
+    locationName: '下界熔岩要塞与深暗古城',
+    greetingEn: 'If it gets too hot or dangerous, drink a fire resistance potion!',
+    greetingZh: '如果感觉太热或遇到危险，就喝下一瓶抗火药水吧！',
     triviaEn: 'Which conjunction means "如果"?',
     triviaZh: '表示“如果”的英文连词是哪个？',
     rewardEmeralds: 5
   },
   {
-    id: 'npc_unit_10',
-    unit: 10,
-    name: 'Warped Enderman',
-    nameZh: '诡异森林·末影使者',
-    avatar: '👽',
-    locationName: '青蓝诡异菌林',
-    greetingEn: 'You must wear a carved pumpkin to talk with me peacefully!',
-    greetingZh: '你必须戴上雕刻南瓜头，才能和我和平交头接耳！',
-    triviaEn: 'Which modal verb expresses strict necessity: "must" or "can"?',
-    triviaZh: '哪个情态动词表达“必须”：must 还是 can？',
-    rewardEmeralds: 5
-  },
-  {
-    id: 'npc_unit_11',
-    unit: 11,
-    name: 'Dragon Trainer',
-    nameZh: '龙巢训导官 · 亚瑟',
-    avatar: '🐲',
-    locationName: '末地黑曜石浮岛',
-    greetingEn: 'The Ender Dragon is coming! Never give up, hero!',
-    greetingZh: '末影龙来了！绝不放弃，英雄！',
-    triviaEn: 'How do you encourage someone in English: "Never ____ up!"',
-    triviaZh: '英文里鼓励别人“绝不放弃”该怎么说：Never ____ up!',
-    rewardEmeralds: 5
-  },
-  {
-    id: 'npc_unit_12',
-    unit: 12,
+    id: 'npc_unit_6',
+    unit: 6,
     name: 'Teacher Alex',
     nameZh: '全服总导师 · Alex 老师',
     avatar: '🎓',
@@ -196,16 +118,10 @@ const MAP_NPCS: MapNPC[] = [
 const BIOME_CARD_STYLES: Record<number, { bg: string; border: string; headerGradient: string; badgeBg: string; decor: string }> = {
   1: { bg: 'bg-[#3e6f24]/95 text-white', border: 'border-[#224013]', headerGradient: 'from-[#487E2C] via-[#3E6F24] to-[#2D5218]', badgeBg: 'bg-[#5C8A2F]', decor: '🌳 🏡 🌾' },
   2: { bg: 'bg-[#15472B]/95 text-white', border: 'border-[#0C2D1B]', headerGradient: 'from-[#1E5C38] via-[#15472B] to-[#0D301C]', badgeBg: 'bg-[#2D6A4F]', decor: '🌲 🗿 🌿' },
-  3: { bg: 'bg-[#B45309]/95 text-white', border: 'border-[#78350F]', headerGradient: 'from-[#D97706] via-[#B45309] to-[#78350F]', badgeBg: 'bg-[#D97706]', decor: '🏜️ 🌵 🕌' },
-  4: { bg: 'bg-[#0369A1]/95 text-white', border: 'border-[#075985]', headerGradient: 'from-[#0284C7] via-[#0369A1] to-[#075985]', badgeBg: 'bg-[#0284C7]', decor: '❄️ 🏔️ ☃️' },
-  5: { bg: 'bg-[#0F766E]/95 text-white', border: 'border-[#115E59]', headerGradient: 'from-[#0D9488] via-[#0F766E] to-[#115E59]', badgeBg: 'bg-[#0D9488]', decor: '🌊 ⛵ 🐬' },
-  6: { bg: 'bg-[#592203]/95 text-white', border: 'border-[#3A1501]', headerGradient: 'from-[#78350F] via-[#592203] to-[#3A1501]', badgeBg: 'bg-[#78350F]', decor: '⛏️ 🚂 💎' },
-  7: { bg: 'bg-[#6B21A8]/95 text-white', border: 'border-[#4C1D95]', headerGradient: 'from-[#7E22CE] via-[#6B21A8] to-[#581C87]', badgeBg: 'bg-[#7E22CE]', decor: '🍄 🐮 🔮' },
-  8: { bg: 'bg-[#0F172A]/95 text-white', border: 'border-[#020617]', headerGradient: 'from-[#1E293B] via-[#0F172A] to-[#020617]', badgeBg: 'bg-[#334155]', decor: '👁️ 🏛️ 🕯️' },
-  9: { bg: 'bg-[#991B1B]/95 text-white', border: 'border-[#7F1D1D]', headerGradient: 'from-[#B91C1C] via-[#991B1B] to-[#7F1D1D]', badgeBg: 'bg-[#DC2626]', decor: '🔥 👺 🗡️' },
-  10: { bg: 'bg-[#831843]/95 text-white', border: 'border-[#701A75]', headerGradient: 'from-[#9D174D] via-[#831843] to-[#701A75]', badgeBg: 'bg-[#BE185D]', decor: '👺 🌲 🐖' },
-  11: { bg: 'bg-[#2E1065]/95 text-white', border: 'border-[#1E1B4B]', headerGradient: 'from-[#4C1D95] via-[#2E1065] to-[#1E1B4B]', badgeBg: 'bg-[#6D28D9]', decor: '🌌 🏙️ 🚀' },
-  12: { bg: 'bg-[#1E1B4B]/95 text-white', border: 'border-[#0F172A]', headerGradient: 'from-[#312E81] via-[#1E1B4B] to-[#0F172A]', badgeBg: 'bg-[#4338CA]', decor: '🐉 👑 🔮' },
+  3: { bg: 'bg-[#B45309]/95 text-white', border: 'border-[#78350F]', headerGradient: 'from-[#D97706] via-[#B45309] to-[#78350F]', badgeBg: 'bg-[#D97706]', decor: '🏜️ 🌊 🐬' },
+  4: { bg: 'bg-[#0369A1]/95 text-white', border: 'border-[#075985]', headerGradient: 'from-[#0284C7] via-[#0369A1] to-[#075985]', badgeBg: 'bg-[#0284C7]', decor: '⛏️ 🚂 ❄️' },
+  5: { bg: 'bg-[#991B1B]/95 text-white', border: 'border-[#7F1D1D]', headerGradient: 'from-[#B91C1C] via-[#991B1B] to-[#7F1D1D]', badgeBg: 'bg-[#DC2626]', decor: '🔥 👺 👁️' },
+  6: { bg: 'bg-[#1E1B4B]/95 text-white', border: 'border-[#0F172A]', headerGradient: 'from-[#312E81] via-[#1E1B4B] to-[#0F172A]', badgeBg: 'bg-[#4338CA]', decor: '🐉 👑 🎓' },
 };
 
 export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
@@ -216,7 +132,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   onOpenVipModal
 }) => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
-  const [biomeNavMode, setBiomeNavMode] = useState<'grid' | 'scroll'>('grid'); // Default to grid for 100% full visibility of 1-12
+  const [biomeNavMode, setBiomeNavMode] = useState<'grid' | 'scroll'>('grid'); // Default to grid for 100% full visibility of 1-6
   const [highlightedUnit, setHighlightedUnit] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1); // 0.85, 1, 1.2
   const [showBgImage, setShowBgImage] = useState<boolean>(true);
@@ -300,13 +216,106 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
     playEmeraldSound();
     setNpcQuizAnswered(true);
     if (onAwardEmeralds) {
-      onAwardEmeralds(activeNPC.rewardEmeralds, 15);
+      onAwardEmeralds(activeNPC.rewardEmeralds, 20);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Controls & Biome Quick Navigation Bar */}
+    <div className="space-y-4 select-none">
+      
+      {/* MAP TOP CONTROLS & MINI HUD */}
+      <div className="bg-white/95 border-4 border-black rounded-2xl sm:rounded-[2rem] p-4 sm:p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] flex flex-wrap items-center justify-between gap-4">
+        
+        {/* Left: Player Coordinates & Status */}
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-[#487E2C] text-white border-2 border-black rounded-2xl flex items-center justify-center font-black shadow-xs text-xl">
+            🧭
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-black font-mono text-slate-900">
+                我的世界 · 全景探险地图
+              </span>
+              <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-mono font-black">
+                6大核心生态领地
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 font-mono">
+              当前坐标：第 <span className="text-[#FF6321] font-black">{currentLessonId}</span> 关 • 
+              已通关：<span className="text-emerald-700 font-black">{completedLessonIds.length}</span> / 144
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Map View Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          
+          {/* Day/Night Lighting Switch */}
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setIsDaylight(!isDaylight);
+            }}
+            className={`px-3 py-1.5 rounded-xl border-2 font-mono text-xs font-black flex items-center space-x-1.5 transition-all cursor-pointer ${
+              isDaylight
+                ? 'bg-amber-100 border-amber-400 text-amber-900 hover:bg-amber-200'
+                : 'bg-indigo-900 border-indigo-700 text-indigo-100 hover:bg-indigo-800'
+            }`}
+          >
+            <span>{isDaylight ? '☀️ 白昼模式' : '🌙 极夜模式'}</span>
+          </button>
+
+          {/* Background Realistic Illustration Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              playClickSound();
+              setShowBgImage(!showBgImage);
+            }}
+            className={`px-3 py-1.5 rounded-xl border-2 font-mono text-xs font-black flex items-center space-x-1.5 transition-all cursor-pointer ${
+              showBgImage
+                ? 'bg-emerald-100 border-emerald-400 text-emerald-900'
+                : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span>{showBgImage ? '🖼️ 实景贴图: 开' : '🧱 实景贴图: 关'}</span>
+          </button>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border-2 border-slate-300 space-x-1">
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                setZoomLevel(prev => Math.max(0.8, Number((prev - 0.1).toFixed(1))));
+              }}
+              className="p-1 hover:bg-slate-200 rounded-lg text-slate-700"
+              title="缩小地图"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-mono font-black px-1 text-slate-700">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                playClickSound();
+                setZoomLevel(prev => Math.min(1.2, Number((prev + 0.1).toFixed(1))));
+              }}
+              className="p-1 hover:bg-slate-200 rounded-lg text-slate-700"
+              title="放大地图"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* BIOME FAST TELEPORT NAVIGATOR DECK (Unit 1 - 6) */}
       <div className="bg-white/95 border-4 border-black rounded-2xl sm:rounded-[2rem] p-4 sm:p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] space-y-3.5">
         
         {/* Header with Title, Active Location, and Mode Toggles */}
@@ -321,7 +330,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                   生态领地快捷传送
                 </span>
                 <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full text-[10px] font-mono font-black">
-                  Unit 1 - 12 全景覆盖
+                  Unit 1 - 6 全景覆盖
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-mono font-semibold">
@@ -344,10 +353,10 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                     ? 'bg-[#487E2C] text-white shadow-xs border border-black'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                 }`}
-                title="12大生态全景平铺展示（Unit 1 至 Unit 12 全部一眼可见）"
+                title="6大生态全景平铺展示（Unit 1 至 Unit 6 全部一眼可见）"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
-                <span>12领地平铺全览</span>
+                <span>6领地平铺全览</span>
               </button>
 
               <button
@@ -370,7 +379,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           </div>
         </div>
 
-        {/* 1~12 Quick Jump Number Ribbon */}
+        {/* 1~6 Quick Jump Number Ribbon */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <span className="text-[11px] font-mono font-black text-slate-500 shrink-0 flex items-center space-x-1 mr-1">
             <Zap className="w-3 h-3 text-amber-500" />
@@ -378,14 +387,14 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           </span>
           {BIOME_CHAPTERS.map(ch => {
             const isSelected = selectedUnit === ch.unit;
-            const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
+            const currentUnitNum = Math.min(6, Math.max(1, Math.ceil(profile.currentLessonId / 24)));
             const isPlayerHere = currentUnitNum === ch.unit;
             return (
               <button
                 key={`pill-${ch.unit}`}
                 type="button"
                 onClick={() => handleJumpToUnit(ch.unit)}
-                className={`px-2 py-1 rounded-lg text-xs font-mono font-black border transition-all shrink-0 flex items-center space-x-1 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black border transition-all shrink-0 flex items-center space-x-1.5 cursor-pointer ${
                   isSelected
                     ? 'bg-[#487E2C] text-white border-black shadow-[0_2px_0_0_#000] scale-105'
                     : isPlayerHere
@@ -404,15 +413,15 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
         {/* Display Container: Grid Mode or Scroll Mode */}
         {biomeNavMode === 'grid' ? (
-          /* Responsive 12-card Grid: 6 cols x 2 rows on desktop, 4x3 on tablet, 2x6 on mobile */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-1">
+          /* Responsive 6-card Grid: 6 cols on desktop */
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-1">
             {BIOME_CHAPTERS.map(ch => {
               const isActive = selectedUnit === ch.unit;
               const unitLessons = catalog.filter(l => l.unit === ch.unit);
               const unlockedIds = profile.unlockedLessonIds || [1];
               const completedCount = unitLessons.filter(l => l.id < profile.currentLessonId || unlockedIds.includes(l.id + 1)).length;
-              const isUnitFinished = completedCount === 12;
-              const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(profile.currentLessonId / 12)));
+              const isUnitFinished = completedCount === 24;
+              const currentUnitNum = Math.min(6, Math.max(1, Math.ceil(profile.currentLessonId / 24)));
               const isPlayerHere = currentUnitNum === ch.unit;
 
               return (
@@ -441,7 +450,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         ? 'bg-emerald-200 text-emerald-900'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {isPlayerHere ? '当前' : isUnitFinished ? '✓ 通关' : `${completedCount}/12`}
+                      {isPlayerHere ? '当前' : isUnitFinished ? '✓ 通关' : `${completedCount}/24`}
                     </span>
                   </div>
 
@@ -473,7 +482,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
               type="button"
               onClick={() => handleScrollNav('right')}
               className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-white border-2 border-black rounded-full flex items-center justify-center text-slate-800 shadow-md hover:bg-amber-300 transition-all active:scale-90"
-              title="向右滚动生态领地 (直达 Unit 12)"
+              title="向右滚动生态领地 (直达 Unit 6)"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -486,8 +495,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 const isActive = selectedUnit === ch.unit;
                 const unitLessons = catalog.filter(l => l.unit === ch.unit);
                 const completedCount = unitLessons.filter(l => l.id < currentLessonId || completedLessonIds.includes(l.id)).length;
-                const isUnitFinished = completedCount === 12;
-                const currentUnitNum = Math.min(12, Math.max(1, Math.ceil(currentLessonId / 12)));
+                const isUnitFinished = completedCount === 24;
+                const currentUnitNum = Math.min(6, Math.max(1, Math.ceil(currentLessonId / 24)));
                 const isPlayerHere = currentUnitNum === ch.unit;
 
                 return (
@@ -512,7 +521,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         {isPlayerHere && <span className="text-[9px] bg-[#FF6321] text-white px-1 py-0.2 rounded font-black">在此关</span>}
                       </div>
                       <p className={`text-[10px] whitespace-nowrap ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
-                        {ch.biomeNameZh.split('·')[0]} ({completedCount}/12)
+                        {ch.biomeNameZh.split('·')[0]} ({completedCount}/24)
                       </p>
                     </div>
                   </button>
@@ -536,13 +545,13 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           transformOrigin: 'top center'
         }}
       >
-        {/* Decorative Daylight Sky Sun & Clouds floating header */}
+        {/* Dynamic Sky Atmosphere Badges */}
         {isDaylight && (
           <div className="absolute top-4 left-6 right-6 flex items-center justify-between pointer-events-none z-0 opacity-80">
             <div className="flex items-center space-x-3 text-amber-300 font-mono font-black text-xs">
               <span className="text-4xl animate-spin" style={{ animationDuration: '30s' }}>☀️</span>
               <span className="bg-amber-300/20 text-amber-100 px-3 py-1 rounded-full border border-amber-300/40 backdrop-blur-sm">
-                Minecraft 阳光平原大世界 • 12大生态领地全景
+                Minecraft 阳光平原大世界 • 6大生态领地全景
               </span>
             </div>
             <div className="hidden sm:flex items-center space-x-6 text-2xl text-white/70">
@@ -577,13 +586,13 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           }}
         />
 
-        {/* Continuous 12 Biome Regions Board */}
+        {/* Continuous 6 Biome Regions Board */}
         <div className="relative space-y-16 max-w-5xl mx-auto py-10 z-10">
           
           {BIOME_CHAPTERS.map((ch) => {
             const unitLessons = catalog.filter(l => l.unit === ch.unit);
             const npc = MAP_NPCS.find(n => n.unit === ch.unit);
-            const isUnitCurrent = profile.currentLessonId >= (ch.unit - 1) * 12 + 1 && profile.currentLessonId <= ch.unit * 12;
+            const isUnitCurrent = profile.currentLessonId >= (ch.unit - 1) * 24 + 1 && profile.currentLessonId <= ch.unit * 24;
             const cardTheme = BIOME_CARD_STYLES[ch.unit] || BIOME_CARD_STYLES[1];
 
             const isHighlighted = highlightedUnit === ch.unit;
@@ -606,7 +615,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                       <span className="text-sm">⚡ 快捷传送已抵达：Unit {ch.unit} • {ch.titleZh} ({ch.biomeNameZh})</span>
                     </div>
                     <span className="text-xs bg-black text-amber-300 px-3 py-1 rounded-full border border-amber-300 self-start sm:self-auto">
-                      包含第 {(ch.unit - 1) * 12 + 1} - {ch.unit * 12} 课
+                      包含第 {(ch.unit - 1) * 24 + 1} - {ch.unit * 24} 课
                     </span>
                   </div>
                 )}
@@ -639,7 +648,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                     <button
                       type="button"
                       onClick={() => handleInteractNPC(npc)}
-                      className="bg-amber-400 hover:bg-amber-300 text-amber-950 border-3 border-black px-4 py-2.5 rounded-2xl text-xs font-mono font-black flex items-center space-x-2 shadow-[0_4px_0_0_#78350F] active:translate-y-1 transition-transform shrink-0"
+                      className="bg-amber-400 hover:bg-amber-300 text-amber-950 border-3 border-black px-4 py-2.5 rounded-2xl text-xs font-mono font-black flex items-center space-x-2 shadow-[0_4px_0_0_#78350F] active:translate-y-1 transition-transform shrink-0 cursor-pointer"
                     >
                       <span className="text-2xl animate-bounce">{npc.avatar}</span>
                       <div className="text-left">
@@ -648,15 +657,34 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                       </div>
                     </button>
                   )}
+
                 </div>
 
-                {/* 12 Lessons Grid Nodes inside this Biome */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-6 relative z-10">
+                {/* Boss / Theme Banner */}
+                <div className="bg-black/30 border-2 border-white/10 rounded-2xl p-3.5 mb-6 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                  <div className="flex items-center space-x-2">
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span className="text-slate-200">领地驻守首领:</span>
+                    <span className="text-amber-300 font-black flex items-center space-x-1">
+                      <span>{ch.bossIcon}</span>
+                      <span>{ch.bossName}</span>
+                    </span>
+                  </div>
+
+                  {isUnitCurrent && (
+                    <span className="bg-[#FF6321] text-white px-2.5 py-0.5 rounded-full font-black text-[10px] animate-pulse">
+                      ⚡ 当前主线正在此生态进行
+                    </span>
+                  )}
+                </div>
+
+                {/* 24 Lessons Grid Nodes inside this Biome */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 relative z-10">
                   {unitLessons.map((item) => {
                     const unlockStatus = getLessonUnlockStatus(profile, selectedVolId, item.id);
                     const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
                     const isTrial = selectedVolId === 'vol1' && item.id <= 20 && !isVolumeFullyUnlocked(profile, 'vol1');
-                    const isBossNode = item.id % 12 === 0;
+                    const isBossNode = item.id % 24 === 0;
                     const isBreaking = breakingLessonId === item.id;
 
                     return (
@@ -701,7 +729,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         <button
                           type="button"
                           onClick={() => handleOpenLessonDetail(item.id, unlockStatus)}
-                          className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-4 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
+                          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-3 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                             isBreaking ? 'scale-125 rotate-6 brightness-150' : ''
                           } ${
                             isCurrent
@@ -749,26 +777,26 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                           )}
 
                           {isPaywallLocked ? (
-                            <Lock className="w-5 h-5 text-amber-400 drop-shadow-md" />
+                            <Lock className="w-4 h-4 text-amber-400 drop-shadow-md" />
                           ) : isCompleted ? (
-                            <CheckCircle className="w-6 h-6 text-amber-300 drop-shadow-md" />
+                            <CheckCircle className="w-5 h-5 text-amber-300 drop-shadow-md" />
                           ) : isCurrent ? (
-                            <Compass className="w-6 h-6 text-white animate-spin-slow drop-shadow-md" />
+                            <Compass className="w-5 h-5 text-white animate-spin-slow drop-shadow-md" />
                           ) : isUnlocked ? (
-                            <Play className="w-5 h-5 fill-white text-white drop-shadow-md" />
+                            <Play className="w-4 h-4 fill-white text-white drop-shadow-md" />
                           ) : (
-                            <Lock className="w-5 h-5 text-slate-500" />
+                            <Lock className="w-4 h-4 text-slate-500" />
                           )}
 
-                          <span className="text-xs font-black font-mono mt-0.5 tracking-wider">
+                          <span className="text-[11px] font-black font-mono mt-0.5 tracking-wider">
                             L{item.id}
                           </span>
                         </button>
 
                         {/* Title text under node */}
-                        <div className="mt-2 text-center max-w-[120px] bg-black/70 border border-white/20 rounded-lg p-1">
+                        <div className="mt-1.5 text-center max-w-[100px] bg-black/70 border border-white/20 rounded-lg p-1">
                           <p className={`text-[10px] font-mono font-bold truncate ${isCurrent ? 'text-amber-300' : isPaywallLocked ? 'text-amber-300' : isUnlocked ? 'text-white' : 'text-slate-500'}`}>
-                            {item.title.split(':')[0]}
+                            {item.title}
                           </p>
                           <p className="text-[9px] text-slate-300 truncate">
                             {item.titleZh}
@@ -781,9 +809,9 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 </div>
 
                 {/* Inter-Biome Portal Energy Conduit Bridge */}
-                {ch.unit < 12 && (() => {
-                  const isBridgeCompleted = profile.currentLessonId > ch.unit * 12;
-                  const isBridgeActive = profile.currentLessonId >= (ch.unit - 1) * 12 + 1 && profile.currentLessonId <= ch.unit * 12;
+                {ch.unit < 6 && (() => {
+                  const isBridgeCompleted = profile.currentLessonId > ch.unit * 24;
+                  const isBridgeActive = profile.currentLessonId >= (ch.unit - 1) * 24 + 1 && profile.currentLessonId <= ch.unit * 24;
 
                   return (
                     <div className="flex flex-col items-center justify-center -mb-8 mt-6 relative z-20">
@@ -828,128 +856,109 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           }}
           onStartPractice={(lesson) => {
             if (onCompleteLesson) {
-              onCompleteLesson(lesson.id);
+              setActiveLesson(null);
+              onSelectLessonForChat(lesson);
             }
-            setActiveLesson(null);
-            onSelectLessonForChat(lesson);
           }}
-          onAwardEmeralds={onAwardEmeralds}
           onOpenVipModal={onOpenVipModal}
         />
       )}
 
-      {/* NPC INTERACTION DIALOGUE MODAL */}
+      {/* NPC CHAT & TRIVIA MODAL */}
       {activeNPC && (
-        <div className="fixed inset-0 z-[110] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-[#1e293b] border-4 border-amber-400 rounded-3xl w-full max-w-lg text-white shadow-[16px_16px_0px_0px_rgba(0,0,0,0.6)] overflow-hidden my-auto space-y-4 p-5 sm:p-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-stone-900 via-neutral-900 to-black border-4 border-amber-500 rounded-3xl max-w-lg w-full p-6 text-white shadow-[0_0_40px_rgba(245,158,11,0.5)] relative font-mono space-y-4">
             
             <button
               type="button"
               onClick={() => setActiveNPC(null)}
-              className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white w-9 h-9 rounded-xl font-mono text-base font-black border-2 border-slate-600 flex items-center justify-center transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg"
             >
-              ✕
+              <X className="w-6 h-6" />
             </button>
 
             {/* NPC Header */}
-            <div className="flex items-center space-x-4 border-b-2 border-slate-700 pb-4">
-              <div className="w-16 h-16 bg-amber-500/20 border-3 border-amber-400 rounded-2xl flex items-center justify-center text-4xl shrink-0 shadow-lg animate-bounce">
+            <div className="flex items-center space-x-4 border-b border-white/10 pb-4">
+              <div className="w-16 h-16 bg-amber-500/20 border-2 border-amber-400 rounded-2xl flex items-center justify-center text-4xl shadow-inner">
                 {activeNPC.avatar}
               </div>
               <div>
-                <span className="text-[10px] font-mono font-black uppercase text-amber-300 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                <span className="text-[10px] bg-amber-400 text-black px-2 py-0.5 rounded font-black uppercase">
                   {activeNPC.locationName}
                 </span>
-                <h3 className="text-xl font-black font-mono text-amber-300 mt-1">
+                <h3 className="text-xl font-black text-amber-300 mt-1">
                   {activeNPC.nameZh}
                 </h3>
-                <p className="text-xs font-bold text-slate-300 font-mono">
+                <p className="text-xs text-slate-400 font-medium">
                   {activeNPC.name}
                 </p>
               </div>
             </div>
 
-            {/* Greeting Speech Bubble */}
-            <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl p-4 space-y-2 relative">
-              <div className="flex items-center justify-between text-amber-300 font-mono text-xs font-black">
-                <span>💬 NPC English Line:</span>
+            {/* NPC Spoken Dialogue */}
+            <div className="bg-black/60 border border-amber-500/30 p-4 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+                <span>NPC 问候寄语:</span>
                 <button
                   type="button"
                   onClick={() => speakText(activeNPC.greetingEn, { speaker: activeNPC.name })}
-                  className="p-1 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/40 rounded-lg flex items-center space-x-1 text-[10px]"
+                  className="flex items-center space-x-1 text-emerald-400 hover:text-emerald-300"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
-                  <span>朗读</span>
+                  <span>重听发音</span>
                 </button>
               </div>
-              <p className="text-sm font-mono font-black text-white leading-relaxed">
+              <p className="text-sm font-bold text-white leading-relaxed">
                 "{activeNPC.greetingEn}"
               </p>
-              <p className="text-xs text-amber-200/90 font-bold">
+              <p className="text-xs text-slate-300">
                 {activeNPC.greetingZh}
               </p>
             </div>
 
-            {/* Quick English Quiz Challenge */}
-            <div className="bg-amber-950/40 border-2 border-amber-500/50 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center space-x-2 text-amber-300 font-mono text-xs font-black">
-                <HelpCircle className="w-4 h-4 text-amber-400" />
-                <span>NPC 英语小考题 (解答赚取 ❇️ 绿宝石):</span>
+            {/* NPC English Trivia Quest */}
+            <div className="bg-gradient-to-r from-amber-950/60 to-stone-900 border-2 border-amber-500/40 p-4 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between text-xs font-black text-amber-300">
+                <span className="flex items-center space-x-1">
+                  <HelpCircle className="w-4 h-4 text-amber-400" />
+                  <span>领地英语小问答挑战</span>
+                </span>
+                <span className="text-emerald-400 font-bold">
+                  +{activeNPC.rewardEmeralds} ❇️ 绿宝石
+                </span>
               </div>
-              
-              <div className="bg-black/40 p-3 rounded-xl border border-white/10 space-y-1">
-                <p className="text-xs font-mono font-bold text-white">
-                  {activeNPC.triviaEn}
-                </p>
-                <p className="text-[11px] text-slate-300 font-bold">
-                  {activeNPC.triviaZh}
-                </p>
+
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-white">{activeNPC.triviaEn}</p>
+                <p className="text-slate-300">{activeNPC.triviaZh}</p>
               </div>
 
               {!npcQuizAnswered ? (
                 <button
                   type="button"
                   onClick={handleSolveNPCQuiz}
-                  className="w-full bg-amber-400 hover:bg-amber-300 text-amber-950 border-2 border-black py-3 rounded-xl font-mono text-xs font-black flex items-center justify-center space-x-1.5 shadow-[0_4px_0_0_#78350F] active:translate-y-0.5"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 border-2 border-black text-white py-2.5 rounded-xl font-black text-xs flex items-center justify-center space-x-2 shadow-[0_4px_0_0_#14532d] active:translate-y-0.5 cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-900" />
-                  <span>答对啦！领取 +{activeNPC.rewardEmeralds} 绿宝石</span>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>给出回答，领取 {activeNPC.rewardEmeralds} 绿宝石！</span>
                 </button>
               ) : (
-                <div className="p-3 bg-emerald-950/80 border-2 border-emerald-400 rounded-xl text-center text-xs font-mono text-emerald-200 font-bold flex items-center justify-center space-x-2">
+                <div className="bg-emerald-900/60 border border-emerald-500/50 p-3 rounded-xl text-center text-xs text-emerald-200 font-bold flex items-center justify-center space-x-2 animate-bounce">
                   <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  <span>回答正确！已放入你的装备背包 (+{activeNPC.rewardEmeralds} ❇️)</span>
+                  <span>已完成答题！获得 +{activeNPC.rewardEmeralds} 绿宝石 + 20 经验值！</span>
                 </div>
               )}
             </div>
-
-            {/* Modal Footer */}
-            <button
-              type="button"
-              onClick={() => setActiveNPC(null)}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-600 py-3 rounded-2xl font-mono text-xs font-bold"
-            >
-              继续我的世界大地图探索
-            </button>
 
           </div>
         </div>
       )}
 
-      {/* Locked Level Interactive Guidance Toast */}
+      {/* PROGRESSION LOCK NOTICE TOAST */}
       {lockedNotice && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
-          <div className="bg-slate-950/95 border-3 border-amber-500 text-amber-200 px-5 py-3 rounded-2xl shadow-[0_8px_25px_rgba(0,0,0,0.8)] font-mono text-xs sm:text-sm font-black flex items-center space-x-3">
-            <Lock className="w-5 h-5 text-amber-400 shrink-0" />
-            <span>{lockedNotice.msg}</span>
-            <button
-              type="button"
-              onClick={() => setLockedNotice(null)}
-              className="ml-2 text-slate-400 hover:text-white text-xs bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700"
-            >
-              知道了
-            </button>
-          </div>
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-stone-900/95 border-2 border-amber-500 text-white font-mono text-xs px-4 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-2 animate-bounce">
+          <Lock className="w-4 h-4 text-amber-400" />
+          <span>{lockedNotice.msg}</span>
         </div>
       )}
 
