@@ -839,15 +839,15 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
     <div className="w-full bg-slate-900 border-2 sm:border-4 border-[#355E20] rounded-2xl sm:rounded-[2rem] shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)] text-slate-100 font-sans relative overflow-hidden flex flex-col transition-all">
       
       {/* 1. Header & Channel Navigation Bar */}
-      <div className="bg-slate-950 border-b-2 border-slate-800 p-2.5 sm:p-3.5 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+      <div className="bg-slate-950 border-b-2 border-slate-800 p-2 sm:p-2.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
         
         {/* Channel Segmented Buttons */}
         <div className="flex items-center space-x-1 sm:space-x-1.5 overflow-x-auto scrollbar-none py-0.5">
           <button
             onClick={() => handleChannelSwitch('lessons')}
-            className={`px-3 py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 active:scale-95 ${
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 active:scale-95 ${
               currentChannel === 'lessons'
-                ? 'bg-[#487E2C] text-white border-2 border-[#7CFC00] shadow-[0_0_12px_rgba(72,126,44,0.6)]'
+                ? 'bg-[#487E2C] text-white border-2 border-[#7CFC00] shadow-[0_0_10px_rgba(72,126,44,0.5)]'
                 : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
             }`}
           >
@@ -857,9 +857,9 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           <button
             onClick={() => handleChannelSwitch('mc_stories')}
-            className={`px-3 py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 active:scale-95 ${
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 active:scale-95 ${
               currentChannel === 'mc_stories'
-                ? 'bg-amber-600 text-white border-2 border-amber-300 shadow-[0_0_12px_rgba(217,119,6,0.6)]'
+                ? 'bg-amber-600 text-white border-2 border-amber-300 shadow-[0_0_10px_rgba(217,119,6,0.5)]'
                 : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
             }`}
           >
@@ -869,9 +869,9 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           <button
             onClick={() => handleChannelSwitch('classic_fables')}
-            className={`px-3 py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 active:scale-95 ${
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 active:scale-95 ${
               currentChannel === 'classic_fables'
-                ? 'bg-purple-600 text-white border-2 border-purple-300 shadow-[0_0_12px_rgba(147,51,234,0.6)]'
+                ? 'bg-purple-600 text-white border-2 border-purple-300 shadow-[0_0_10px_rgba(147,51,234,0.5)]'
                 : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
             }`}
           >
@@ -881,9 +881,9 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           <button
             onClick={() => handleChannelSwitch('alex_chat')}
-            className={`px-3 py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 relative active:scale-95 ${
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center space-x-1.5 shrink-0 relative active:scale-95 ${
               currentChannel === 'alex_chat'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.6)]'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-2 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
                 : 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
             }`}
           >
@@ -962,14 +962,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           <div className="text-[11px] font-mono text-emerald-300 font-bold bg-emerald-950/60 px-2.5 py-1 rounded-xl border border-emerald-500/40 hidden sm:flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-emerald-400" />
-            <span>已听 {listenedMinutes} 分钟</span>
+            <span>已听 {listenedMinutes} 分</span>
           </div>
         </div>
       </div>
 
       {/* 2. Main Content View */}
       {currentChannel === 'alex_chat' ? (
-        <div className="p-3 sm:p-5">
+        <div className="p-3 sm:p-4">
           <AlexChatView
             profile={profile || ({} as UserProfile)}
             activeLesson={activeLessonForChat || (currentChannel === 'lessons' ? effectiveLessons.find(l => l.id === currentLessonItem.lessonId) || null : null)}
@@ -988,7 +988,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
         </div>
       ) : zenMode ? (
         /* ================= ZEN BLIND LISTENING FULL IMMERSION VIEW ================= */
-        <div className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-[520px] relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 animate-in fade-in zoom-in-95 duration-300">
+        <div className="p-3 sm:p-5 flex flex-col items-center justify-center min-h-[380px] sm:min-h-[420px] relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 animate-in fade-in zoom-in-95 duration-300">
           
           {/* Ambient Glow */}
           <div 
@@ -997,12 +997,12 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
           />
 
           {/* Top Zen Bar */}
-          <div className="w-full max-w-xl flex items-center justify-between gap-2 mb-4 relative z-10">
+          <div className="w-full max-w-xl flex items-center justify-between gap-2 mb-2 relative z-10">
             <div className="flex items-center space-x-2">
-              <span className="bg-slate-900/90 text-amber-300 px-3 py-1 rounded-xl border border-slate-800 font-mono font-bold text-xs flex items-center space-x-1.5 shadow-sm">
+              <span className="bg-slate-900/90 text-amber-300 px-2.5 py-0.5 rounded-xl border border-slate-800 font-mono font-bold text-xs flex items-center space-x-1.5 shadow-sm">
                 <span>{displayDisc.icon} Disc: {displayDisc.name}</span>
               </span>
-              <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold rounded-xl border border-emerald-500/40 flex items-center gap-1.5">
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold rounded-xl border border-emerald-500/40 flex items-center gap-1.5">
                 <Headphones className="w-3.5 h-3.5" />
                 <span>Zen 纯听力沉浸</span>
               </span>
@@ -1013,7 +1013,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                 playClickSound();
                 setZenMode(false);
               }}
-              className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-mono text-xs font-bold flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+              className="px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 font-mono text-xs font-bold flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
               title="退出 Zen 沉浸模式"
             >
               <Minimize2 className="w-3.5 h-3.5" />
@@ -1021,24 +1021,23 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             </button>
           </div>
 
-          {/* Giant Vinyl Record with Stylus in Zen Mode */}
-          <div className="relative py-4 sm:py-6 flex items-center justify-center relative z-10">
-            <div className="relative w-48 h-48 sm:w-64 sm:h-64 flex items-center justify-center">
+          {/* Vinyl Record in Zen Mode */}
+          <div className="relative py-2 sm:py-3 flex items-center justify-center relative z-10">
+            <div className="relative w-36 h-36 sm:w-48 sm:h-48 flex items-center justify-center">
               <div 
-                className="w-full h-full rounded-full border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_50px_rgba(0,0,0,0.95)] relative flex items-center justify-center"
+                className="w-full h-full rounded-full border-3 sm:border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_40px_rgba(0,0,0,0.9)] relative flex items-center justify-center"
                 style={{ transform: `rotate(${discRotation}deg)` }}
               >
                 {/* Concentric Groove Rings */}
-                <div className="absolute inset-3 rounded-full border border-slate-700/30" />
-                <div className="absolute inset-6 rounded-full border border-slate-700/50" />
-                <div className="absolute inset-9 rounded-full border border-slate-700/30" />
-                <div className="absolute inset-12 rounded-full border border-slate-700/40" />
-                <div className="absolute inset-16 rounded-full border border-slate-700/30" />
+                <div className="absolute inset-2 sm:inset-3 rounded-full border border-slate-700/30" />
+                <div className="absolute inset-4 sm:inset-6 rounded-full border border-slate-700/50" />
+                <div className="absolute inset-7 sm:inset-9 rounded-full border border-slate-700/30" />
+                <div className="absolute inset-10 sm:inset-12 rounded-full border border-slate-700/40" />
                 
                 {/* Vinyl Center Core Label */}
-                <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-xl relative`}>
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-slate-950 rounded-full border border-white/60 shadow-inner" />
-                  <span className="text-[9px] sm:text-xs font-mono font-black mt-1.5 uppercase tracking-wider text-amber-200">
+                <div className={`w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-xl relative`}>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-slate-950 rounded-full border border-white/60 shadow-inner" />
+                  <span className="text-[8px] sm:text-[10px] font-mono font-black mt-1 uppercase tracking-wider text-amber-200 truncate max-w-[90%] text-center">
                     {displayDisc.name}
                   </span>
                 </div>
@@ -1046,27 +1045,27 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
               {/* Stylus Tonearm Needle */}
               <div 
-                className={`absolute top-0 right-1 w-12 h-20 sm:w-16 sm:h-28 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right drop-shadow-xl ${
+                className={`absolute top-0 right-1 w-10 h-16 sm:w-14 sm:h-24 border-r-3 sm:border-r-4 border-t-3 sm:border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right drop-shadow-xl ${
                   isPlaying ? 'rotate-12' : '-rotate-12 opacity-60'
                 }`}
               >
-                <div className="absolute -bottom-1 -right-1.5 w-3.5 h-3.5 bg-amber-300 rounded-full border border-black" />
+                <div className="absolute -bottom-1 -right-1.5 w-3 h-3 bg-amber-300 rounded-full border border-black" />
               </div>
             </div>
           </div>
 
           {/* Dynamic Audio Visualizer Waves */}
-          <div className="flex items-center justify-center space-x-1.5 h-8 my-2 relative z-10">
+          <div className="flex items-center justify-center space-x-1.5 h-6 my-1.5 relative z-10">
             {[35, 75, 100, 50, 90, 60, 95, 45, 85, 70, 100, 40, 65, 80].map((heightPct, barIdx) => (
               <div
                 key={barIdx}
-                className={`w-1.5 rounded-full transition-all duration-300 ${
+                className={`w-1 rounded-full transition-all duration-300 ${
                   isPlaying
                     ? 'bg-gradient-to-t from-[#487E2C] via-emerald-400 to-amber-300 animate-pulse'
                     : 'bg-slate-800'
                 }`}
                 style={{
-                  height: isPlaying ? `${Math.max(20, heightPct)}%` : '5px',
+                  height: isPlaying ? `${Math.max(20, heightPct)}%` : '4px',
                   animationDelay: `${barIdx * 60}ms`
                 }}
               />
@@ -1074,11 +1073,11 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
           </div>
 
           {/* Track Headline in Zen Mode */}
-          <div className="text-center space-y-1 my-2 max-w-lg relative z-10">
-            <span className="text-sm font-mono text-amber-300 font-bold bg-amber-950/80 px-4 py-1 rounded-full border border-amber-500/40 inline-block shadow-sm">
+          <div className="text-center space-y-0.5 my-1.5 max-w-lg relative z-10">
+            <span className="text-xs sm:text-sm font-mono text-amber-300 font-bold bg-amber-950/80 px-3 py-0.5 rounded-full border border-amber-500/40 inline-block shadow-sm">
               {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}
             </span>
-            <p className="text-xs text-slate-400 font-mono">
+            <p className="text-[11px] text-slate-400 font-mono">
               主讲: <span className="text-white font-bold">{currentChannel === 'lessons' ? currentLessonItem?.speaker || 'Alex' : currentParagraph?.speaker || 'Alex'}</span>
               {currentChannel === 'lessons' && (
                 <span className="ml-2 text-emerald-400">· 进度 {safeCurrentIndex + 1} / {playlist.length} 句</span>
@@ -1088,37 +1087,37 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           {/* Interactive Shadow Echo Pause Bar (Zen Mode) */}
           {isEchoPausing && (
-            <div className="w-full max-w-md bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-2 border-amber-400/90 rounded-2xl p-3.5 my-2 animate-in fade-in zoom-in-95 duration-200 z-10 shadow-lg">
-              <div className="flex items-center justify-between text-xs font-mono mb-2">
-                <div className="flex items-center space-x-2 text-amber-300 font-black">
-                  <Mic className="w-4 h-4 text-amber-400 animate-bounce" />
+            <div className="w-full max-w-md bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-2 border-amber-400/90 rounded-2xl p-2.5 my-1.5 animate-in fade-in zoom-in-95 duration-200 z-10 shadow-lg">
+              <div className="flex items-center justify-between text-xs font-mono mb-1">
+                <div className="flex items-center space-x-1.5 text-amber-300 font-black">
+                  <Mic className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
                   <span>🎙️ 影子跟读：大声复述刚才听到的句子！</span>
                 </div>
                 <button
                   onClick={handleSkipEchoPause}
-                  className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-black text-xs flex items-center space-x-1 active:scale-95 transition-all shadow-sm cursor-pointer"
+                  className="px-2 py-0.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-black text-xs flex items-center space-x-1 active:scale-95 transition-all shadow-sm cursor-pointer"
                 >
                   <span>跳过</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-amber-400/40">
+              <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-amber-400/40">
                 <div 
                   className="bg-gradient-to-r from-amber-400 to-yellow-300 h-full rounded-full transition-all duration-1000 ease-linear"
                   style={{ width: `${echoTotalSeconds > 0 ? (echoRemainingSeconds / echoTotalSeconds) * 100 : 0}%` }}
                 />
               </div>
-              <div className="text-[11px] text-amber-200 font-mono mt-1 text-right font-bold">
+              <div className="text-[10px] text-amber-200 font-mono mt-0.5 text-right font-bold">
                 剩余练习时间: {echoRemainingSeconds} 秒
               </div>
             </div>
           )}
 
           {/* Subtitle Peek Strip in Zen Mode */}
-          <div className="w-full max-w-lg my-2 relative z-10">
+          <div className="w-full max-w-lg my-1.5 relative z-10">
             {zenShowSubtitlesTemp ? (
-              <div className="p-4 bg-slate-950/95 border border-slate-700/80 rounded-2xl text-center space-y-2 animate-in fade-in zoom-in-95 duration-200 shadow-xl">
-                <div className="text-lg sm:text-xl font-black text-white font-mono">
+              <div className="p-3 bg-slate-950/95 border border-slate-700/80 rounded-2xl text-center space-y-1.5 animate-in fade-in zoom-in-95 duration-200 shadow-xl">
+                <div className="text-base sm:text-lg font-black text-white font-mono">
                   <ProsodicSentence 
                     text={currentChannel === 'lessons' ? currentLessonItem?.english : (currentParagraph?.english || '')} 
                     showProsody={showProsodyCues} 
@@ -1128,12 +1127,12 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     }}
                   />
                 </div>
-                <p className="text-xs sm:text-sm text-emerald-300 font-medium font-mono">
+                <p className="text-xs text-emerald-300 font-medium font-mono">
                   {currentChannel === 'lessons' ? currentLessonItem?.chinese : (currentParagraph?.chinese || '')}
                 </p>
                 <button
                   onClick={() => setZenShowSubtitlesTemp(false)}
-                  className="text-[11px] text-slate-400 hover:text-white font-mono underline cursor-pointer pt-1"
+                  className="text-[10px] text-slate-400 hover:text-white font-mono underline cursor-pointer pt-0.5"
                 >
                   隐藏字幕返回纯盲听
                 </button>
@@ -1145,7 +1144,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     playClickSound();
                     setZenShowSubtitlesTemp(true);
                   }}
-                  className="px-4 py-2 rounded-2xl bg-slate-950/70 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-amber-300 font-mono text-xs flex items-center justify-center space-x-2 mx-auto transition-all cursor-pointer shadow-xs"
+                  className="px-3.5 py-1.5 rounded-2xl bg-slate-950/70 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-amber-300 font-mono text-xs flex items-center justify-center space-x-2 mx-auto transition-all cursor-pointer shadow-xs"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>🙈 盲听磨耳朵中 · 点击偷看原文字幕</span>
@@ -1156,8 +1155,8 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
           {/* Three Times Method Status */}
           {currentChannel === 'lessons' && playMode === 'three_times' && isPlaying && !isEchoPausing && (
-            <div className="flex justify-center my-1 relative z-10">
-              <div className="inline-flex items-center space-x-2 bg-[#1B3314] border border-[#7CFC00]/60 px-4 py-1.5 rounded-full text-xs font-mono text-emerald-300 shadow-sm animate-pulse">
+            <div className="flex justify-center my-0.5 relative z-10">
+              <div className="inline-flex items-center space-x-1.5 bg-[#1B3314] border border-[#7CFC00]/60 px-3 py-1 rounded-full text-xs font-mono text-emerald-300 shadow-sm animate-pulse">
                 <span>🎧 三遍精听: </span>
                 <span className="font-black text-amber-300">
                   {repeatCount === 1 ? '第 1 遍（听音律）' : repeatCount === 2 ? '第 2 遍（辨词义）' : '第 3 遍（跟读）'}
@@ -1167,74 +1166,74 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             </div>
           )}
 
-          {/* Zen Mode Big Transport Controls */}
-          <div className="flex items-center justify-center space-x-6 sm:space-x-10 mt-4 relative z-10">
+          {/* Zen Mode Transport Controls */}
+          <div className="flex items-center justify-center space-x-5 sm:space-x-8 mt-2 relative z-10">
             <button
               onClick={handlePrevTrack}
-              className="p-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-md cursor-pointer"
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700 active:scale-95 transition-all shadow-md cursor-pointer"
               title="上一句 / 上一段"
             >
-              <SkipBack className="w-6 h-6" />
+              <SkipBack className="w-5 h-5" />
             </button>
 
             <button
               onClick={handleTogglePlay}
-              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all shadow-2xl active:scale-95 cursor-pointer ${
+              className={`w-13 h-13 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center transition-all shadow-xl active:scale-95 cursor-pointer ${
                 isPlaying
-                  ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 border-amber-300 shadow-[0_0_35px_rgba(245,158,11,0.7)]'
-                  : 'bg-gradient-to-tr from-[#487E2C] to-emerald-600 text-white border-[#7CFC00] hover:from-[#355E20] hover:to-emerald-500 shadow-[0_0_35px_rgba(72,126,44,0.7)]'
+                  ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 border-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.6)]'
+                  : 'bg-gradient-to-tr from-[#487E2C] to-emerald-600 text-white border-[#7CFC00] hover:from-[#355E20] hover:to-emerald-500 shadow-[0_0_25px_rgba(72,126,44,0.6)]'
               }`}
               title={isPlaying ? '暂停' : '开始播讲'}
             >
-              {isPlaying ? <Pause className="w-8 h-8 fill-slate-950" /> : <Play className="w-8 h-8 fill-white ml-1" />}
+              {isPlaying ? <Pause className="w-6 h-6 fill-slate-950" /> : <Play className="w-6 h-6 fill-white ml-0.5" />}
             </button>
 
             <button
               onClick={() => handleNextTrack()}
-              className="p-3.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-md cursor-pointer"
+              className="p-2.5 sm:p-3 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700 active:scale-95 transition-all shadow-md cursor-pointer"
               title="下一句 / 下一段"
             >
-              <SkipForward className="w-6 h-6" />
+              <SkipForward className="w-5 h-5" />
             </button>
           </div>
 
         </div>
       ) : (
-        /* ================= IMMERSIVE 2-COLUMN RESPONSIVE BENTO LAYOUT ================= */
-        <div className="p-3 sm:p-5 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        /* ================= IMMERSIVE 2-COLUMN BALANCED BENTO LAYOUT (6:6 GRID) ================= */
+        <div className="p-2 sm:p-3 lg:p-3.5 grid grid-cols-1 lg:grid-cols-12 gap-2.5 sm:gap-3 items-stretch">
           
-          {/* ================= LEFT COLUMN: Jukebox Player & Subtitle Prompter (7 Cols) ================= */}
-          <div className="lg:col-span-7 flex flex-col space-y-3.5 sm:space-y-4">
+          {/* ================= LEFT COLUMN: Compact Hi-Fi Player Deck & Dynamic Subtitles (6 Cols) ================= */}
+          <div className="lg:col-span-6 flex flex-col space-y-2.5 sm:space-y-3">
             
-            {/* Jukebox Stage Card */}
-            <div className="relative bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-2 border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-inner overflow-hidden flex flex-col justify-between">
+            {/* Jukebox Stage Card - Compact High-Fi Design */}
+            <div className="relative bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-2 border-slate-800 rounded-2xl p-3 sm:p-3.5 shadow-inner overflow-hidden flex flex-col justify-between">
               
               {/* Dynamic Theme Glow */}
               <div 
                 className="absolute inset-0 pointer-events-none transition-all duration-700 opacity-20"
-                style={{ background: `radial-gradient(circle at center, ${displayDisc.glow || 'rgba(16,185,129,0.3)'} 0%, transparent 70%)` }}
+                style={{ background: `radial-gradient(circle at 30% 30%, ${displayDisc.glow || 'rgba(16,185,129,0.3)'} 0%, transparent 70%)` }}
               />
 
               {/* Stage Top Bar: Disc Badge & Scope Selector */}
-              <div className="flex items-center justify-between gap-2 mb-3 relative z-10">
-                <div className="flex items-center space-x-2">
-                  <span className="bg-slate-900 text-amber-300 px-2.5 py-1 rounded-xl border border-slate-800 font-mono font-bold text-xs flex items-center space-x-1.5 shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-2 relative z-10">
+                <div className="flex items-center space-x-1.5">
+                  <span className="bg-slate-900 text-amber-300 px-2 py-0.5 rounded-lg border border-slate-800 font-mono font-bold text-xs flex items-center space-x-1 shadow-xs">
                     <span>{displayDisc.icon} Disc: {displayDisc.name}</span>
                   </span>
                   {isPlaying && (
-                    <span className="flex items-center space-x-0.5 px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold rounded-md border border-emerald-500/40">
+                    <span className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold rounded-md border border-emerald-500/40">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-1" />
-                      正在播讲
+                      播讲中
                     </span>
                   )}
                 </div>
 
                 {/* Scope filter (Lesson Mode) */}
                 {currentChannel === 'lessons' ? (
-                  <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+                  <div className="flex items-center space-x-0.5 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px] sm:text-[11px] font-mono">
                     <button
                       onClick={() => handleScopeChange('all')}
-                      className={`px-2 py-0.5 rounded-lg transition-all font-bold ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded-md transition-all font-bold ${
                         playlistScope === 'all' ? 'bg-[#487E2C] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1242,7 +1241,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleScopeChange('current')}
-                      className={`px-2 py-0.5 rounded-lg transition-all font-bold ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded-md transition-all font-bold ${
                         playlistScope === 'current' ? 'bg-[#487E2C] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1250,7 +1249,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleScopeChange('recent5')}
-                      className={`px-2 py-0.5 rounded-lg transition-all font-bold ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded-md transition-all font-bold ${
                         playlistScope === 'recent5' ? 'bg-[#487E2C] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -1258,7 +1257,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleScopeChange('smart_review')}
-                      className={`px-2 py-0.5 rounded-lg transition-all font-bold flex items-center space-x-0.5 ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded-md transition-all font-bold flex items-center space-x-0.5 ${
                         playlistScope === 'smart_review' 
                           ? 'bg-gradient-to-r from-purple-600 to-amber-600 text-white shadow-xs' 
                           : 'text-amber-400/80 hover:text-amber-300'
@@ -1269,31 +1268,29 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                     </button>
                   </div>
                 ) : (
-                  <span className="text-xs font-mono text-amber-300 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                  <span className="text-[11px] font-mono text-amber-300 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
                     段落 {storyParagraphIdx + 1} / {currentStory.paragraphs.length}
                   </span>
                 )}
               </div>
 
-              {/* Jukebox Vinyl Record Stage with Stylus */}
-              <div className="relative py-2 sm:py-4 flex items-center justify-center">
+              {/* Compact Integrated Jukebox Strip */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-2.5 my-0.5 flex items-center gap-2.5 sm:gap-3.5 relative z-10 shadow-xs">
                 
-                {/* Vinyl Record */}
-                <div className="relative w-32 h-32 sm:w-44 sm:h-44 flex items-center justify-center">
+                {/* Compact Spinning Vinyl Disc with Stylus */}
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center">
                   <div 
-                    className="w-full h-full rounded-full border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_35px_rgba(0,0,0,0.9)] relative flex items-center justify-center"
+                    className="w-full h-full rounded-full border-2 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_15px_rgba(0,0,0,0.8)] relative flex items-center justify-center transition-transform"
                     style={{ transform: `rotate(${discRotation}deg)` }}
                   >
                     {/* Concentric Groove Rings */}
-                    <div className="absolute inset-2.5 rounded-full border border-slate-700/30" />
-                    <div className="absolute inset-5 rounded-full border border-slate-700/50" />
-                    <div className="absolute inset-8 rounded-full border border-slate-700/30" />
-                    <div className="absolute inset-11 rounded-full border border-slate-700/40" />
+                    <div className="absolute inset-1 rounded-full border border-slate-700/30" />
+                    <div className="absolute inset-2 rounded-full border border-slate-700/50" />
                     
                     {/* Vinyl Center Core Label */}
-                    <div className={`w-14 h-14 sm:w-18 sm:h-18 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-lg relative`}>
-                      <div className="w-3.5 h-3.5 bg-slate-950 rounded-full border border-white/60 shadow-inner" />
-                      <span className="text-[8px] sm:text-[9px] font-mono font-black mt-1 uppercase tracking-tighter text-amber-200">
+                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr ${displayDisc.color} border border-black flex flex-col items-center justify-center text-white shadow-md relative`}>
+                      <div className="w-1.5 h-1.5 bg-slate-950 rounded-full border border-white/60 shadow-inner" />
+                      <span className="text-[5px] sm:text-[6px] font-mono font-black uppercase tracking-tighter text-amber-200 truncate max-w-[90%] text-center">
                         {displayDisc.name}
                       </span>
                     </div>
@@ -1301,47 +1298,54 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
                   {/* Stylus Tonearm Needle */}
                   <div 
-                    className={`absolute top-0 right-1 w-10 h-16 sm:w-12 sm:h-20 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right drop-shadow-md ${
-                      isPlaying ? 'rotate-12' : '-rotate-12 opacity-60'
+                    className={`absolute -top-1 right-0 w-5 h-8 sm:w-6 sm:h-10 border-r-2 border-t-2 border-amber-400 rounded-tr-lg transition-transform duration-500 origin-top-right drop-shadow-sm pointer-events-none ${
+                      isPlaying ? 'rotate-12' : '-rotate-12 opacity-50'
                     }`}
                   >
-                    <div className="absolute -bottom-1 -right-1.5 w-3 h-3 bg-amber-300 rounded-full border border-black" />
+                    <div className="absolute -bottom-1 -right-0.5 w-1.5 h-1.5 bg-amber-300 rounded-full border border-black" />
                   </div>
                 </div>
+
+                {/* Track Info & Realtime Dynamic Audio Waves */}
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="text-xs sm:text-sm font-mono text-amber-300 font-black truncate">
+                      {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
+                      {currentChannel === 'lessons' ? `${safeCurrentIndex + 1}/${playlist.length} 句` : `第 ${storyParagraphIdx + 1} 段`}
+                    </span>
+                  </div>
+
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 font-mono">
+                    主讲: <span className="text-slate-200 font-bold">{currentChannel === 'lessons' ? currentLessonItem?.speaker || 'Alex' : currentParagraph?.speaker || 'Alex'}</span>
+                  </p>
+
+                  {/* Dynamic Soundwave Bars */}
+                  <div className="flex items-center space-x-1 h-3 pt-0.5">
+                    {[30, 65, 100, 45, 80, 50, 90, 40, 75, 55, 95, 35, 60, 85].map((heightPct, barIdx) => (
+                      <div
+                        key={barIdx}
+                        className={`w-0.5 sm:w-1 rounded-full transition-all duration-300 ${
+                          isPlaying
+                            ? 'bg-gradient-to-t from-emerald-500 to-amber-300 animate-pulse'
+                            : 'bg-slate-800'
+                        }`}
+                        style={{
+                          height: isPlaying ? `${Math.max(25, heightPct)}%` : '2px',
+                          animationDelay: `${barIdx * 60}ms`
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
               </div>
 
-              {/* Dynamic Audio Visualizer Waves (Normal View) */}
-              <div className="flex items-center justify-center space-x-1 sm:space-x-1.5 h-6 my-1 relative z-10">
-                {[30, 65, 100, 45, 80, 50, 90, 40, 75, 55, 95, 35].map((heightPct, barIdx) => (
-                  <div
-                    key={barIdx}
-                    className={`w-1 sm:w-1.5 rounded-full transition-all duration-300 ${
-                      isPlaying
-                        ? 'bg-gradient-to-t from-emerald-500 to-amber-300 animate-pulse'
-                        : 'bg-slate-800'
-                    }`}
-                    style={{
-                      height: isPlaying ? `${Math.max(20, heightPct)}%` : '4px',
-                      animationDelay: `${barIdx * 75}ms`
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Narrator & Track Headline */}
-              <div className="text-center space-y-1 my-1 relative z-10">
-                <span className="text-xs font-mono text-amber-400 font-bold bg-amber-950/60 px-3 py-0.5 rounded-full border border-amber-500/30 inline-block">
-                  {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}
-                </span>
-                <p className="text-xs text-slate-400 font-mono">
-                  主讲人: <span className="text-white font-bold">{currentChannel === 'lessons' ? currentLessonItem?.speaker || 'Alex' : currentParagraph?.speaker || 'Alex'}</span>
-                </p>
-              </div>
-
-              {/* Subtitle Teleprompter Board */}
-              <div className="my-2.5 p-4 sm:p-5 bg-slate-950/90 rounded-2xl border border-slate-800/90 min-h-[105px] flex flex-col justify-center items-center space-y-2 shadow-inner relative z-10">
+              {/* Subtitle Teleprompter Board - Extended & Prominent */}
+              <div className="my-1 p-2 sm:p-2.5 bg-slate-950/95 rounded-xl border border-slate-800 min-h-[68px] sm:min-h-[78px] flex flex-col justify-center items-center space-y-1 shadow-inner relative z-10">
                 {subtitleMode !== 'chinese_only' && subtitleMode !== 'blind_listening' && (
-                  <div className="text-base sm:text-2xl font-black text-white leading-relaxed tracking-wide text-center">
+                  <div className="text-sm sm:text-base lg:text-lg font-black text-white leading-snug tracking-wide text-center">
                     <ProsodicSentence 
                       text={currentChannel === 'lessons' ? currentLessonItem?.english : (currentParagraph?.english || '')} 
                       showProsody={showProsodyCues} 
@@ -1354,16 +1358,16 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                 )}
 
                 {subtitleMode !== 'english_only' && subtitleMode !== 'blind_listening' && (
-                  <p className="text-xs sm:text-sm text-slate-300 font-bold text-center">
+                  <p className="text-[11px] sm:text-xs text-slate-300 font-bold text-center">
                     {currentChannel === 'lessons' ? currentLessonItem?.chinese : (currentParagraph?.chinese || '')}
                   </p>
                 )}
 
                 {subtitleMode === 'blind_listening' && (
-                  <div className="text-center space-y-1.5 py-1">
-                    <p className="text-xs text-amber-300 font-mono italic flex items-center justify-center gap-1.5">
+                  <div className="text-center space-y-1 py-0.5">
+                    <p className="text-[11px] text-amber-300 font-mono italic flex items-center justify-center gap-1">
                       <span>🙈</span>
-                      <span>盲听磨耳朵模式 · 专注辨听原声音调与连读</span>
+                      <span>盲听磨耳朵模式 · 专注辨听原声音调</span>
                     </p>
                     <button
                       onClick={() => {
@@ -1380,36 +1384,36 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
               {/* Interactive Shadow Echo Pause Bar */}
               {isEchoPausing && (
-                <div className="bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-2 border-amber-400/80 rounded-2xl p-3 my-2 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="flex items-center justify-between text-xs font-mono mb-1.5">
-                    <div className="flex items-center space-x-2 text-amber-300 font-black">
-                      <Mic className="w-4 h-4 text-amber-400 animate-bounce" />
+                <div className="bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-2 border-amber-400/80 rounded-xl p-2 my-1 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center justify-between text-xs font-mono mb-1">
+                    <div className="flex items-center space-x-1.5 text-amber-300 font-black">
+                      <Mic className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
                       <span>🎙️ 影子跟读槽：请大声模仿刚才的英文！</span>
                     </div>
                     <button
                       onClick={handleSkipEchoPause}
-                      className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg font-black text-xs flex items-center space-x-1 active:scale-95 transition-all shadow-sm cursor-pointer"
+                      className="px-2 py-0.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-md font-black text-[11px] flex items-center space-x-1 active:scale-95 transition-all shadow-xs cursor-pointer"
                     >
                       <span>跳过</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-amber-400/40">
+                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-amber-400/40">
                     <div 
                       className="bg-gradient-to-r from-amber-400 to-yellow-300 h-full rounded-full transition-all duration-1000 ease-linear"
                       style={{ width: `${echoTotalSeconds > 0 ? (echoRemainingSeconds / echoTotalSeconds) * 100 : 0}%` }}
                     />
                   </div>
-                  <div className="text-[10px] text-amber-200/80 font-mono mt-1 text-right">
-                    剩余练习时间: {echoRemainingSeconds} 秒
+                  <div className="text-[10px] text-amber-200/80 font-mono mt-0.5 text-right font-bold">
+                    剩余练习: {echoRemainingSeconds} 秒
                   </div>
                 </div>
               )}
 
               {/* Three-Times Method Status Indicator */}
               {currentChannel === 'lessons' && playMode === 'three_times' && isPlaying && !isEchoPausing && (
-                <div className="flex justify-center my-1">
-                  <div className="inline-flex items-center space-x-2 bg-[#1B3314] border border-[#7CFC00]/60 px-3.5 py-1 rounded-full text-xs font-mono text-emerald-300 shadow-sm animate-pulse">
+                <div className="flex justify-center my-0.5">
+                  <div className="inline-flex items-center space-x-1.5 bg-[#1B3314] border border-[#7CFC00]/60 px-3 py-0.5 rounded-full text-[11px] font-mono text-emerald-300 shadow-xs animate-pulse">
                     <span>🎧 三遍精听法: </span>
                     <span className="font-black text-amber-300">
                       {repeatCount === 1 ? '第 1 遍（听辨音律）' : repeatCount === 2 ? '第 2 遍（强化理解）' : '第 3 遍（口型跟读）'}
@@ -1422,42 +1426,42 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             </div>
 
             {/* Transport Control Deck */}
-            <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 space-y-3.5">
+            <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-2.5 sm:p-3 space-y-2">
               
               {/* Play Progress & Transport Buttons */}
-              <div className="flex items-center justify-center space-x-4 sm:space-x-8">
+              <div className="flex items-center justify-center space-x-3 sm:space-x-6">
                 <button
                   onClick={handlePrevTrack}
-                  className="p-3 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-sm cursor-pointer"
+                  className="p-2 sm:p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700 active:scale-95 transition-all shadow-xs cursor-pointer"
                   title="上一句 / 上一段"
                 >
-                  <SkipBack className="w-5 h-5" />
+                  <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                   onClick={handleTogglePlay}
-                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center transition-all shadow-xl active:scale-95 cursor-pointer ${
+                  className={`w-11 h-11 sm:w-13 sm:h-13 rounded-full border-2 flex items-center justify-center transition-all shadow-lg active:scale-95 cursor-pointer ${
                     isPlaying
-                      ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 border-amber-300 shadow-[0_0_25px_rgba(245,158,11,0.6)]'
-                      : 'bg-gradient-to-tr from-[#487E2C] to-emerald-600 text-white border-[#7CFC00] hover:from-[#355E20] hover:to-emerald-500 shadow-[0_0_25px_rgba(72,126,44,0.6)]'
+                      ? 'bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)]'
+                      : 'bg-gradient-to-tr from-[#487E2C] to-emerald-600 text-white border-[#7CFC00] hover:from-[#355E20] hover:to-emerald-500 shadow-[0_0_20px_rgba(72,126,44,0.5)]'
                   }`}
                   title={isPlaying ? '暂停' : '开始播讲'}
                 >
-                  {isPlaying ? <Pause className="w-7 h-7 fill-slate-950" /> : <Play className="w-7 h-7 fill-white ml-1" />}
+                  {isPlaying ? <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-slate-950" /> : <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-white ml-0.5" />}
                 </button>
 
                 <button
                   onClick={() => handleNextTrack()}
-                  className="p-3 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-2xl border border-slate-700 active:scale-95 transition-all shadow-sm cursor-pointer"
+                  className="p-2 sm:p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700 active:scale-95 transition-all shadow-xs cursor-pointer"
                   title="下一句 / 下一段"
                 >
-                  <SkipForward className="w-5 h-5" />
+                  <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 
               {/* Play Mode Selector Ribbon (Lesson Channel) */}
               {currentChannel === 'lessons' && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 pt-1 text-xs font-mono">
+                <div className="grid grid-cols-4 gap-1 pt-0.5 text-[10px] sm:text-[11px] font-mono">
                   <button
                     onClick={() => {
                       playClickSound();
@@ -1466,14 +1470,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       setRepeatCount(1);
                       repeatCountRef.current = 1;
                     }}
-                    className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
+                    className={`p-1.5 rounded-lg border flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer ${
                       playMode === 'three_times'
                         ? 'bg-[#487E2C]/30 border-[#7CFC00] text-emerald-200 font-black shadow-xs'
                         : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    <span>三遍精听法</span>
+                    <Sparkles className="w-3 h-3 text-amber-400" />
+                    <span>三遍精听</span>
                   </button>
 
                   <button
@@ -1484,14 +1488,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       setRepeatCount(1);
                       repeatCountRef.current = 1;
                     }}
-                    className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
+                    className={`p-1.5 rounded-lg border flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer ${
                       playMode === 'sequential'
                         ? 'bg-[#487E2C]/30 border-[#7CFC00] text-emerald-200 font-black shadow-xs'
                         : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
-                    <Repeat className="w-3.5 h-3.5" />
-                    <span>顺序连续播</span>
+                    <Repeat className="w-3 h-3" />
+                    <span>顺序播</span>
                   </button>
 
                   <button
@@ -1502,14 +1506,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       setRepeatCount(1);
                       repeatCountRef.current = 1;
                     }}
-                    className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
+                    className={`p-1.5 rounded-lg border flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer ${
                       playMode === 'shuffle'
                         ? 'bg-[#487E2C]/30 border-[#7CFC00] text-emerald-200 font-black shadow-xs'
                         : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
-                    <Shuffle className="w-3.5 h-3.5" />
-                    <span>随机混播</span>
+                    <Shuffle className="w-3 h-3" />
+                    <span>随机播</span>
                   </button>
 
                   <button
@@ -1520,21 +1524,21 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       setRepeatCount(1);
                       repeatCountRef.current = 1;
                     }}
-                    className={`p-2 rounded-xl border flex flex-col items-center justify-center space-y-1 transition-all cursor-pointer ${
+                    className={`p-1.5 rounded-lg border flex flex-col items-center justify-center space-y-0.5 transition-all cursor-pointer ${
                       playMode === 'single_loop'
                         ? 'bg-[#487E2C]/30 border-[#7CFC00] text-emerald-200 font-black shadow-xs'
                         : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
-                    <Disc className="w-3.5 h-3.5" />
+                    <Disc className="w-3 h-3" />
                     <span>单句循环</span>
                   </button>
                 </div>
               )}
 
               {/* Subtitle & Audio Feature Buttons (Cleaned Up & Streamlined) */}
-              <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                <div className="flex items-center space-x-2">
+              <div className="bg-slate-900/90 p-1.5 sm:p-2 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-1.5 text-[10px] sm:text-[11px] font-mono">
+                <div className="flex items-center space-x-1.5">
                   <button
                     onClick={() => {
                       playClickSound();
@@ -1546,14 +1550,14 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                         onAfterLessonSentenceEnded(currentIndexRef.current, repeatCountRef.current);
                       }
                     }}
-                    className={`px-2.5 py-1 rounded-lg border font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 rounded-md border font-bold flex items-center space-x-1 transition-all cursor-pointer ${
                       enableEchoPause 
                         ? 'bg-amber-500/20 border-amber-400/70 text-amber-300' 
                         : 'bg-slate-950 border-slate-800 text-slate-400'
                     }`}
                   >
-                    <Mic className="w-3 h-3" />
-                    <span>影子跟读停顿 ({enableEchoPause ? '开启' : '关闭'})</span>
+                    <Mic className="w-2.5 h-2.5" />
+                    <span>跟读停顿 ({enableEchoPause ? '开' : '关'})</span>
                   </button>
 
                   <button
@@ -1561,27 +1565,27 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       playClickSound();
                       setShowProsodyCues(!showProsodyCues);
                     }}
-                    className={`px-2.5 py-1 rounded-lg border font-bold flex items-center space-x-1.5 transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 rounded-md border font-bold flex items-center space-x-1 transition-all cursor-pointer ${
                       showProsodyCues 
                         ? 'bg-emerald-500/20 border-emerald-400/70 text-emerald-300' 
                         : 'bg-slate-950 border-slate-800 text-slate-400'
                     }`}
                   >
-                    <Sparkle className="w-3 h-3" />
+                    <Sparkle className="w-2.5 h-2.5" />
                     <span>连读标注</span>
                   </button>
                 </div>
 
-                <div className="flex items-center space-x-1.5">
+                <div className="flex items-center space-x-1">
                   <button
                     onClick={() => {
                       playClickSound();
                       setShowSettingsDrawer(true);
                     }}
-                    className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 text-emerald-300 hover:text-emerald-200 rounded-lg border border-slate-800 text-xs font-bold cursor-pointer flex items-center space-x-1"
+                    className="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 text-emerald-300 hover:text-emerald-200 rounded-md border border-slate-800 text-[10px] sm:text-[11px] font-bold cursor-pointer flex items-center space-x-1"
                     title="展开调音台设置"
                   >
-                    <Sliders className="w-3 h-3 text-emerald-400" />
+                    <Sliders className="w-2.5 h-2.5 text-emerald-400" />
                     <span>{speechRate}x · {subtitleMode === 'bilingual' ? '双语' : subtitleMode === 'english_only' ? '纯英' : subtitleMode === 'chinese_only' ? '纯中' : '盲听'}</span>
                   </button>
                 </div>
@@ -1590,47 +1594,47 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             </div>
 
             {/* Quick 1-Click Transition to Alex Chat */}
-            <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-emerald-950/80 border-2 border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-              <div className="flex items-center space-x-3 text-left">
-                <div className="w-10 h-10 rounded-2xl bg-[#487E2C] border-2 border-[#7CFC00] flex items-center justify-center text-xl shrink-0">
+            <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-emerald-950/80 border-2 border-emerald-500/40 rounded-xl p-2 sm:p-2.5 flex items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center space-x-2 text-left min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#487E2C] border border-[#7CFC00] flex items-center justify-center text-base shrink-0">
                   👩‍🦰
                 </div>
-                <div>
-                  <h4 className="font-black text-xs sm:text-sm text-white font-mono flex items-center gap-1.5">
-                    <span>听后说联动：与 Alex 老师探讨本篇</span>
-                    <span className="px-1.5 py-0.2 bg-[#FF6321] text-white text-[9px] font-black rounded-full">+5💎</span>
+                <div className="min-w-0">
+                  <h4 className="font-black text-[11px] sm:text-xs text-white font-mono flex items-center gap-1 truncate">
+                    <span>听后说实战：与 Alex 交流本篇</span>
+                    <span className="px-1 py-0.2 bg-[#FF6321] text-white text-[8px] font-black rounded-full">+5💎</span>
                   </h4>
-                  <p className="text-[11px] text-emerald-300/80 font-mono mt-0.5">
-                    针对《{currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}》开展智能口语实战
+                  <p className="text-[10px] text-emerald-300/80 font-mono truncate">
+                    针对《{currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.titleZh}》练口语
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={handleLaunchAlexChatForCurrent}
-                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 text-slate-950 font-mono font-black text-xs rounded-xl border-2 border-emerald-300 shadow-md flex items-center justify-center space-x-1.5 active:scale-95 transition-all shrink-0 cursor-pointer"
+                className="px-2.5 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 text-slate-950 font-mono font-black text-xs rounded-lg border border-emerald-300 shadow-xs flex items-center space-x-1 active:scale-95 transition-all shrink-0 cursor-pointer"
               >
-                <PhoneCall className="w-3.5 h-3.5 text-slate-950" />
-                <span>🎙️ 连线 Alex 交流</span>
+                <PhoneCall className="w-3 h-3 text-slate-950" />
+                <span>连线</span>
               </button>
             </div>
 
           </div>
 
-          {/* ================= RIGHT COLUMN: Interactive Playlist & Story Catalog & Vocab Chest (5 Cols) ================= */}
-          <div className="lg:col-span-5 flex flex-col space-y-3.5 sm:space-y-4">
+          {/* ================= RIGHT COLUMN: Interactive Playlist & Story Catalog & Vocab Chest (6 Cols) ================= */}
+          <div className="lg:col-span-6 flex flex-col space-y-2.5 sm:space-y-3">
             
             {/* If Story Channel: Story Catalog Carousel */}
             {currentChannel !== 'lessons' && (
-              <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 space-y-3">
+              <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-2.5 sm:p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-mono font-black text-xs sm:text-sm text-white flex items-center space-x-1.5">
-                    <BookMarked className="w-4 h-4 text-amber-400" />
-                    <span>故事剧目选集 ({activeStories.length})</span>
+                  <h4 className="font-mono font-black text-xs text-white flex items-center space-x-1.5">
+                    <BookMarked className="w-3.5 h-3.5 text-amber-400" />
+                    <span>故事选集 ({activeStories.length})</span>
                   </h4>
                 </div>
 
-                <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                <div className="space-y-1 max-h-28 overflow-y-auto custom-scrollbar pr-1">
                   {activeStories.map(story => (
                     <button
                       key={story.id}
@@ -1642,20 +1646,20 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                         storyParagraphIdxRef.current = 0;
                         setTimeout(() => playStoryParagraph(story, 0), 150);
                       }}
-                      className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                      className={`w-full p-1.5 rounded-lg border text-left flex items-center justify-between transition-all cursor-pointer ${
                         selectedStoryId === story.id
-                          ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-sm'
+                          ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-xs'
                           : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800/80'
                       }`}
                     >
-                      <div className="flex items-center space-x-2.5 min-w-0">
-                        <span className="text-xl shrink-0">{story.discTheme.icon}</span>
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <span className="text-base shrink-0">{story.discTheme.icon}</span>
                         <div className="min-w-0">
                           <div className="font-bold text-xs truncate font-mono">{story.titleZh}</div>
-                          <div className="text-[10px] text-slate-400 truncate font-mono">{story.title}</div>
+                          <div className="text-[9px] text-slate-400 truncate font-mono">{story.title}</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono bg-slate-950 px-2 py-0.5 rounded text-amber-400 shrink-0">
+                      <span className="text-[9px] font-mono bg-slate-950 px-1.5 py-0.5 rounded text-amber-400 shrink-0">
                         {story.durationApprox}
                       </span>
                     </button>
@@ -1665,39 +1669,39 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
             )}
 
             {/* Playlist Track Items / Story Paragraphs */}
-            <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 space-y-3 flex-1 flex flex-col">
+            <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-2.5 sm:p-3 space-y-2 flex-1 flex flex-col">
               
               {/* Header with Title & Quick Controls */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-1.5 pb-1.5 border-b border-slate-800">
                 <div className="flex items-center space-x-1.5">
-                  <List className="w-4 h-4 text-emerald-400" />
-                  <h4 className="font-mono font-black text-xs sm:text-sm text-white">
+                  <List className="w-3.5 h-3.5 text-emerald-400" />
+                  <h4 className="font-mono font-black text-xs text-white">
                     {currentChannel === 'lessons' 
-                      ? `课文剧目列表 (${lessonGroups.length} 课 · ${playlist.length} 句)` 
+                      ? `课文剧目 (${lessonGroups.length} 课 · ${playlist.length} 句)` 
                       : `故事段落 (${currentStory.paragraphs.length} 段)`}
                   </h4>
                 </div>
 
                 {currentChannel === 'lessons' ? (
-                  <div className="flex items-center space-x-1.5 text-[11px] font-mono">
+                  <div className="flex items-center space-x-1 text-[10px] font-mono">
                     <button
                       onClick={expandAllLessons}
-                      className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all cursor-pointer"
+                      className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all cursor-pointer"
                       title="展开所有课文"
                     >
-                      展开全部
+                      展开
                     </button>
                     <button
                       onClick={collapseAllLessons}
-                      className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all cursor-pointer"
+                      className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all cursor-pointer"
                       title="只保留当前播放课文"
                     >
-                      全部折叠
+                      折叠
                     </button>
                   </div>
                 ) : (
-                  <span className="text-[11px] font-mono text-slate-400">
-                    当前第 {storyParagraphIdx + 1} 段
+                  <span className="text-[10px] font-mono text-slate-400">
+                    第 {storyParagraphIdx + 1} 段
                   </span>
                 )}
               </div>
@@ -1705,30 +1709,30 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
               {/* Lesson Channel Quick Search / Filter Bar */}
               {currentChannel === 'lessons' && lessonGroups.length > 3 && (
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Search className="w-3 h-3 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     value={lessonFilterQuery}
                     onChange={(e) => setLessonFilterQuery(e.target.value)}
-                    placeholder="搜索课文标题、课号或重点句 (如: Lesson 1 / handbag)..."
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-8 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-all"
+                    placeholder="搜索课文标题、课号或重点句..."
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-7 pr-7 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-all"
                   />
                   {lessonFilterQuery && (
                     <button
                       onClick={() => setLessonFilterQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-3 h-3" />
                     </button>
                   )}
                 </div>
               )}
 
               {/* Scrollable Grouped Lesson List */}
-              <div className="space-y-2.5 max-h-[380px] lg:max-h-[460px] overflow-y-auto custom-scrollbar pr-1 flex-1">
+              <div className="space-y-1.5 max-h-[280px] sm:max-h-[320px] lg:max-h-[350px] xl:max-h-[380px] overflow-y-auto custom-scrollbar pr-1 flex-1">
                 {currentChannel === 'lessons' ? (
                   filteredLessonGroups.length === 0 ? (
-                    <div className="py-8 text-center text-slate-500 font-mono text-xs">
+                    <div className="py-6 text-center text-slate-500 font-mono text-xs">
                       没有匹配到相关课文或句子
                     </div>
                   ) : (
@@ -1739,19 +1743,19 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                       return (
                         <div
                           key={group.lessonId}
-                          className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                          className={`rounded-xl border transition-all duration-200 overflow-hidden ${
                             isGroupActive
-                              ? 'bg-[#12230e] border-[#7CFC00]/60 shadow-[0_0_15px_rgba(124,252,0,0.15)]'
+                              ? 'bg-[#12230e] border-[#7CFC00]/60 shadow-[0_0_12px_rgba(124,252,0,0.12)]'
                               : 'bg-slate-900/90 border-slate-800/90 hover:border-slate-700'
                           }`}
                         >
                           {/* Lesson Card Accordion Header */}
                           <div
                             onClick={() => toggleLessonExpand(group.lessonId)}
-                            className="p-2.5 sm:p-3 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-white/[0.03] transition-colors"
+                            className="p-2 sm:p-2.5 flex items-center justify-between gap-1.5 cursor-pointer select-none hover:bg-white/[0.03] transition-colors"
                           >
-                            <div className="flex items-center space-x-2.5 min-w-0">
-                              <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-mono font-black shrink-0 border ${
+                            <div className="flex items-center space-x-2 min-w-0">
+                              <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-mono font-black shrink-0 border ${
                                 isGroupActive
                                   ? 'bg-[#487E2C] text-white border-[#7CFC00]'
                                   : 'bg-slate-950 text-slate-300 border-slate-800'
@@ -1761,27 +1765,27 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
                               <div className="min-w-0">
                                 <div className="flex items-center space-x-1.5">
-                                  <span className={`font-mono font-bold text-xs truncate ${
+                                  <span className={`font-mono font-bold text-[11px] sm:text-xs truncate ${
                                     isGroupActive ? 'text-emerald-300' : 'text-white'
                                   }`}>
                                     {group.lessonTitle}
                                   </span>
                                   {isGroupActive && isPlaying && (
-                                    <span className="flex items-center space-x-0.5 px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 text-[9px] font-mono font-black rounded border border-emerald-500/40 shrink-0">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-0.5" />
-                                      正在播放
+                                    <span className="flex items-center space-x-0.5 px-1 py-0.2 bg-emerald-500/20 text-emerald-300 text-[8px] font-mono font-black rounded border border-emerald-500/40 shrink-0">
+                                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping mr-0.5" />
+                                      播放中
                                     </span>
                                   )}
                                 </div>
                                 {group.lessonTitleZh && (
-                                  <p className="text-[10px] text-slate-400 font-mono truncate">
+                                  <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono truncate">
                                     {group.lessonTitleZh}
                                   </p>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex items-center space-x-1.5 shrink-0">
+                            <div className="flex items-center space-x-1 shrink-0">
                               {/* Quick Play Button for this whole lesson */}
                               <button
                                 type="button"
@@ -1793,23 +1797,22 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                                   currentIndexRef.current = firstGlobalIndex;
                                   setRepeatCount(1);
                                   repeatCountRef.current = 1;
-                                  // Ensure expanded
                                   setExpandedLessonIds(prev => new Set(prev).add(group.lessonId));
                                   playLessonItem(firstGlobalIndex, 1);
                                 }}
-                                className={`p-1.5 rounded-xl border flex items-center space-x-1 text-[10px] font-mono font-black transition-all active:scale-95 ${
+                                className={`p-1 rounded-lg border flex items-center space-x-0.5 text-[9px] font-mono font-black transition-all active:scale-95 ${
                                   isGroupActive && isPlaying
                                     ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-xs'
                                     : 'bg-slate-950 hover:bg-[#487E2C] text-slate-300 hover:text-white border-slate-800'
                                 }`}
                                 title="播放整课"
                               >
-                                <Play className="w-3 h-3 fill-current" />
-                                <span className="hidden sm:inline">{group.items.length} 句</span>
+                                <Play className="w-2.5 h-2.5 fill-current" />
+                                <span className="hidden sm:inline">{group.items.length}句</span>
                               </button>
 
                               <ChevronDown
-                                className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                                className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
                                   isExpanded ? 'rotate-180 text-emerald-400' : ''
                                 }`}
                               />
@@ -1818,7 +1821,7 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
 
                           {/* Expanded Sentences Inside This Lesson */}
                           {isExpanded && (
-                            <div className="p-2 pt-0 space-y-1.5 border-t border-slate-800/80 bg-slate-950/60 animate-in fade-in duration-150">
+                            <div className="p-1.5 pt-0 space-y-1 border-t border-slate-800/80 bg-slate-950/60 animate-in fade-in duration-150">
                               {group.items.map(({ item, globalIndex }, itemIdx) => {
                                 const isCurrent = globalIndex === safeCurrentIndex;
                                 return (
@@ -1833,39 +1836,39 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                                       repeatCountRef.current = 1;
                                       playLessonItem(globalIndex, 1);
                                     }}
-                                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-start space-x-2 ${
+                                    className={`p-1.5 sm:p-2 rounded-lg border text-left transition-all cursor-pointer flex items-start space-x-1.5 ${
                                       isCurrent
-                                        ? 'bg-[#1B3314] border-[#7CFC00] text-emerald-100 shadow-sm'
+                                        ? 'bg-[#1B3314] border-[#7CFC00] text-emerald-100 shadow-xs'
                                         : 'bg-slate-900/70 border-slate-800/70 text-slate-300 hover:bg-slate-850 hover:border-slate-700'
                                     }`}
                                   >
                                     <div className="mt-0.5 shrink-0">
                                       {isCurrent && isPlaying ? (
-                                        <span className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-[8px] font-black animate-pulse">
+                                        <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center text-[7px] font-black animate-pulse">
                                           ▶
                                         </span>
                                       ) : (
-                                        <span className="w-4 h-4 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[9px] font-mono">
+                                        <span className="w-3.5 h-3.5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[8px] font-mono">
                                           {itemIdx + 1}
                                         </span>
                                       )}
                                     </div>
 
                                     <div className="min-w-0 flex-1">
-                                      <div className="flex items-center space-x-1.5 mb-0.5">
-                                        <span className="text-[9px] font-mono bg-slate-950 px-1.5 py-0.2 rounded text-slate-400">
+                                      <div className="flex items-center space-x-1 mb-0.5">
+                                        <span className="text-[8px] font-mono bg-slate-950 px-1 py-0.2 rounded text-slate-400">
                                           {item.speaker}
                                         </span>
                                         {item.type === 'target_sentence' && (
-                                          <span className="text-[9px] font-mono text-amber-400/90 bg-amber-950/60 px-1 rounded">
-                                            重点句
+                                          <span className="text-[8px] font-mono text-amber-400/90 bg-amber-950/60 px-1 rounded">
+                                            重点
                                           </span>
                                         )}
                                       </div>
-                                      <p className={`text-xs font-bold font-mono leading-tight ${isCurrent ? 'text-white' : 'text-slate-200'}`}>
+                                      <p className={`text-[11px] sm:text-xs font-bold font-mono leading-tight ${isCurrent ? 'text-white' : 'text-slate-200'}`}>
                                         {item.english}
                                       </p>
-                                      <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                                      <p className="text-[9px] sm:text-[10px] text-slate-400 mt-0.5 font-mono">
                                         {item.chinese}
                                       </p>
                                     </div>
@@ -1891,34 +1894,34 @@ export const RadioImmersionView: React.FC<RadioImmersionViewProps> = ({
                           storyParagraphIdxRef.current = pIdx;
                           playStoryParagraph(currentStory, pIdx);
                         }}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start space-x-2.5 ${
+                        className={`p-2 rounded-lg border text-left transition-all cursor-pointer flex items-start space-x-2 ${
                           isCurrent
-                            ? 'bg-amber-950/40 border-amber-400 text-amber-100 shadow-sm'
+                            ? 'bg-amber-950/40 border-amber-400 text-amber-100 shadow-xs'
                             : 'bg-slate-900/80 border-slate-800/80 text-slate-300 hover:bg-slate-900'
                         }`}
                       >
                         <div className="mt-0.5 shrink-0">
                           {isCurrent && isPlaying ? (
-                            <span className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[10px] font-black animate-pulse">
+                            <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center text-[8px] font-black animate-pulse">
                               ▶
                             </span>
                           ) : (
-                            <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-mono">
+                            <span className="w-4 h-4 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[9px] font-mono">
                               {pIdx + 1}
                             </span>
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center space-x-1.5 mb-0.5">
-                            <span className="text-[10px] font-mono bg-slate-950 px-1.5 py-0.2 rounded text-amber-300">
+                          <div className="flex items-center space-x-1 mb-0.5">
+                            <span className="text-[9px] font-mono bg-slate-950 px-1 py-0.2 rounded text-amber-300">
                               {p.speaker}
                             </span>
                           </div>
                           <p className={`text-xs font-bold font-mono ${isCurrent ? 'text-white' : 'text-slate-200'}`}>
                             {p.english}
                           </p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
+                          <p className="text-[10px] text-slate-400 mt-0.5">
                             {p.chinese}
                           </p>
                         </div>

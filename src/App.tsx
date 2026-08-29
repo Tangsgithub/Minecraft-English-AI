@@ -151,15 +151,22 @@ const sanitizeProfile = (raw: any): UserProfile => {
       const uSet = new Set<number>(Array.isArray(vp.unlockedLessonIds) ? vp.unlockedLessonIds : [1]);
       uSet.add(1);
 
-      cSet.forEach(id => {
-        uSet.add(id);
-        if (id < totalCount) {
-          uSet.add(id + 1);
+      const isVolUnlocked = isVipUser || activatedVols.includes(vId) || activatedVols.includes('all');
+      if (isVolUnlocked && vId === 'vol1') {
+        for (let i = 1; i <= totalCount; i++) {
+          uSet.add(i);
         }
-      });
+      } else {
+        cSet.forEach(id => {
+          uSet.add(id);
+          if (id < totalCount) {
+            uSet.add(id + 1);
+          }
+        });
 
-      if (vp.currentLessonId) {
-        uSet.add(vp.currentLessonId);
+        if (vp.currentLessonId) {
+          uSet.add(vp.currentLessonId);
+        }
       }
 
       vp.unlockedLessonIds = Array.from(uSet).sort((a, b) => a - b);
@@ -715,7 +722,9 @@ export default function App() {
       />
 
       {/* Main App Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 py-3 sm:py-6 flex flex-col space-y-4 sm:space-y-5 pb-safe">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 flex flex-col pb-safe ${
+        activeTab === 'radio' ? 'py-1.5 sm:py-2.5 space-y-2 sm:space-y-2.5' : 'py-3 sm:py-6 space-y-4 sm:space-y-5'
+      }`}>
         
         {/* Navigation Tabs Bar (Responsive Mobile Optimized) */}
         <nav className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1 sm:p-2 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">

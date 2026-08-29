@@ -985,41 +985,70 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
               )}
             </div>
 
-            {/* Spinning Minecraft Vinyl Record */}
-            <div className="relative w-28 h-28 sm:w-36 sm:h-36 landscape-compact-disc mx-auto my-1 sm:my-2 flex items-center justify-center transition-all">
-              {/* Outer Grooves */}
-              <div 
-                className="w-full h-full rounded-full border-4 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_25px_rgba(0,0,0,0.8)] relative flex items-center justify-center"
-                style={{ transform: `rotate(${discRotation}deg)` }}
-              >
-                {/* Vinyl Ring Lines */}
-                <div className="absolute inset-2 rounded-full border border-slate-700/40" />
-                <div className="absolute inset-4 rounded-full border border-slate-700/60" />
-                <div className="absolute inset-6 rounded-full border border-slate-700/40" />
-                
-                {/* Center Disc Color Core */}
-                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr ${displayDisc.color} border-2 border-black flex flex-col items-center justify-center text-white shadow-md relative`}>
-                  <div className="w-3 h-3 bg-slate-950 rounded-full border border-white/50" />
-                  <span className="text-[7px] sm:text-[8px] font-mono font-black mt-0.5 uppercase tracking-tighter">MC DISK</span>
+            {/* Compact Integrated Jukebox Strip (Refined proportions) */}
+            <div className="bg-slate-950/80 border border-slate-700/80 rounded-xl p-2.5 sm:p-3 my-1 flex items-center gap-3 sm:gap-4 text-left shadow-sm">
+              
+              {/* Spinning Minecraft Vinyl Record */}
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center">
+                {/* Outer Grooves */}
+                <div 
+                  className="w-full h-full rounded-full border-2 border-black bg-gradient-to-tr from-slate-950 via-slate-800 to-slate-950 shadow-[0_0_15px_rgba(0,0,0,0.8)] relative flex items-center justify-center transition-transform"
+                  style={{ transform: `rotate(${discRotation}deg)` }}
+                >
+                  {/* Vinyl Ring Lines */}
+                  <div className="absolute inset-1 rounded-full border border-slate-700/40" />
+                  <div className="absolute inset-2.5 rounded-full border border-slate-700/60" />
+                  
+                  {/* Center Disc Color Core */}
+                  <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-tr ${displayDisc.color} border border-black flex flex-col items-center justify-center text-white shadow-md relative`}>
+                    <div className="w-1.5 h-1.5 bg-slate-950 rounded-full border border-white/50" />
+                    <span className="text-[5px] font-mono font-black uppercase tracking-tighter text-amber-200 truncate">DISC</span>
+                  </div>
+                </div>
+
+                {/* Tonearm Stylus needle */}
+                <div 
+                  className={`absolute -top-1 right-0 w-5 h-8 sm:w-6 sm:h-9 border-r-2 border-t-2 border-amber-400 rounded-tr-lg transition-transform duration-500 origin-top-right pointer-events-none ${
+                    isPlaying ? 'rotate-12' : '-rotate-12 opacity-50'
+                  }`}
+                >
+                  <div className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-300 rounded-full border border-black" />
                 </div>
               </div>
 
-              {/* Tonearm Stylus needle */}
-              <div 
-                className={`absolute top-0 right-2 w-8 h-12 sm:w-10 sm:h-16 border-r-4 border-t-4 border-amber-400 rounded-tr-2xl transition-transform duration-500 origin-top-right ${
-                  isPlaying ? 'rotate-12' : '-rotate-12 opacity-60'
-                }`}
-              />
-            </div>
+              {/* Title & Narrator Badge */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs sm:text-sm font-mono text-amber-300 font-bold truncate">
+                    {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.categoryName}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                    {currentChannel === 'lessons' ? `${safeCurrentIndex + 1}/${playlist.length}句` : `第${storyParagraphIdx + 1}段`}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-mono">
+                  讲读: <span className="text-slate-200 font-bold">{currentSpeaker === 'Steve' ? '👨 Steve (美音男声)' : '👩‍🦰 Alex (美音女声)'}</span>
+                </p>
 
-            {/* Title & Narrator Badge */}
-            <div className="space-y-1 mt-1 sm:mt-2">
-              <span className="text-[11px] font-mono text-amber-400 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/30">
-                {currentChannel === 'lessons' ? currentLessonItem?.lessonTitle : currentStory.categoryName}
-              </span>
-              <p className="text-xs text-slate-400 font-mono font-semibold">
-                讲读人: <span className="text-white font-bold">{currentSpeaker === 'Steve' ? '👨 Steve (美音男声)' : '👩‍🦰 Alex (美音女声)'}</span>
-              </p>
+                {/* Dynamic Soundwave Bars */}
+                <div className="flex items-center space-x-1 h-3 pt-0.5">
+                  {[25, 60, 100, 40, 75, 50, 90, 35, 70, 50, 90, 30].map((heightPct, barIdx) => (
+                    <div
+                      key={barIdx}
+                      className={`w-0.5 sm:w-1 rounded-full transition-all duration-300 ${
+                        isPlaying
+                          ? 'bg-gradient-to-t from-emerald-500 to-amber-300 animate-pulse'
+                          : 'bg-slate-800'
+                      }`}
+                      style={{
+                        height: isPlaying ? `${Math.max(25, heightPct)}%` : '3px',
+                        animationDelay: `${barIdx * 60}ms`
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             {/* Subtitles Box with Prosodic Visual Cues */}

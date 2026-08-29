@@ -223,21 +223,16 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
         mediaRecorderRef.current = recorder;
         setIsRecording(true);
       } else {
-        simulateRecording();
+        // Microphone API not available in this environment
+        setIsRecording(true);
+        setHasRealRecording(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Microphone access permission or device missing:", err);
-      simulateRecording();
-    }
-  };
-
-  const simulateRecording = () => {
-    setIsRecording(true);
-    setHasRealRecording(false);
-    setTimeout(() => {
+      setShowMicPermissionGuide(true);
       setIsRecording(false);
-      finishAssessment(targetText);
-    }, 2800);
+      finishAssessment('');
+    }
   };
 
   const stopRecording = () => {
@@ -264,11 +259,11 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   };
 
   const finishAssessment = (spoken: string) => {
-    const duration = Math.max(1.5, recordingSeconds);
+    const duration = Math.max(1.0, recordingSeconds);
     const result = evaluateSpeech(targetText, spoken, duration);
     setEvaluationResult(result);
 
-    // Audio & Confetti Feedback
+    // Audio & Confetti Feedback (Only for genuine 4+ stars)
     if (result.stars >= 4) {
       playLevelUpSound();
       try {
@@ -278,16 +273,16 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
           origin: { y: 0.6 }
         });
       } catch {}
-    } else {
+    } else if (result.stars >= 3) {
       playEmeraldSound();
     }
 
-    // Award rewards
-    if (onAwardEmeralds) {
+    // Award rewards only if valid speech score >= 40
+    if (onAwardEmeralds && result.overallScore >= 40 && (result.emeraldReward > 0 || result.xpReward > 0)) {
       onAwardEmeralds(result.emeraldReward, result.xpReward, '口语跟读打分');
     }
 
-    // Auto master word if 4+ stars
+    // Auto master word only if genuinely 4+ stars
     if (result.stars >= 4 && onMasterWord && targetText.split(' ').length <= 2) {
       onMasterWord(targetText);
     }

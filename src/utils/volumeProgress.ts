@@ -125,8 +125,9 @@ export function getLessonUnlockStatus(
   // Lesson 1 is always the start node.
   // For lessonId > 1, previous lesson (lessonId - 1) must be completed.
   // If this lesson is already completed or recorded in unlockedList, it is progression-unlocked.
+  const isVolFullyUnlocked = isVolumeFullyUnlocked(profile, volumeId);
   const isPrevCompleted = lessonId === 1 || completedList.includes(lessonId - 1);
-  const isProgressionUnlocked = isPrevCompleted || isCompleted || unlockedList.includes(lessonId);
+  const isProgressionUnlocked = isVolFullyUnlocked || isPrevCompleted || isCompleted || unlockedList.includes(lessonId);
   const isProgressionLocked = hasAccess && !isProgressionUnlocked;
 
   const isUnlocked = hasAccess && isProgressionUnlocked;

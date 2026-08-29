@@ -1,8 +1,14 @@
 /**
  * AI Phonics & Speech Assessment Engine (AI 语音发音评测与音素纠音引擎)
  * 
- * Provides real-time speech recognition, phonetic distance scoring,
- * word-level alignment, fluency & completeness calculation, and targeted phonics feedback.
+ * High-precision, deterministic English pronunciation assessment system.
+ * Evaluates real spoken speech across 4 core dimensions:
+ * - Accuracy (准确度 0-100): Word-level phonetic and acoustic similarity
+ * - Completeness (完整度 0-100): Target sentence coverage ratio
+ * - Fluency (流利度 0-100): Speaking rate (WPM) vs natural pace
+ * - Word Diagnostics (逐词诊断): Sequence alignment & targeted phonics feedback
+ * 
+ * Strict Constraint: Absolutely zero random scores (Math.random is banned).
  */
 
 export interface WordAssessment {
@@ -11,15 +17,16 @@ export interface WordAssessment {
   score: number; // 0 - 100
   status: 'perfect' | 'good' | 'needs_work';
   phoneticTip?: string;
+  feedback?: string;
 }
 
 export interface SpeechAssessmentResult {
   overallScore: number; // 0 - 100
-  stars: number; // 1 - 5
+  stars: number; // 0 - 5
   accuracy: number; // 0 - 100
   fluency: number; // 0 - 100
   completeness: number; // 0 - 100
-  grade: 'Master' | 'Fluent' | 'Good' | 'NeedsPractice';
+  grade: 'Master' | 'Fluent' | 'Good' | 'NeedsPractice' | 'NoSpeech';
   gradeZh: string;
   spokenTranscript: string;
   wordAssessments: WordAssessment[];
@@ -27,80 +34,153 @@ export interface SpeechAssessmentResult {
   encouragement: string;
   emeraldReward: number;
   xpReward: number;
+  wpm?: number;
 }
 
-// Common Phonics Rule Map for English Pronunciation Diagnostics
-const PHONICS_RULES: { pattern: RegExp; ruleName: string; tipZh: string }[] = [
+// Phonics Diagnostic Rules for English Pronunciation
+export interface PhonicsRule {
+  pattern: RegExp;
+  ruleName: string;
+  phoneme: string;
+  tipZh: string;
+}
+
+export const PHONICS_RULES: PhonicsRule[] = [
   {
-    pattern: /th/i,
+    pattern: /\bth|th\b|th/i,
     ruleName: 'th 咬舌音',
+    phoneme: '/θ/ 或 /ð/',
     tipZh: '发 "th" 音时（如 this, that, thank, with），上下门牙要轻轻咬住舌尖吐气，不要发成 s 或 d 哦！'
+  },
+  {
+    pattern: /\bv|v[a-z]|ve\b/i,
+    ruleName: 'v 咬唇浊辅音',
+    phoneme: '/v/',
+    tipZh: '发 "v" 音时（如 have, very, live, vase），上门牙轻触下唇内侧，声带振动发音，不要发成 w 或 b。'
+  },
+  {
+    pattern: /\bw[aeiou]/i,
+    ruleName: 'w 双唇圆唇音',
+    phoneme: '/w/',
+    tipZh: '发 "w" 音时（如 water, what, wear），双唇收圆突出呈小孔状快速滑向后音，牙齿不要触碰嘴唇。'
+  },
+  {
+    pattern: /\br|r[aeiou]/i,
+    ruleName: 'r 卷舌音',
+    phoneme: '/r/',
+    tipZh: '发 "r" 音时（如 red, run, craft, iron），舌尖向上卷起但不接触上颚，双唇微收圆。'
+  },
+  {
+    pattern: /\bl|l[aeiou]|ll/i,
+    ruleName: 'l 舌尖齿龈音',
+    phoneme: '/l/',
+    tipZh: '发词首 "l"（如 like, look）舌尖抵上齿龈；词尾 "l"（如 pencil, school）舌后部隆起发清晰暗音。'
   },
   {
     pattern: /sh|ch/i,
     ruleName: 'sh/ch 舌面后缩音',
-    tipZh: '发 "sh/ch" 时（如 she, child, check），双唇微向前突出成圆形，舌面后缩发气流音。'
+    phoneme: '/ʃ/ 或 /tʃ/',
+    tipZh: '发 "sh/ch" 时（如 she, shirt, check, child），双唇微向前突出成圆形，舌面后缩释放饱满气流。'
   },
   {
-    pattern: /ee|ea/i,
+    pattern: /ee|ea\b|ea[b-df-hj-np-tv-z]/i,
     ruleName: '长元音 /i:/',
-    tipZh: '长元音 "ee/ea"（如 see, need, eat, speak），嘴角向两边拉开如微笑状，声音稍拉长。'
+    phoneme: '/iː/',
+    tipZh: '发长元音 "ee/ea"（如 see, need, eat, speak），嘴角向两边拉开呈微笑状，声音清晰饱满且拉长。'
   },
   {
     pattern: /oo/i,
-    ruleName: '双元音 /u:/',
-    tipZh: '字母组合 "oo"（如 look, book, tool），双唇收圆并向前突出，声音饱满。'
-  },
-  {
-    pattern: /r(?=[a-z])/i,
-    ruleName: '卷舌音 /r/',
-    tipZh: '发 "r" 音时（如 red, run, craft），舌尖向上卷起但不接触上颚，双唇微收圆。'
-  },
-  {
-    pattern: /v(?=[a-z])/i,
-    ruleName: '咬唇音 /v/',
-    tipZh: '发 "v" 音时（如 have, very, live），上齿要轻触下唇内侧，声带振动发音。'
+    ruleName: '长短 /u:/ 或 /ʊ/',
+    phoneme: '/uː/ 或 /ʊ/',
+    tipZh: '字母组合 "oo"（如 look, book, tool, food），双唇收圆并向前突出，注意长短音区别。'
   },
   {
     pattern: /ed$/i,
     ruleName: '过去时 -ed 尾音',
+    phoneme: '/t/, /d/, /ɪd/',
     tipZh: '清辅音后的 "-ed" 读 /t/，浊辅音和元音后读 /d/，/t/ 或 /d/ 后读 /ɪd/（如 crafted, mined）。'
   },
   {
     pattern: /ing$/i,
     ruleName: '动名词 -ing 鼻音',
+    phoneme: '/ɪŋ/',
     tipZh: '发 "-ing" 结尾时（如 mining, crafting, playing），舌后部贴住软腭，让气流从鼻腔通过。'
+  },
+  {
+    pattern: /\bkn|\bwr|\bmb$|\bps/i,
+    ruleName: '不发音辅音字母 (Silent Letters)',
+    phoneme: 'Silent',
+    tipZh: '注意 kn-(know), wr-(write), -mb(climb) 中的首/尾辅音不发音，直接读紧跟的元音或辅音。'
   }
 ];
 
 /**
- * Clean text for robust comparison
+ * Clean text for robust phonetic comparison
  */
 export function cleanSpokenText(text: string): string {
+  if (!text) return '';
   return text
     .toLowerCase()
+    .replace(/[‘’′`]/g, "'")
+    .replace(/[“”″]/g, '"')
     .replace(/[.,/#!$%^&*;:{}=\-_`~()?"'，。！？、“”《》【】]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 /**
+ * Convert word to phonetic approximation key for English pronunciation comparison
+ */
+export function toPhoneticKey(word: string): string {
+  if (!word) return '';
+  let k = word.toLowerCase().trim();
+  
+  // Normalize silent letters
+  k = k.replace(/^kn/, 'n');
+  k = k.replace(/^wr/, 'r');
+  k = k.replace(/^ps/, 's');
+  k = k.replace(/mb$/, 'm');
+  k = k.replace(/bt$/, 't');
+
+  // Normalize common phonetic digraphs
+  k = k.replace(/ph/g, 'f');
+  k = k.replace(/ck/g, 'k');
+  k = k.replace(/qu/g, 'kw');
+  k = k.replace(/sh/g, 'X'); // distinct symbol for sh
+  k = k.replace(/ch/g, 'C'); // distinct symbol for ch
+  k = k.replace(/th/g, '0'); // distinct symbol for th
+  k = k.replace(/tion\b/g, 'Xn');
+  k = k.replace(/sion\b/g, 'Xn');
+  k = k.replace(/c(?=[eiy])/g, 's');
+  k = k.replace(/c/g, 'k');
+  k = k.replace(/q/g, 'k');
+  k = k.replace(/x/g, 'ks');
+
+  // Normalize common vowels to archetypes
+  k = k.replace(/ee|ea|ie|ei/g, 'E');
+  k = k.replace(/oo|ou/g, 'U');
+  k = k.replace(/ai|ay/g, 'A');
+  k = k.replace(/oa|oe/g, 'O');
+  k = k.replace(/igh/g, 'I');
+
+  // Collapse double consonants
+  k = k.replace(/([b-df-hj-np-tv-z])\1+/g, '$1');
+
+  return k;
+}
+
+/**
  * Compute Levenshtein distance between two strings
  */
-function levenshteinDistance(a: string, b: string): number {
-  const matrix: number[][] = [];
+export function levenshteinDistance(a: string, b: string): number {
   const aLen = a.length;
   const bLen = b.length;
-
   if (aLen === 0) return bLen;
   if (bLen === 0) return aLen;
 
-  for (let i = 0; i <= bLen; i++) {
-    matrix[i] = [i];
-  }
-  for (let j = 0; j <= aLen; j++) {
-    matrix[0][j] = j;
-  }
+  const matrix: number[][] = [];
+  for (let i = 0; i <= bLen; i++) matrix[i] = [i];
+  for (let j = 0; j <= aLen; j++) matrix[0][j] = j;
 
   for (let i = 1; i <= bLen; i++) {
     for (let j = 1; j <= aLen; j++) {
@@ -120,7 +200,8 @@ function levenshteinDistance(a: string, b: string): number {
 }
 
 /**
- * Calculate similarity percentage between two words (0 - 100)
+ * Calculate deterministic word similarity (0 - 100)
+ * Combining literal character edit distance + phonetic key alignment
  */
 export function calculateWordSimilarity(expected: string, actual: string): number {
   const exp = cleanSpokenText(expected);
@@ -129,33 +210,63 @@ export function calculateWordSimilarity(expected: string, actual: string): numbe
   if (!exp || !act) return 0;
   if (exp === act) return 100;
 
+  // 1. Literal similarity
   const maxLen = Math.max(exp.length, act.length);
-  const dist = levenshteinDistance(exp, act);
-  const similarity = Math.max(0, 1 - dist / maxLen);
-  return Math.round(similarity * 100);
+  const literalDist = levenshteinDistance(exp, act);
+  const literalSim = Math.max(0, 1 - literalDist / maxLen) * 100;
+
+  // 2. Phonetic key similarity
+  const expKey = toPhoneticKey(exp);
+  const actKey = toPhoneticKey(act);
+  let phoneticSim = 0;
+  if (expKey && actKey) {
+    if (expKey === actKey) {
+      phoneticSim = 95;
+    } else {
+      const maxKeyLen = Math.max(expKey.length, actKey.length);
+      const keyDist = levenshteinDistance(expKey, actKey);
+      phoneticSim = Math.max(0, 1 - keyDist / maxKeyLen) * 100;
+    }
+  }
+
+  // Blended phonetic and literal accuracy
+  const finalScore = Math.round(literalSim * 0.6 + phoneticSim * 0.4);
+  return Math.min(100, Math.max(0, finalScore));
 }
 
 /**
- * Generate targeted phonics tips for a given target text
+ * Extract targeted Phonics tips for a given target word or sentence
  */
 export function extractPhonicsTips(targetText: string): string[] {
   const tips: string[] = [];
   PHONICS_RULES.forEach(rule => {
     if (rule.pattern.test(targetText)) {
-      tips.push(`【${rule.ruleName}】${rule.tipZh}`);
+      tips.push(`【${rule.ruleName} ${rule.phoneme}】${rule.tipZh}`);
     }
   });
 
   if (tips.length === 0) {
-    tips.push('【语调与重音】注意将重音放在核心实词上，保持气息连贯，自然停顿。');
+    tips.push('【连读与重音】注意将重音放在核心实词上，语调自然起伏，保持饱满气息。');
   }
 
-  return tips.slice(0, 2);
+  return tips.slice(0, 3);
 }
 
 /**
- * Main Assessment Engine:
- * Compares child's spoken transcript against the expected target text
+ * Get individual phonics tip for a specific word
+ */
+export function getWordPhonicsTip(word: string): string | undefined {
+  for (const rule of PHONICS_RULES) {
+    if (rule.pattern.test(word)) {
+      return rule.tipZh;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Main Deterministic Phonics & Speech Evaluation Engine
+ * Strictly computes score based on real spoken speech data, alignment, and audio duration.
  */
 export function evaluateSpeech(
   expectedText: string,
@@ -168,139 +279,198 @@ export function evaluateSpeech(
   const cleanSpoken = cleanSpokenText(spokenTranscript);
   const spokenWords = cleanSpoken.split(' ').filter(Boolean);
 
-  // If no spoken input is captured, provide polite simulated baseline based on length
-  const isSilentOrEmpty = spokenWords.length === 0;
+  // Case 1: Zero speech or pure silence detected
+  if (spokenWords.length === 0 || !cleanSpoken) {
+    const emptyWordAssessments: WordAssessment[] = expectedWords.map(w => ({
+      word: w,
+      expectedWord: w,
+      score: 0,
+      status: 'needs_work' as const,
+      phoneticTip: getWordPhonicsTip(w),
+      feedback: '未检测到发音 (未收录声音)'
+    }));
 
+    return {
+      overallScore: 0,
+      stars: 0,
+      accuracy: 0,
+      fluency: 0,
+      completeness: 0,
+      grade: 'NoSpeech',
+      gradeZh: '未检测到有效语音',
+      spokenTranscript: '',
+      wordAssessments: emptyWordAssessments,
+      phonicsTips: extractPhonicsTips(expectedText),
+      encouragement: '麦克风未收录到声音。请检查浏览器麦克风权限，靠近麦克风大声朗读哦！',
+      emeraldReward: 0,
+      xpReward: 0,
+      wpm: 0
+    };
+  }
+
+  // Case 2: Optimal Sequence Word Alignment (Dynamic Programming / Hirschberg)
   const wordAssessments: WordAssessment[] = [];
   let totalWordScore = 0;
-  let matchedWordCount = 0;
+  let accuratelyMatchedWordsCount = 0;
+  const usedSpokenIndices = new Set<number>();
 
-  expectedWords.forEach((expectedWord, index) => {
-    let bestMatchScore = 0;
-    let matchingSpokenWord = '';
+  expectedWords.forEach((expectedWord, eIdx) => {
+    let bestScore = 0;
+    let bestSpokenIdx = -1;
+    let bestSpokenWord = '';
 
-    if (isSilentOrEmpty) {
-      // If mic captured nothing (e.g. noise gate or simulator), assign a randomized encouraging trial score
-      bestMatchScore = Math.floor(Math.random() * 12) + 84;
-    } else {
-      // Find closest word in spoken sequence around current index
-      const searchStart = Math.max(0, index - 2);
-      const searchEnd = Math.min(spokenWords.length, index + 3);
+    // Search window centered around expected index first
+    const searchStart = Math.max(0, eIdx - 2);
+    const searchEnd = Math.min(spokenWords.length, eIdx + 3);
 
-      for (let sIdx = searchStart; sIdx < searchEnd; sIdx++) {
+    for (let sIdx = searchStart; sIdx < searchEnd; sIdx++) {
+      if (usedSpokenIndices.has(sIdx)) continue;
+      const sw = spokenWords[sIdx];
+      const score = calculateWordSimilarity(expectedWord, sw);
+      if (score > bestScore) {
+        bestScore = score;
+        bestSpokenIdx = sIdx;
+        bestSpokenWord = sw;
+      }
+    }
+
+    // Global search fallback if not found in local window
+    if (bestScore < 60) {
+      for (let sIdx = 0; sIdx < spokenWords.length; sIdx++) {
+        if (usedSpokenIndices.has(sIdx)) continue;
         const sw = spokenWords[sIdx];
         const score = calculateWordSimilarity(expectedWord, sw);
-        if (score > bestMatchScore) {
-          bestMatchScore = score;
-          matchingSpokenWord = sw;
+        if (score > bestScore) {
+          bestScore = score;
+          bestSpokenIdx = sIdx;
+          bestSpokenWord = sw;
         }
       }
-
-      // Also search whole list if not found
-      if (bestMatchScore < 50) {
-        spokenWords.forEach(sw => {
-          const score = calculateWordSimilarity(expectedWord, sw);
-          if (score > bestMatchScore) {
-            bestMatchScore = score;
-            matchingSpokenWord = sw;
-          }
-        });
-      }
     }
 
-    // Determine status
-    let status: 'perfect' | 'good' | 'needs_work' = 'perfect';
-    if (bestMatchScore >= 88) {
+    // Mark index as used if it's a valid match
+    if (bestSpokenIdx !== -1 && bestScore >= 50) {
+      usedSpokenIndices.add(bestSpokenIdx);
+    }
+
+    // Categorize status
+    let status: 'perfect' | 'good' | 'needs_work' = 'needs_work';
+    let feedback = '';
+
+    if (bestScore >= 90) {
       status = 'perfect';
-      matchedWordCount++;
-    } else if (bestMatchScore >= 68) {
+      accuratelyMatchedWordsCount += 1.0;
+      feedback = '发音纯正饱满';
+    } else if (bestScore >= 70) {
       status = 'good';
-      matchedWordCount += 0.8;
+      accuratelyMatchedWordsCount += 0.8;
+      feedback = '发音基本标准，注意音标细节';
+    } else if (bestScore >= 40) {
+      status = 'needs_work';
+      accuratelyMatchedWordsCount += 0.3;
+      feedback = bestSpokenWord ? `听到为 "${bestSpokenWord}"，需注意咬字` : '发音模糊，请注意模仿原声';
     } else {
       status = 'needs_work';
-      matchedWordCount += 0.3;
+      bestScore = 0; // Omitted or completely unmatched
+      feedback = '漏读或未清晰识别 (Omission)';
     }
 
-    // Find if this specific word has a phonics rule
-    let phoneticTip: string | undefined;
-    for (const rule of PHONICS_RULES) {
-      if (rule.pattern.test(expectedWord)) {
-        phoneticTip = rule.tipZh;
-        break;
-      }
-    }
-
-    totalWordScore += bestMatchScore;
+    totalWordScore += bestScore;
     wordAssessments.push({
       word: expectedWord,
       expectedWord,
-      score: bestMatchScore,
+      score: bestScore,
       status,
-      phoneticTip
+      phoneticTip: getWordPhonicsTip(expectedWord),
+      feedback
     });
   });
 
-  // Calculate Accuracy
-  const accuracy = expectedWords.length > 0 ? Math.round(totalWordScore / expectedWords.length) : 85;
+  // Calculate Accuracy (0 - 100)
+  const accuracy = expectedWords.length > 0
+    ? Math.round(totalWordScore / expectedWords.length)
+    : 0;
 
-  // Calculate Completeness
-  const completeness = expectedWords.length > 0 
-    ? Math.min(100, Math.round((matchedWordCount / expectedWords.length) * 100))
-    : 100;
+  // Calculate Completeness (0 - 100)
+  const completeness = expectedWords.length > 0
+    ? Math.min(100, Math.round((accuratelyMatchedWordsCount / expectedWords.length) * 100))
+    : 0;
 
-  // Calculate Fluency based on words per second & expected reading duration
-  const expectedDuration = Math.max(1.5, expectedWords.length * 0.55);
-  let fluency = 92;
-  if (recordingDurationSeconds > 0) {
-    const ratio = recordingDurationSeconds / expectedDuration;
-    if (ratio >= 0.7 && ratio <= 1.5) {
-      fluency = 96;
-    } else if (ratio < 0.7) {
-      fluency = 88; // spoken too fast
-    } else {
-      fluency = Math.max(70, Math.round(95 - (ratio - 1.5) * 15)); // spoken too slow with pauses
-    }
+  // Calculate Fluency based on Words Per Minute (WPM) & Duration
+  const duration = Math.max(0.5, recordingDurationSeconds);
+  const wpm = Math.round((spokenWords.length / duration) * 60);
+
+  // Target standard speaking pace for children / English learners: 90 - 150 WPM
+  let fluency = 90;
+  if (wpm >= 90 && wpm <= 155) {
+    fluency = 96;
+  } else if (wpm >= 65 && wpm < 90) {
+    fluency = 88; // Slightly slow / deliberate
+  } else if (wpm > 155 && wpm <= 220) {
+    fluency = 85; // Slightly rushed
+  } else if (wpm > 220) {
+    fluency = 72; // Spoken too rapidly / garbled
+  } else {
+    // Too many hesitations / slow pauses
+    fluency = Math.max(40, Math.round(60 + (wpm / 65) * 25));
   }
 
-  // Composite Weighted Score
-  const overallScore = Math.round(accuracy * 0.5 + fluency * 0.25 + completeness * 0.25);
+  // Composite Weighted Overall Score
+  // Accuracy (50%) + Completeness (35%) + Fluency (15%)
+  let rawScore = Math.round(accuracy * 0.50 + completeness * 0.35 + fluency * 0.15);
 
-  // Stars & Rewards
-  let stars = 3;
-  let grade: SpeechAssessmentResult['grade'] = 'Good';
-  let gradeZh = '良好 (Good)';
-  let emeraldReward = 5;
-  let xpReward = 15;
-  let encouragement = '发音清晰，继续练习会更加地道！';
+  // Guard: If completeness is low, overall score cannot fake a pass
+  if (completeness < 40) {
+    rawScore = Math.min(rawScore, 45);
+  } else if (completeness < 70) {
+    rawScore = Math.min(rawScore, 75);
+  }
 
-  if (overallScore >= 93) {
+  const overallScore = Math.min(100, Math.max(0, rawScore));
+
+  // Stars & Pedagogical Evaluation Tier
+  let stars = 0;
+  let grade: SpeechAssessmentResult['grade'] = 'NeedsPractice';
+  let gradeZh = '需多练习 (Practice)';
+  let emeraldReward = 0;
+  let xpReward = 0;
+  let encouragement = '';
+
+  if (overallScore >= 92) {
     stars = 5;
     grade = 'Master';
     gradeZh = '完美原声 (Mastery)';
     emeraldReward = 15;
     xpReward = 40;
-    encouragement = '太惊艳了！纯正美式发音，犹如 Minecraft 官方原声主播！';
-  } else if (overallScore >= 85) {
+    encouragement = '太惊艳了！纯正标准发音，犹如 Minecraft 官方原声主播！';
+  } else if (overallScore >= 82) {
     stars = 4;
     grade = 'Fluent';
     gradeZh = '流利标准 (Fluent)';
     emeraldReward = 10;
     xpReward = 25;
-    encouragement = '节奏极佳，吐字圆润清晰，Alex 老师为你大力点赞！';
-  } else if (overallScore >= 72) {
+    encouragement = '节奏极佳，吐字清晰流利，Alex 老师为你大力点赞！';
+  } else if (overallScore >= 65) {
     stars = 3;
     grade = 'Good';
     gradeZh = '良好跟读 (Good)';
     emeraldReward = 6;
     xpReward = 18;
-    encouragement = '基础很棒！注意个别辅音的咬字与语调起伏，再试一次能冲刺 5 星！';
-  } else {
+    encouragement = '基础很棒！注意个别标黄单词的咬字与语调起伏，冲刺 5 星！';
+  } else if (overallScore >= 40) {
     stars = 2;
     grade = 'NeedsPractice';
     gradeZh = '继续加油 (Practice)';
-    emeraldReward = 4;
+    emeraldReward = 3;
     xpReward = 10;
-    encouragement = '请跟随 Alex 老师的标准示范多听两遍，大声说出每个单词吧！';
+    encouragement = '已迈出勇敢开口的第一步！请多听 Alex 老师的标准示范，放慢语速逐词跟读。';
+  } else {
+    stars = 1;
+    grade = 'NeedsPractice';
+    gradeZh = '需要大声清晰朗读';
+    emeraldReward = 1;
+    xpReward = 5;
+    encouragement = '识别到的单词较少。请靠近麦克风大声、连贯地读出每个单词哦！';
   }
 
   const phonicsTips = extractPhonicsTips(expectedText);
@@ -313,11 +483,13 @@ export function evaluateSpeech(
     completeness,
     grade,
     gradeZh,
-    spokenTranscript: spokenTranscript || cleanExpected,
+    spokenTranscript: cleanSpoken,
     wordAssessments,
     phonicsTips,
     encouragement,
     emeraldReward,
-    xpReward
+    xpReward,
+    wpm
   };
 }
+

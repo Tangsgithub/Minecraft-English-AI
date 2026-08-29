@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { speakText, stopSpeech, playClickSound, playLevelUpSound, playEmeraldSound } from '../utils/audio';
+import { evaluateSpeech, SpeechAssessmentResult, cleanSpokenText } from '../services/speechAssessmentService';
 import {
   Mic, MicOff, Volume2, CheckCircle2, Award, Sparkles, X,
-  AlertCircle, ShieldCheck, Headphones, ArrowRight
+  AlertCircle, ShieldCheck, Headphones, ArrowRight, Star
 } from 'lucide-react';
 
 export interface RealWorldSceneItem {
@@ -32,10 +33,12 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
 
   // Oral Reading State
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
   const [recordedSpoken, setRecordedSpoken] = useState<string>('');
-  const [oralScore, setOralScore] = useState<number | null>(null);
+  const [assessmentResult, setAssessmentResult] = useState<SpeechAssessmentResult | null>(null);
   const [oralFeedback, setOralFeedback] = useState<string>('');
   const recognitionRef = useRef<any>(null);
+  const recordingTimerRef = useRef<any>(null);
 
   // Silent Mode State (Must listen to model audio before quiz unlocks)
   const [hasListenedAudio, setHasListenedAudio] = useState<boolean>(false);
@@ -46,13 +49,19 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
     if (!isOpen) {
       stopSpeech();
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try { recognitionRef.current.abort(); } catch {}
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
       }
       setRecordedSpoken('');
-      setOralScore(null);
+      setAssessmentResult(null);
       setOralFeedback('');
       setHasListenedAudio(false);
       setQuizAnswer(null);
+      setIsRecording(false);
+      setRecordingSeconds(0);
     }
   }, [isOpen]);
 
@@ -63,14 +72,17 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
     playClickSound();
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      // Fallback for browsers without speech recognition
-      setOralFeedback('检测到当前环境暂不支持实时麦克风收音，已为您记录！');
-      setRecordedSpoken(scene.realPhrase);
-      setOralScore(90);
+      setOralFeedback('当前浏览器暂不支持实时收音，建议在 Chrome/Edge 中打开，或切换至下方【无麦克风/静音自测】通道完成打卡！');
+      setRecordedSpoken('');
+      setAssessmentResult(null);
       return;
     }
 
     try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.continuous = false;
@@ -78,31 +90,52 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
       recognitionRef.current = recognition;
 
       setIsRecording(true);
+      setRecordingSeconds(0);
       setRecordedSpoken('');
+      setAssessmentResult(null);
       setOralFeedback('');
 
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+
+      let capturedTranscript = '';
+
       recognition.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((r: any) => r[0].transcript)
-          .join('');
-        setRecordedSpoken(transcript);
+        let current = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          current += event.results[i][0].transcript;
+        }
+        capturedTranscript = current;
+        setRecordedSpoken(current);
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
+        console.warn('Speech recognition error:', event?.error);
         setIsRecording(false);
-        if (event.error === 'not-allowed') {
-          setOralFeedback('麦克风权限未开启。您可以切换到【无麦克风/静音自测】通道完成打卡！');
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        if (event?.error === 'not-allowed') {
+          setOralFeedback('麦克风权限未开启。请点击地址栏锁头图标允许麦克风，或切换到【无麦克风/静音自测】通道！');
+        } else if (event?.error === 'no-speech') {
+          setOralFeedback('未检测到发音，请靠近麦克风并大声朗读哦！');
         } else {
-          setOralFeedback('未能清晰录到声音，请离麦克风近一点再大声试一次～');
+          setOralFeedback('收音中断，请离麦克风近一点再大声试一次～');
         }
       };
 
       recognition.onend = () => {
         setIsRecording(false);
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
         setTimeout(() => {
-          evaluateSpoken();
-        }, 300);
+          evaluateSpoken(capturedTranscript);
+        }, 200);
       };
 
       recognition.start();
@@ -114,39 +147,38 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
 
   const stopRecording = () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
     }
     setIsRecording(false);
   };
 
-  const evaluateSpoken = () => {
-    if (!recordedSpoken) {
-      setOralScore(85);
-      setOralFeedback('🌟 敢于大声开口就是最大的进步！');
+  const evaluateSpoken = (transcriptToEval?: string) => {
+    const textToTest = transcriptToEval !== undefined ? transcriptToEval : recordedSpoken;
+    const duration = Math.max(1.0, recordingSeconds);
+
+    if (!cleanSpokenText(textToTest)) {
+      setAssessmentResult(null);
+      setOralFeedback('⚠️ 未检测到有效发音。请靠近麦克风大声朗读上方英文，或切换至【无麦克风/静音自测】！');
       return;
     }
 
-    const cleanTarget = scene.realPhrase.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-    const cleanSpoken = recordedSpoken.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    const result = evaluateSpeech(scene.realPhrase, textToTest, duration);
+    setAssessmentResult(result);
 
-    const targetWords = cleanTarget.split(/\s+/);
-    const spokenWords = cleanSpoken.split(/\s+/);
-
-    let matches = 0;
-    targetWords.forEach(w => {
-      if (spokenWords.includes(w)) matches++;
-    });
-
-    const accuracy = Math.round((matches / Math.max(targetWords.length, 1)) * 100);
-    const finalScore = Math.max(75, Math.min(100, accuracy + 15)); // Encouraging curve
-    setOralScore(finalScore);
-
-    if (finalScore >= 90) {
-      setOralFeedback('🌟 现实生活口语发音非常地道！获得双倍绿宝石奖励！');
-    } else if (finalScore >= 80) {
-      setOralFeedback('👍 读得很清晰流畅！成功达成生活场景口语打卡！');
+    if (result.overallScore >= 85) {
+      setOralFeedback(`🌟 ${result.encouragement}`);
+      playLevelUpSound();
+    } else if (result.overallScore >= 60) {
+      setOralFeedback(`👍 ${result.encouragement}`);
+      playEmeraldSound();
     } else {
-      setOralFeedback('👏 开口大声朗读很棒！多听几遍原声会更地道哦！');
+      setOralFeedback(`👏 ${result.encouragement}`);
     }
   };
 
@@ -158,100 +190,96 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
       setIsPlayingModelAudio(false);
       setHasListenedAudio(true);
     }, {
-      lang: 'en-US',
-      speaker: 'Alex',
       rate: 0.9
     });
   };
 
-  // Submission handler
-  const handleFinalSubmit = (isSpokenPassed: boolean) => {
-    if (isSpokenPassed) {
-      playLevelUpSound();
-      onCompleteSceneCheckIn(scene.id, 4, 15, true); // +4 Emeralds for spoken (Double reward)
-    } else {
-      playEmeraldSound();
-      onCompleteSceneCheckIn(scene.id, 2, 5, false); // +2 Emeralds for silent
-    }
+  const handleFinalSubmit = (isSpoken: boolean) => {
+    playLevelUpSound();
+    const emeralds = isSpoken ? 4 : 2; // Spoken gives double emeralds
+    const xp = isSpoken ? 30 : 15;
+    onCompleteSceneCheckIn(scene.id, emeralds, xp, isSpoken);
     onClose();
   };
 
+  const oralScore = assessmentResult ? assessmentResult.overallScore : null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#2D241E] border-3 sm:border-4 border-[#1B140F] rounded-2xl sm:rounded-[2rem] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.4)] overflow-hidden text-white flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#2D1B00] border-4 border-amber-500 rounded-3xl w-full max-w-lg text-amber-50 shadow-[0_0_30px_rgba(245,158,11,0.4)] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
         
-        {/* Header Strip */}
-        <div className="bg-[#201812] border-b-2 border-black/40 px-4 sm:px-6 py-3.5 flex items-center justify-between">
+        {/* Header */}
+        <div className="bg-[#1A0E00] p-4 border-b-2 border-amber-600/60 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="text-xl">{scene.icon}</span>
+            <span className="text-2xl">{scene.icon}</span>
             <div>
-              <h3 className="text-sm sm:text-base font-black font-mono text-amber-300">
-                学以致用 · {scene.sceneTitle} 打卡
+              <h3 className="text-base sm:text-lg font-black font-mono text-amber-400">
+                {scene.sceneTitle} • 生活口语打卡
               </h3>
               <p className="text-[11px] font-mono text-amber-200/80">
-                大声开口读出生活应用句 · 拒绝空刷
+                将游戏英语活学活用到现实生活真实场景中
               </p>
             </div>
           </div>
-
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-black/40 hover:bg-black/60 border border-white/20 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="text-amber-300 hover:text-white p-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
+        {/* Content Body */}
+        <div className="p-4 sm:p-5 space-y-4">
           
-          {/* Real-World Phrase Target Card */}
-          <div className="bg-black/40 border-2 border-amber-500/40 rounded-2xl p-4 space-y-2.5">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-amber-400 font-bold flex items-center space-x-1">
-                <span>🏠 生活场景口语目标</span>
+          {/* Dual Phrases Display */}
+          <div className="space-y-2">
+            {/* Game Context */}
+            <div className="bg-black/30 border border-amber-500/20 rounded-xl p-2.5 flex items-center justify-between text-xs font-mono">
+              <span className="text-amber-300/70">🎮 MC 游戏场景:</span>
+              <span className="font-bold text-amber-100">"{scene.gamePhrase}"</span>
+            </div>
+
+            {/* Real Life Golden Phrase */}
+            <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-2 border-amber-400 rounded-2xl p-4 text-center space-y-2 relative shadow-inner">
+              <span className="text-[11px] font-mono font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full uppercase">
+                🌍 现实生活地道金句
               </span>
+              <h4 className="text-lg sm:text-xl font-black font-mono text-white tracking-wide">
+                "{scene.realPhrase}"
+              </h4>
+              <p className="text-xs font-mono text-amber-300 font-bold">
+                含义: {scene.cnMeaning}
+              </p>
+
               <button
                 type="button"
                 onClick={handlePlayModel}
-                className="bg-amber-600/90 hover:bg-amber-500 text-white px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center space-x-1 transition-colors cursor-pointer"
+                className="mt-1 inline-flex items-center space-x-1.5 bg-amber-500/30 hover:bg-amber-500/50 text-amber-200 border border-amber-400/50 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer"
               >
-                <Volume2 className={`w-3.5 h-3.5 ${isPlayingModelAudio ? 'animate-pulse text-amber-200' : ''}`} />
-                <span>{isPlayingModelAudio ? '正在播放...' : '听标准示范'}</span>
+                <Volume2 className={`w-3.5 h-3.5 ${isPlayingModelAudio ? 'animate-pulse text-white' : ''}`} />
+                <span>{isPlayingModelAudio ? '正在播放示范...' : '听标准示范'}</span>
               </button>
-            </div>
-
-            <div className="p-2 bg-slate-900/60 rounded-lg text-[11px] font-mono text-slate-400 border border-white/5">
-              <span className="text-emerald-400 font-bold">🎮 游戏句型:</span> "{scene.gamePhrase}"
-            </div>
-
-            <div className="p-2.5 bg-amber-950/60 border border-amber-500/30 rounded-xl space-y-1">
-              <p className="text-base sm:text-lg font-mono font-black text-amber-300 leading-snug">
-                "{scene.realPhrase}"
-              </p>
-              <p className="text-xs font-mono text-amber-200/90">
-                💡 {scene.cnMeaning}
-              </p>
             </div>
           </div>
 
-          {/* Mode Switch Tab Bar */}
-          <div className="grid grid-cols-2 gap-2 bg-black/40 p-1 rounded-xl border border-black">
+          {/* Mode Switcher Tabs */}
+          <div className="grid grid-cols-2 gap-2 bg-black/40 p-1 rounded-xl border border-amber-500/20 text-xs font-mono">
             <button
               type="button"
               onClick={() => {
                 playClickSound();
                 setMode('spoken_reading');
               }}
-              className={`py-2 rounded-lg font-mono font-black text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+              className={`py-2 rounded-lg font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
                 mode === 'spoken_reading'
-                  ? 'bg-amber-500 text-black shadow-xs border border-amber-300'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-amber-400 text-slate-950 shadow-sm'
+                  : 'text-amber-200/70 hover:text-white'
               }`}
             >
               <Mic className="w-3.5 h-3.5" />
-              <span>🎙️ 真人开口跟读 (+4 ❇️)</span>
+              <span>麦克风口语打卡 (双倍 ❇️)</span>
             </button>
 
             <button
@@ -260,44 +288,47 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
                 playClickSound();
                 setMode('silent_listen');
               }}
-              className={`py-2 rounded-lg font-mono font-black text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+              className={`py-2 rounded-lg font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
                 mode === 'silent_listen'
-                  ? 'bg-amber-700 text-white shadow-xs border border-amber-500'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-amber-400 text-slate-950 shadow-sm'
+                  : 'text-amber-200/70 hover:text-white'
               }`}
             >
               <Headphones className="w-3.5 h-3.5" />
-              <span>🔇 无麦克风/静音自测</span>
+              <span>无麦克风/静音自测</span>
             </button>
           </div>
 
-          {/* BRANCH 1: Spoken Reading Challenge */}
+          {/* BRANCH 1: Spoken Reading (Microphone Recording) */}
           {mode === 'spoken_reading' && (
-            <div className="bg-black/30 border border-white/10 rounded-2xl p-4 text-center space-y-4">
+            <div className="bg-black/30 border border-amber-500/30 rounded-2xl p-4 space-y-4 text-center">
               
-              <div className="flex flex-col items-center space-y-2">
-                <div className="relative">
+              <div className="space-y-2">
+                <div className="relative inline-flex items-center justify-center">
+                  {isRecording && (
+                    <div className="absolute inset-0 rounded-full bg-rose-500/40 animate-ping" />
+                  )}
                   <button
                     type="button"
                     onClick={isRecording ? stopRecording : startRecording}
-                    className={`w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center transition-all transform active:scale-95 cursor-pointer shadow-lg ${
+                    className={`relative w-20 h-20 rounded-full border-4 flex flex-col items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer ${
                       isRecording
-                        ? 'bg-rose-600 border-rose-400 animate-pulse ring-4 ring-rose-500/50'
-                        : oralScore !== null
-                        ? 'bg-amber-500 border-amber-300 hover:bg-amber-400 text-slate-950'
-                        : 'bg-amber-600 border-amber-400 hover:bg-amber-500'
+                        ? 'bg-rose-600 border-rose-400 text-white animate-pulse'
+                        : oralScore !== null && oralScore >= 60
+                        ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-400 text-white'
+                        : 'bg-amber-500 hover:bg-amber-400 border-amber-300 text-slate-950'
                     }`}
                   >
                     {isRecording ? (
-                      <div className="flex flex-col items-center">
-                        <div className="w-6 h-6 bg-white rounded-sm animate-ping" />
-                        <span className="text-[10px] font-mono font-black mt-1">录音中...</span>
-                      </div>
+                      <>
+                        <MicOff className="w-7 h-7 mb-0.5" />
+                        <span className="text-[10px] font-mono font-black">完成</span>
+                      </>
                     ) : (
                       <div className="flex flex-col items-center">
-                        <Mic className="w-7 h-7 text-white" />
-                        <span className="text-[10px] font-mono font-black mt-1">
-                          {oralScore !== null ? '重新朗读' : '按住朗读'}
+                        <Mic className="w-7 h-7 mb-0.5" />
+                        <span className="text-[10px] font-mono font-black">
+                          {oralScore !== null ? '重新朗读' : '点击朗读'}
                         </span>
                       </div>
                     )}
@@ -306,20 +337,58 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
 
                 <p className="text-xs font-mono text-slate-300">
                   {isRecording
-                    ? '正在录入您的发音，读完点击停止...'
+                    ? `正在录入您的发音 (${recordingSeconds}s)，读完点击停止...`
                     : oralScore !== null
-                    ? '发音已收到，点击下方按钮完成打卡！'
+                    ? '发音已真实评估，点击下方按钮完成打卡！'
                     : '点击麦克风按钮，大声读出上方黄色框生活英文'}
                 </p>
               </div>
 
               {/* Recorded Transcript & Score Card */}
-              {(recordedSpoken || oralFeedback) && (
-                <div className="bg-black/40 border border-amber-500/30 rounded-xl p-3 text-left space-y-2">
+              {(recordedSpoken || oralFeedback || assessmentResult) && (
+                <div className="bg-black/50 border border-amber-500/40 rounded-xl p-3 text-left space-y-2.5">
                   {recordedSpoken && (
                     <div className="text-xs font-mono">
                       <span className="text-slate-400">听到你说: </span>
                       <span className="text-amber-300 font-bold">"{recordedSpoken}"</span>
+                    </div>
+                  )}
+
+                  {/* Word Badges */}
+                  {assessmentResult && assessmentResult.wordAssessments.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {assessmentResult.wordAssessments.map((wa, idx) => (
+                        <span
+                          key={idx}
+                          className={`text-[11px] font-mono font-black px-2 py-0.5 rounded border ${
+                            wa.status === 'perfect'
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500'
+                              : wa.status === 'good'
+                              ? 'bg-amber-950/80 text-amber-300 border-amber-500'
+                              : 'bg-rose-950/80 text-rose-300 border-rose-500'
+                          }`}
+                          title={wa.feedback}
+                        >
+                          {wa.word} ({wa.score}分)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {assessmentResult && (
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-mono pt-1">
+                      <div className="bg-slate-900/80 p-1.5 rounded border border-slate-700">
+                        <span className="text-slate-400 block">准确度</span>
+                        <span className="text-emerald-400 font-bold text-xs">{assessmentResult.accuracy}%</span>
+                      </div>
+                      <div className="bg-slate-900/80 p-1.5 rounded border border-slate-700">
+                        <span className="text-slate-400 block">流利度</span>
+                        <span className="text-blue-400 font-bold text-xs">{assessmentResult.fluency}%</span>
+                      </div>
+                      <div className="bg-slate-900/80 p-1.5 rounded border border-slate-700">
+                        <span className="text-slate-400 block">完整度</span>
+                        <span className="text-amber-400 font-bold text-xs">{assessmentResult.completeness}%</span>
+                      </div>
                     </div>
                   )}
 
@@ -330,6 +399,16 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
                         <span className="text-sm font-mono font-black text-amber-300">
                           发音得分: {oralScore} 分
                         </span>
+                        {assessmentResult && (
+                          <div className="flex items-center space-x-0.5">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3.5 h-3.5 ${i < assessmentResult.stars ? 'fill-amber-400 text-amber-400' : 'text-slate-600'}`}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <span className="text-[11px] font-mono font-black text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-600">
                         双倍奖励 +4 ❇️
@@ -346,7 +425,7 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
               )}
 
               {/* Submit Spoken Button */}
-              {oralScore !== null ? (
+              {oralScore !== null && oralScore >= 50 ? (
                 <button
                   type="button"
                   onClick={() => handleFinalSubmit(true)}
@@ -357,8 +436,8 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
                 </button>
               ) : (
                 <div className="text-[11px] font-mono text-slate-400 flex items-center justify-center space-x-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>必须至少开口录音一次，才能进行口语打卡！</span>
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{oralScore !== null ? '得分偏低，请靠近麦克风大声朗读重试，或切换静音自测！' : '请大声录音朗读，系统将根据实际发音真实打分！'}</span>
                 </div>
               )}
 
@@ -449,25 +528,19 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
                   onClick={() => handleFinalSubmit(false)}
                   className="w-full bg-amber-600 hover:bg-amber-500 border-2 border-black py-2.5 rounded-xl font-mono font-black text-xs text-white flex items-center justify-center space-x-1.5 shadow-[0_3px_0_0_#78350F] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>完成听读自测打卡 (+2 ❇️ 基础奖励)</span>
+                  <ArrowRight className="w-4 h-4 text-emerald-400" />
+                  <span>已理解生活应用，完成静音打卡 (领 +2 ❇️)</span>
                 </button>
               ) : (
-                <p className="text-[11px] font-mono text-center text-slate-400">
-                  {!hasListenedAudio ? '请先完整播放一次音频' : '请选出正确的场景解析以完成验证'}
-                </p>
+                <div className="text-[11px] font-mono text-slate-400 text-center">
+                  完成上方两步验证后，即可激活静音打卡按钮！
+                </div>
               )}
 
             </div>
           )}
 
         </div>
-
-        {/* Footer Note */}
-        <div className="bg-[#201812] border-t border-white/10 px-4 py-2.5 text-center text-[11px] font-mono text-slate-400">
-          💡 提示：真实开口朗读奖励 4 绿宝石（普通自测 2 绿宝石），鼓励孩子把英语真正用在生活中！
-        </div>
-
       </div>
     </div>
   );
