@@ -3,7 +3,7 @@ import { UserProfile, Lesson } from '../types';
 import { LESSONS_DATA } from '../data/lessonsData';
 import { ShieldCheck, Unlock, Zap, Database, Terminal, RefreshCw, Key, Award, Check, AlertTriangle, Eye, Volume2, X, Download, Upload, Copy, FileText } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playLevelUpSound, speakText } from '../utils/audio';
-import { fetchAllUsersFromFirestore, fetchActivationCodesFromFirestore, saveActivationCodeToFirestore } from '../lib/firebase';
+import { fetchAllUsersFromNeon } from '../lib/neonAuth';
 
 interface AdminDashboardModalProps {
   profile: UserProfile;
@@ -67,7 +67,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         console.warn("Local codes backup parse warning:", e);
       }
 
-      // 2. Load from Express Backend API (Neon Postgres)
+      // 2. Load from Express Backend API (Neon PostgreSQL)
       try {
         const resp = await fetch('/api/admin/codes');
         if (resp.ok) {
@@ -82,25 +82,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         }
       } catch (e) {
         console.warn("Fetch backend codes warning:", e);
-      }
-
-      // 3. Load from Cloud Firestore
-      try {
-        const firestoreList = await fetchActivationCodesFromFirestore();
-        if (Array.isArray(firestoreList)) {
-          firestoreList.forEach((c: any) => {
-            if (c && c.code) {
-              const clean = c.code.trim().toUpperCase();
-              const existing = codeMap.get(clean);
-              codeMap.set(clean, {
-                ...(existing || {}),
-                ...c
-              });
-            }
-          });
-        }
-      } catch (e) {
-        console.warn("Fetch firestore codes warning:", e);
       }
 
       const mergedList = Array.from(codeMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -163,11 +144,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       });
       const data = await resp.json();
 
-      // Sync to Firestore
-      for (const item of newItems) {
-        saveActivationCodeToFirestore(item).catch(() => {});
-      }
-
       playLevelUpSound();
       setShowImportModal(false);
       setImportInputText('');
@@ -215,20 +191,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       if (data.success) {
         playLevelUpSound();
         setCodeMsg(data.message || `成功生成 ${data.codes?.length} 个激活码！`);
-        // Save to Firestore as well
-        if (Array.isArray(data.codes)) {
-          data.codes.forEach((c: string) => {
-            saveActivationCodeToFirestore({
-              code: c,
-              isUsed: false,
-              usedByAccount: '',
-              usedAt: 0,
-              devices: [],
-              maxDevices: 3,
-              createdAt: Date.now()
-            }).catch(() => {});
-          });
-        }
         await fetchActivationCodes();
       } else {
         alert(data.error || '生成卡密失败');
@@ -1105,7 +1067,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                         <form onSubmit={handleImportRawCodes} className="space-y-3">
                           <p className="text-xs text-stone-300">
-                            将您先前保存的激活码文本粘贴在下方（支持每行一个，或逗号/分号分隔），系统会自动去重并实时写入 Neon 数据库与 Firestore 云端：
+                            将您先前保存的激活码文本粘贴在下方（支持每行一个，或逗号/分号分隔），系统会自动去重并实时写入 Neon PostgreSQL 云端数据库：
                           </p>
                           <textarea
                             value={importInputText}

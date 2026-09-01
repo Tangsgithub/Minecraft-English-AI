@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { User } from '../lib/firebase';
+import { User } from '../lib/neonAuth';
 import { sendChatMessageToAlex } from '../services/aiService';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 import {
@@ -162,7 +162,7 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
 应用核心规则：
 1. 注册与登录：用户须注册/登录后即可畅享学习大厅。所有注册用户均可【免费体验 1 ~ 20 课】全量关卡及 AI 语音对练。
 2. VIP 会员：购买/获得 16 位激活码后可在系统输入解锁 21-144 全套课。
-3. 云端存储：支持 Google Firebase 云端 秒级实时同步学习进度、绿宝石和已收录单词。
+3. 云端存储：支持 Neon PostgreSQL 云端秒级实时同步学习进度、绿宝石和已收录单词。
 4. 口语评测与音效：采用标准美式发音与精准得分系统。
 请使用中文回答，回答简明扼要、排版清晰，符合 Minecraft 风格。`;
 

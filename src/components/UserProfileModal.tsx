@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, ParentSettings } from '../types';
-import { User, saveUserProfileToCloud, fetchUserProfileFromCloud } from '../lib/firebase';
+import { User, saveUserProfileToCloud, fetchUserProfileFromCloud } from '../lib/neonAuth';
 import {
   User as UserIcon, Shield, Medal, Sword, Flame, Star, X, LogOut,
   RefreshCw, CheckCircle2, Lock, Key, Clock, Eye, Sparkles, ChevronRight,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Compass, BookOpen, MessageSquare, Hammer, Shield, Sparkles, CheckCircle2, Trophy, Volume2, UserCheck, X, Layers, Zap, Radio, Disc, KeyRound, HelpCircle, ArrowRight, HeartHandshake, FileText, Headphones } from 'lucide-react';
+import { Compass, BookOpen, MessageSquare, Hammer, Shield, Sparkles, CheckCircle2, Trophy, Volume2, UserCheck, X, Layers, Zap, Radio, Disc, KeyRound, HelpCircle, ArrowRight, HeartHandshake, FileText, Headphones, Download } from 'lucide-react';
 import { playClickSound, speakText } from '../utils/audio';
+import { exportLearningManualToWord } from '../utils/wordExport';
 
 interface StudyGuideManualModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ type GuideSection = 'roadmap' | 'radio' | 'alex' | 'vocab_craft' | 'gamification
 
 export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ onClose }) => {
   const [activeSection, setActiveSection] = useState<GuideSection>('roadmap');
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
 
   const guideTabs: { id: GuideSection; label: string; icon: any }[] = [
     { id: 'roadmap', label: '🚀 学习路线闭环', icon: Compass },
@@ -21,12 +23,19 @@ export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ on
     { id: 'faq', label: '❓ 常见问答 FAQ', icon: HelpCircle },
   ];
 
+  const handleDownloadWord = () => {
+    playClickSound();
+    exportLearningManualToWord();
+    setDownloadSuccess(true);
+    setTimeout(() => setDownloadSuccess(false), 3000);
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-safe pb-safe overflow-y-auto">
       <div className="bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2.5rem] w-full max-w-4xl text-[#2D2D2D] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden my-auto max-h-[92dvh] flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="bg-[#487E2C] p-4 sm:p-5 border-b-2 sm:border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
+        <div className="bg-[#487E2C] p-3.5 sm:p-5 border-b-2 sm:border-b-4 border-[#355E20] flex items-center justify-between text-white shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-900 border-2 border-amber-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-2xl shadow-inner shrink-0">
               📖
@@ -44,13 +53,25 @@ export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ on
             </div>
           </div>
 
-          <button
-            onClick={() => { playClickSound(); onClose(); }}
-            className="text-white/80 hover:text-white text-xs font-mono font-bold bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-xl border-2 border-white/30 transition-all flex items-center space-x-1 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-            <span>关闭</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleDownloadWord}
+              className="bg-amber-400 hover:bg-amber-300 text-slate-950 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-mono font-black border-2 border-amber-200 shadow-md flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all"
+              title="下载并保存完整的 Word (.doc / .docx) 手册文档"
+            >
+              <Download className="w-4 h-4 text-slate-950" />
+              <span className="hidden sm:inline">{downloadSuccess ? '已导出 Word!' : '导出 Word 手册'}</span>
+              <span className="sm:hidden">{downloadSuccess ? '已导出' : 'Word'}</span>
+            </button>
+
+            <button
+              onClick={() => { playClickSound(); onClose(); }}
+              className="text-white/80 hover:text-white text-xs font-mono font-bold bg-black/20 hover:bg-black/40 px-3 py-1.5 sm:py-2 rounded-xl border-2 border-white/30 transition-all flex items-center space-x-1 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+              <span>关闭</span>
+            </button>
+          </div>
         </div>
 
         {/* Section Navigation Tabs */}
@@ -346,8 +367,8 @@ export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ on
                 </div>
 
                 <div className="p-3 bg-white border-2 border-slate-200 rounded-xl space-y-1">
-                  <span className="text-blue-900 font-black block">☁️ Firebase 跨设备云同步</span>
-                  <p className="text-slate-600">登录账号后，学习进度、词汇掌握和绿宝石余额实时同步，手机、iPad 与电脑无缝衔接。</p>
+                  <span className="text-blue-900 font-black block">☁️ Neon PostgreSQL 跨设备实时云同步</span>
+                  <p className="text-slate-600">登录账号后，学习进度、词汇掌握和绿宝石余额实时同步至 Neon 数据库，手机、iPad 与电脑无缝衔接。</p>
                 </div>
               </div>
             </div>
@@ -398,18 +419,28 @@ export const StudyGuideManualModal: React.FC<StudyGuideManualModalProps> = ({ on
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 sm:p-4 bg-slate-50 border-t-2 border-slate-200 flex items-center justify-between shrink-0">
+        <div className="p-3.5 sm:p-4 bg-slate-50 border-t-2 border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
           <div className="text-[11px] font-mono text-slate-500 font-bold hidden sm:flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#487E2C]" />
             <span>Minecraft 英语教研中心 • 陪伴孩子流利开口说英语</span>
           </div>
 
-          <button
-            onClick={() => { playClickSound(); onClose(); }}
-            className="bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white px-6 py-2.5 rounded-xl font-mono font-black text-xs shadow-[0_3px_0_0_#2A4718] transition-all ml-auto cursor-pointer active:translate-y-0.5"
-          >
-            我已掌握，开始探索 ➔
-          </button>
+          <div className="flex items-center space-x-2 ml-auto">
+            <button
+              onClick={handleDownloadWord}
+              className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3.5 py-2 rounded-xl font-mono font-black text-xs flex items-center space-x-1.5 transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{downloadSuccess ? '已成功导出 Word' : '下载 Word 版手册 (.doc)'}</span>
+            </button>
+
+            <button
+              onClick={() => { playClickSound(); onClose(); }}
+              className="bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white px-5 py-2 rounded-xl font-mono font-black text-xs shadow-[0_3px_0_0_#2A4718] transition-all cursor-pointer active:translate-y-0.5"
+            >
+              我已掌握 ➔
+            </button>
+          </div>
         </div>
 
       </div>

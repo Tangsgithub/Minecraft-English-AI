@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { APP_VERSION_INFO } from '../types';
-import { User } from '../lib/firebase';
+import { User } from '../lib/neonAuth';
 import {
   Gamepad2,
   Check,

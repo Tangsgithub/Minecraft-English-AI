@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { serverProxyLogin, serverProxyRegister, updateUserPassword, auth, User } from '../lib/firebase';
+import { serverProxyLogin, serverProxyRegister, updateUserPassword, auth, User } from '../lib/neonAuth';
 import { playClickSound, playLevelUpSound } from '../utils/audio';
 import { UserCheck, UserPlus, KeyRound, ShieldCheck, Zap, Sparkles, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
 

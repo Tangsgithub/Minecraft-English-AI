@@ -22,7 +22,7 @@ import { RadioImmersionView } from './components/RadioImmersionView';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
 import { CustomerServiceModal, CustomerServiceFloatingButton } from './components/CustomerServiceModal';
-import { auth, User, saveUserProfileToCloud, fetchUserProfileFromCloud } from './lib/firebase';
+import { auth, User, saveUserProfileToCloud, fetchUserProfileFromCloud } from './lib/neonAuth';
 import { getSoundEnabled, playClickSound, playLevelUpSound, playEmeraldSound } from './utils/audio';
 import { unlockMobileAudio } from './services/edgeTtsService';
 import { Map, MessageSquare, BookOpen, Scroll, Trophy, Sparkles, Hammer, Radio } from 'lucide-react';
@@ -268,36 +268,58 @@ export default function App() {
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
 
-  // Fetch latest cloud profile on login or user switch
+  // Fetch latest cloud profile on login, initial load, or user switch from Neon Database
   useEffect(() => {
-    const target = currentUser?.uid || currentUser?.account || profile?.account;
+    const target = currentUser?.account || currentUser?.uid;
     if (target) {
       fetchUserProfileFromCloud(target).then(cloudProfile => {
         if (cloudProfile) {
           setProfile(prev => {
-            const isSwitchingAccount = prev.account && currentUser?.account && prev.account !== currentUser.account;
+            // Check if switching away from a different registered account
+            const isSwitchingAccount = prev.account && currentUser?.account && prev.account.toLowerCase() !== currentUser.account.toLowerCase();
             
-            let merged;
+            let merged: UserProfile;
 
             if (isSwitchingAccount) {
-              // Completely overwrite local state when switching to a different account
+              // Completely load cloud profile when switching to a different account
               merged = sanitizeProfile({
                 ...cloudProfile,
                 account: currentUser?.account || cloudProfile.account,
                 nickname: currentUser?.nickname || cloudProfile.nickname
               });
             } else {
-              // Merge local guest progress with cloud profile, or update existing
+              // Volume progress merge across all 4 volumes
+              const volKeys: CourseVolumeId[] = ['vol1', 'vol2', 'vol3', 'vol4'];
+              const mergedVolProgress: Record<CourseVolumeId, any> = {
+                vol1: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+                vol2: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+                vol3: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] },
+                vol4: { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] }
+              };
+
+              volKeys.forEach(vKey => {
+                const lVol = prev.volumeProgress?.[vKey] || { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] };
+                const cVol = cloudProfile.volumeProgress?.[vKey] || { currentLessonId: 1, unlockedLessonIds: [1], completedLessonIds: [] };
+
+                const unl = Array.from(new Set([...(lVol.unlockedLessonIds || [1]), ...(cVol.unlockedLessonIds || [1])])).sort((a, b) => a - b);
+                const comp = Array.from(new Set([...(lVol.completedLessonIds || []), ...(cVol.completedLessonIds || [])])).sort((a, b) => a - b);
+                const curr = Math.max(lVol.currentLessonId || 1, cVol.currentLessonId || 1);
+
+                mergedVolProgress[vKey] = {
+                  currentLessonId: curr,
+                  unlockedLessonIds: unl.length > 0 ? unl : [1],
+                  completedLessonIds: comp
+                };
+              });
+
               const mergedUnlocked = Array.from(new Set([...(prev.unlockedLessonIds || [1]), ...(cloudProfile.unlockedLessonIds || [1])])).sort((a, b) => a - b);
               const mergedCompleted = Array.from(new Set([...(prev.completedLessonIds || []), ...(cloudProfile.completedLessonIds || [])])).sort((a, b) => a - b);
               const mergedMissions = Array.from(new Set([...(prev.completedMissionIds || []), ...(cloudProfile.completedMissionIds || [])]));
               const mergedWords = Array.from(new Set([...(prev.masteredWords || []), ...(cloudProfile.masteredWords || [])]));
-              const maxLevel = Math.max(prev.level || 1, cloudProfile.level || 1);
-              const maxEmeralds = Math.max(prev.emeralds ?? 100, cloudProfile.emeralds ?? 100);
-              const maxXp = Math.max(prev.xp || 0, cloudProfile.xp || 0);
-              const maxCurrentLesson = Math.max(prev.currentLessonId || 1, cloudProfile.currentLessonId || 1);
+              const mergedBadges = Array.from(new Set([...(prev.unlockedBadgeIds || []), ...(cloudProfile.unlockedBadgeIds || [])]));
+              const mergedCrafting = Array.from(new Set([...(prev.unlockedCraftingIds || []), ...(cloudProfile.unlockedCraftingIds || [])]));
               const isVip = Boolean(prev.isVip || cloudProfile.isVip);
-              
+              const isAdmin = Boolean(prev.isAdmin || cloudProfile.isAdmin);
               const mergedActivatedVolumes = Array.from(new Set([
                 ...(prev.activatedVolumes || []),
                 ...(cloudProfile.activatedVolumes || [])
@@ -309,15 +331,23 @@ export default function App() {
                 account: currentUser?.account || cloudProfile.account || prev.account,
                 nickname: currentUser?.nickname || cloudProfile.nickname || prev.nickname,
                 isVip,
+                isAdmin,
+                role: isAdmin ? 'super_admin' : (cloudProfile.role || prev.role || 'user'),
                 activatedVolumes: mergedActivatedVolumes,
-                level: maxLevel,
-                emeralds: maxEmeralds,
-                xp: maxXp,
-                currentLessonId: maxCurrentLesson,
+                level: Math.max(prev.level || 1, cloudProfile.level || 1),
+                emeralds: Math.max(prev.emeralds ?? 100, cloudProfile.emeralds ?? 100),
+                xp: Math.max(prev.xp || 0, cloudProfile.xp || 0),
+                currentLessonId: Math.max(prev.currentLessonId || 1, cloudProfile.currentLessonId || 1),
                 unlockedLessonIds: mergedUnlocked,
                 completedLessonIds: mergedCompleted,
                 completedMissionIds: mergedMissions,
-                masteredWords: mergedWords
+                masteredWords: mergedWords,
+                unlockedBadgeIds: mergedBadges,
+                unlockedCraftingIds: mergedCrafting,
+                volumeProgress: mergedVolProgress,
+                totalStudyDays: Math.max(prev.totalStudyDays || 0, cloudProfile.totalStudyDays || 0),
+                streakDays: Math.max(prev.streakDays || 1, cloudProfile.streakDays || 1),
+                totalStudyMinutes: Math.max(prev.totalStudyMinutes || 0, cloudProfile.totalStudyMinutes || 0)
               });
             }
 
@@ -331,12 +361,12 @@ export default function App() {
     }
   }, [currentUser?.uid, currentUser?.account]);
 
-  // Sync profile to localStorage and Cloud
+  // Real-time sync profile to localStorage and Neon Database
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('mc_english_user_profile', JSON.stringify(profile));
-      const syncTarget = currentUser?.uid || profile?.account || profile?.id;
-      if (syncTarget) {
+      const syncTarget = currentUser?.account || currentUser?.uid || profile?.account;
+      if (syncTarget && currentUser) {
         saveUserProfileToCloud(profile, syncTarget);
       }
     }

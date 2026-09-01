@@ -80,21 +80,11 @@ async function ensureNeonTable() {
   }
 }
 
-// Activation Codes Database Handlers
+// Exclusive Neon PostgreSQL Database Handlers
 async function getCloudCode(code: string): Promise<any | null> {
   if (!code) return null;
   const cleanCode = code.trim().toUpperCase();
   const rawNoHyphen = cleanCode.replace(/[^A-Z0-9]/g, '');
-
-  const memCode = memoryCodesFallback.get(cleanCode) || memoryCodesFallback.get(rawNoHyphen);
-  if (memCode) return memCode;
-
-  // Search in memory code list by raw normalized string
-  for (const [k, v] of memoryCodesFallback.entries()) {
-    if (k.replace(/[^A-Z0-9]/g, '') === rawNoHyphen) {
-      return v;
-    }
-  }
 
   const sql = getNeonSql();
   if (sql) {
@@ -124,14 +114,22 @@ async function getCloudCode(code: string): Promise<any | null> {
         memoryCodesFallback.set(cleanCode, cObj);
         return cObj;
       }
-      return null;
     } catch (e) {
       console.warn("Neon Postgres get code error:", e);
-      return null;
     }
   }
 
-  return memoryCodesFallback.get(cleanCode) || null;
+  // Memory fallback
+  const memCode = memoryCodesFallback.get(cleanCode) || memoryCodesFallback.get(rawNoHyphen);
+  if (memCode) return memCode;
+
+  for (const [k, v] of memoryCodesFallback.entries()) {
+    if (k.replace(/[^A-Z0-9]/g, '') === rawNoHyphen) {
+      return v;
+    }
+  }
+
+  return null;
 }
 
 async function saveCloudCode(cObj: any): Promise<boolean> {
@@ -174,10 +172,6 @@ async function saveCloudCode(cObj: any): Promise<boolean> {
 async function getAllCloudCodes(): Promise<any[]> {
   const codeMap = new Map<string, any>();
 
-  for (const [k, v] of memoryCodesFallback.entries()) {
-    codeMap.set(k.toUpperCase(), v);
-  }
-
   const sql = getNeonSql();
   if (sql) {
     try {
@@ -190,7 +184,7 @@ async function getAllCloudCodes(): Promise<any[]> {
             try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
           }
           const cleanCode = String(r.code).toUpperCase();
-          codeMap.set(cleanCode, {
+          const cObj = {
             code: r.code,
             isUsed: Boolean(r.is_used),
             usedByAccount: r.used_by_account || '',
@@ -198,11 +192,19 @@ async function getAllCloudCodes(): Promise<any[]> {
             devices: Array.isArray(parsedDevices) ? parsedDevices : [],
             maxDevices: Number(r.max_devices || 3),
             createdAt: Number(r.created_at || Date.now())
-          });
+          };
+          codeMap.set(cleanCode, cObj);
+          memoryCodesFallback.set(cleanCode, cObj);
         });
       }
     } catch (e) {
       console.warn("Neon Postgres getAllCodes error:", e);
+    }
+  }
+
+  for (const [k, v] of memoryCodesFallback.entries()) {
+    if (!codeMap.has(k.toUpperCase())) {
+      codeMap.set(k.toUpperCase(), v);
     }
   }
 
@@ -222,27 +224,10 @@ async function clearAllCloudCodes(): Promise<void> {
   }
 }
 
-// Exclusive Neon PostgreSQL Database Handlers
+// Exclusive Neon PostgreSQL User Database Handlers
 async function getCloudUser(accountOrUid: string): Promise<any | null> {
   if (!accountOrUid) return null;
   const clean = accountOrUid.trim().toLowerCase();
-
-  // 1. Direct match in memory fallback
-  const memUser = memoryUsersFallback.get(clean);
-  if (memUser) return memUser;
-
-  // 2. Iterate memory fallback for cross-key lookup (account, uid, profile.id, profile.account)
-  for (const u of memoryUsersFallback.values()) {
-    if (
-      (u.account && u.account.toLowerCase() === clean) ||
-      (u.uid && u.uid.toLowerCase() === clean) ||
-      (u.profile?.id && String(u.profile.id).toLowerCase() === clean) ||
-      (u.profile?.account && String(u.profile.account).toLowerCase() === clean)
-    ) {
-      memoryUsersFallback.set(clean, u);
-      return u;
-    }
-  }
 
   const sql = getNeonSql();
   if (sql) {
@@ -279,10 +264,24 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
         if (u.uid) memoryUsersFallback.set(u.uid.toLowerCase(), u);
         return u;
       }
-      return null;
     } catch (e) {
-      console.warn("Neon Postgres get error:", e);
-      return null;
+      console.warn("Neon Postgres get user error:", e);
+    }
+  }
+
+  // Memory fallback
+  const memUser = memoryUsersFallback.get(clean);
+  if (memUser) return memUser;
+
+  for (const u of memoryUsersFallback.values()) {
+    if (
+      (u.account && u.account.toLowerCase() === clean) ||
+      (u.uid && u.uid.toLowerCase() === clean) ||
+      (u.profile?.id && String(u.profile.id).toLowerCase() === clean) ||
+      (u.profile?.account && String(u.profile.account).toLowerCase() === clean)
+    ) {
+      memoryUsersFallback.set(clean, u);
+      return u;
     }
   }
 
