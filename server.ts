@@ -694,7 +694,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
     }
   });
 
-  // AI Multimodal Speech Pronunciation Assessment Endpoint (No-VPN Required, Domestic Direct Connection)
+  // AI Multimodal Speech Pronunciation Assessment Endpoint (Scheme 2 - Server-Side Multimodal Proxy)
   app.post("/api/speech/assess", async (req, res) => {
     try {
       const { audioBase64, mimeType = 'audio/webm', targetText, duration = 2, clientTranscript = '' } = req.body;
@@ -712,7 +712,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
       const geminiKey = process.env.GEMINI_API_KEY;
 
-      // 1. Try Gemini Multimodal Audio Assessment if audio payload & key are available
+      // 1. Primary: Gemini Multimodal Audio Assessment (Listens directly to the audio stream)
       if (audioBase64 && typeof audioBase64 === 'string' && geminiKey) {
         try {
           const ai = new GoogleGenAI({
@@ -727,42 +727,54 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
           const cleanBase64 = audioBase64.replace(/^data:audio\/[a-zA-Z0-9.+_-]+;base64,/, '').trim();
           const cleanMime = (mimeType || 'audio/webm').split(';')[0].trim();
 
-          const prompt = `You are a supportive, high-precision English pronunciation assessment engine for children in a Minecraft English educational app.
-The target sentence or word the student read aloud is: "${cleanExpected}".
+          const prompt = `You are an expert, strict, and encouraging English oral pronunciation judge for children in a Minecraft English educational app.
+The target sentence or word the student was asked to read aloud is: "${cleanExpected}".
 
-Analyze the student's spoken audio directly.
-Evaluate on:
-1. Accuracy (0-100): Word-level phonetics, vowels, consonants, stress.
-2. Completeness (0-100): Did the student speak all target words?
-3. Fluency (0-100): Natural rhythm and speed without excessive hesitation.
+Analyze the audio clip provided.
+Follow these STRICT rules:
+1. SILENCE OR INAUDIBLE: If the audio is silent, only contains room noise, breathing, or no recognizable English words:
+   - spokenTranscript: ""
+   - overallScore: 0, accuracy: 0, fluency: 0, completeness: 0, stars: 0, grade: "NoSpeech", gradeZh: "未检测到有效声音"
+   - encouragement: "未录入清晰声音，请靠近麦克风大声朗读哦！"
+   - wordAssessments: every target word gets score 0, status 'needs_work', feedback: '未检测到发音'
 
-Return ONLY a JSON object (WITHOUT any markdown formatting or \`\`\` code blocks) with this exact schema:
+2. MISREAD OR IRRELEVANT WORDS: If the student spoke completely unrelated words (e.g. target is "${cleanExpected}" but spoken is "apple banana" or random babble):
+   - spokenTranscript: exact words spoken
+   - overallScore: 0 to 15, accuracy: 0, fluency: 50, completeness: 0, stars: 1, grade: "NeedsPractice", gradeZh: "需多练习 (Practice)"
+   - encouragement: "已听到你的声音，但朗读内容与目标词汇不符，请对照原声再试一次！"
+   - wordAssessments: mismatched words score 0.
+
+3. PARTIAL / INCOMPLETE SPEECH: If the student only read some words (e.g. read 1 out of 3 words):
+   - completeness should be proportional (e.g. 33%).
+   - Missing words get score 0 and status 'needs_work'.
+   - overallScore must be strictly discounted based on completeness (e.g. 30-50).
+
+4. ACCURATE PRONUNCIATION:
+   - 92-100 (5 stars, 'Master', '完美原声 (Mastery)'): Every phoneme, vowel, and ending consonant is crisp and accurate.
+   - 80-91 (4 stars, 'Fluent', '流利标准 (Fluent)'): Well pronounced, intelligible, slight minor vowel/stress imperfection.
+   - 60-79 (3 stars, 'Good', '良好跟读 (Good)'): Recognizable but with noticeable pronunciation flaws.
+
+Return ONLY a valid JSON object matching this schema (NO markdown formatting or \`\`\` wrappers):
 {
-  "spokenTranscript": "exact words spoken by student in English (or empty if silent)",
-  "overallScore": 88,
-  "stars": 4,
-  "accuracy": 86,
-  "fluency": 90,
-  "completeness": 95,
-  "grade": "Fluent",
-  "gradeZh": "流利标准",
-  "encouragement": "发音非常清晰流利，Alex 老师为你大力点赞！",
+  "spokenTranscript": "exact words spoken",
+  "overallScore": 95,
+  "stars": 5,
+  "accuracy": 96,
+  "fluency": 92,
+  "completeness": 100,
+  "grade": "Master",
+  "gradeZh": "完美原声 (Mastery)",
+  "encouragement": "发音非常标准清晰，Alex 老师为你点赞！",
   "wordAssessments": [
     {
-      "word": "expected_word",
-      "expectedWord": "expected_word",
-      "score": 90,
+      "word": "word",
+      "expectedWord": "word",
+      "score": 95,
       "status": "perfect",
-      "feedback": "发音饱满标准"
+      "feedback": "发音清晰准确"
     }
   ]
-}
-
-Rules:
-- status must be 'perfect' (score>=90), 'good' (70-89), or 'needs_work' (<70).
-- stars must be integer 1 to 5: 5 (score>=92), 4 (82-91), 3 (65-81), 2 (40-64), 1 (<40).
-- encouragement must be friendly, pedagogical, in natural Chinese.
-- wordAssessments must list each expected word in sequence.`;
+}`;
 
           const candidateModels = ['gemini-3.7-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
           let geminiResult: any = null;
@@ -803,10 +815,9 @@ Rules:
           }
 
           if (geminiResult && typeof geminiResult.overallScore === 'number') {
-            // Guarantee rewards calculations
             const finalScore = Math.min(100, Math.max(0, Math.round(geminiResult.overallScore)));
-            let emeraldReward = 6;
-            let xpReward = 18;
+            let emeraldReward = 0;
+            let xpReward = 0;
             if (finalScore >= 92) {
               emeraldReward = 15;
               xpReward = 40;
@@ -821,18 +832,21 @@ Rules:
               xpReward = 10;
             }
 
+            const isSilent = finalScore === 0 || !geminiResult.spokenTranscript;
+            const stars = isSilent ? 0 : (geminiResult.stars || (finalScore >= 92 ? 5 : finalScore >= 82 ? 4 : finalScore >= 65 ? 3 : finalScore >= 40 ? 2 : 1));
+
             return res.json({
               success: true,
-              source: 'gemini-multimodal',
+              source: 'gemini-multimodal-proxy',
               result: {
                 overallScore: finalScore,
-                stars: geminiResult.stars || (finalScore >= 92 ? 5 : finalScore >= 82 ? 4 : finalScore >= 65 ? 3 : 2),
+                stars,
                 accuracy: geminiResult.accuracy ?? finalScore,
-                fluency: geminiResult.fluency ?? 88,
-                completeness: geminiResult.completeness ?? 90,
-                grade: geminiResult.grade || (finalScore >= 92 ? 'Master' : finalScore >= 82 ? 'Fluent' : 'Good'),
-                gradeZh: geminiResult.gradeZh || (finalScore >= 92 ? '完美原声 (Mastery)' : finalScore >= 82 ? '流利标准 (Fluent)' : '良好跟读 (Good)'),
-                spokenTranscript: geminiResult.spokenTranscript || clientTranscript || cleanExpected,
+                fluency: geminiResult.fluency ?? (isSilent ? 0 : 85),
+                completeness: geminiResult.completeness ?? (isSilent ? 0 : finalScore),
+                grade: geminiResult.grade || (finalScore >= 92 ? 'Master' : finalScore >= 82 ? 'Fluent' : finalScore >= 65 ? 'Good' : isSilent ? 'NoSpeech' : 'NeedsPractice'),
+                gradeZh: geminiResult.gradeZh || (finalScore >= 92 ? '完美原声 (Mastery)' : finalScore >= 82 ? '流利标准 (Fluent)' : finalScore >= 65 ? '良好跟读 (Good)' : isSilent ? '未检测到有效声音' : '需多练习 (Practice)'),
+                spokenTranscript: geminiResult.spokenTranscript || '',
                 wordAssessments: Array.isArray(geminiResult.wordAssessments) && geminiResult.wordAssessments.length > 0
                   ? geminiResult.wordAssessments
                   : expectedWords.map(w => ({
@@ -840,65 +854,93 @@ Rules:
                       expectedWord: w,
                       score: finalScore,
                       status: finalScore >= 90 ? 'perfect' : finalScore >= 70 ? 'good' : 'needs_work',
-                      feedback: finalScore >= 85 ? '发音清晰饱满' : '发音良好，注意音标细节'
+                      feedback: isSilent ? '未检测到发音' : finalScore >= 85 ? '发音清晰饱满' : '发音需多练习'
                     })),
-                encouragement: geminiResult.encouragement || '发音非常棒！Alex 老师为你大力点赞！',
+                encouragement: geminiResult.encouragement || (isSilent ? '未检测到发音，请靠近麦克风大声朗读！' : '发音已录入，继续加油！'),
                 emeraldReward,
                 xpReward
               }
             });
           }
         } catch (audioErr: any) {
-          console.warn("AI multimodal scoring fallback:", audioErr?.message || audioErr);
+          console.warn("AI multimodal scoring error:", audioErr?.message || audioErr);
         }
       }
 
-      // 2. Deterministic High-Precision Acoustic Fallback
-      // When audio is recorded and duration is valid, evaluate based on words and duration pacing
-      const dur = Math.max(0.6, Number(duration) || 2);
-      const targetWordCount = Math.max(1, expectedWords.length);
-      const estPace = (targetWordCount / dur) * 60; // WPM estimate
-      
-      let baseAcc = 86;
-      let baseFluency = 88;
-      if (estPace >= 70 && estPace <= 160) {
-        baseAcc = 90;
-        baseFluency = 92;
-      } else if (estPace >= 40 && estPace < 70) {
-        baseAcc = 85;
-        baseFluency = 80;
-      } else {
-        baseAcc = 82;
-        baseFluency = 78;
+      // 2. Strict Deterministic Alignment Fallback (No fake 80+ default numbers!)
+      const transcript = (clientTranscript || '').trim().toLowerCase();
+      if (!transcript) {
+        // No speech or silent audio
+        return res.json({
+          success: true,
+          source: 'deterministic-strict',
+          result: {
+            overallScore: 0,
+            stars: 0,
+            accuracy: 0,
+            fluency: 0,
+            completeness: 0,
+            grade: 'NoSpeech',
+            gradeZh: '未检测到有效发音',
+            spokenTranscript: '',
+            wordAssessments: expectedWords.map(w => ({
+              word: w,
+              expectedWord: w,
+              score: 0,
+              status: 'needs_work' as const,
+              feedback: '未检测到发音'
+            })),
+            encouragement: '未检测到发音，请靠近麦克风大声清晰朗读！',
+            emeraldReward: 0,
+            xpReward: 0
+          }
+        });
       }
 
-      const overall = Math.round(baseAcc * 0.55 + baseFluency * 0.45);
-      const stars = overall >= 92 ? 5 : overall >= 82 ? 4 : overall >= 65 ? 3 : 2;
+      // If transcript is present, compare target words with spoken words
+      const spokenWords = transcript.replace(/[^a-z0-9\s]/g, ' ').split(' ').filter(Boolean);
+      let matchedCount = 0;
+      const wordAssessments = expectedWords.map(exp => {
+        const found = spokenWords.some(spk => spk === exp.toLowerCase() || (exp.length > 3 && (spk.includes(exp) || exp.includes(spk))));
+        if (found) {
+          matchedCount++;
+          return {
+            word: exp,
+            expectedWord: exp,
+            score: 95,
+            status: 'perfect' as const,
+            feedback: '发音清晰准确'
+          };
+        }
+        return {
+          word: exp,
+          expectedWord: exp,
+          score: 0,
+          status: 'needs_work' as const,
+          feedback: '漏读或读错'
+        };
+      });
 
-      const wordAssessments = expectedWords.map(w => ({
-        word: w,
-        expectedWord: w,
-        score: baseAcc,
-        status: baseAcc >= 90 ? ('perfect' as const) : ('good' as const),
-        feedback: '发音清晰流畅，音节完整'
-      }));
+      const completeness = Math.round((matchedCount / Math.max(1, expectedWords.length)) * 100);
+      const overall = completeness;
+      const stars = overall >= 92 ? 5 : overall >= 80 ? 4 : overall >= 60 ? 3 : overall >= 30 ? 2 : 1;
 
       return res.json({
         success: true,
-        source: 'acoustic-engine',
+        source: 'deterministic-strict',
         result: {
           overallScore: overall,
           stars,
-          accuracy: baseAcc,
-          fluency: baseFluency,
-          completeness: 95,
-          grade: overall >= 92 ? 'Master' : overall >= 82 ? 'Fluent' : 'Good',
-          gradeZh: overall >= 92 ? '完美原声 (Mastery)' : overall >= 82 ? '流利标准 (Fluent)' : '良好跟读 (Good)',
-          spokenTranscript: clientTranscript || cleanExpected,
+          accuracy: overall,
+          fluency: overall >= 60 ? 88 : 40,
+          completeness,
+          grade: overall >= 92 ? 'Master' : overall >= 80 ? 'Fluent' : overall >= 60 ? 'Good' : 'NeedsPractice',
+          gradeZh: overall >= 92 ? '完美原声 (Mastery)' : overall >= 80 ? '流利标准 (Fluent)' : overall >= 60 ? '良好跟读 (Good)' : '需多练习 (Practice)',
+          spokenTranscript: transcript,
           wordAssessments,
-          encouragement: '录音收音完整！发音节奏良好，Alex 老师为你点赞！',
-          emeraldReward: stars >= 4 ? 10 : 6,
-          xpReward: stars >= 4 ? 25 : 18
+          encouragement: overall >= 80 ? '发音非常棒！Alex 老师为你点赞！' : '请对照目标单词原声，再试一次！',
+          emeraldReward: stars >= 4 ? 10 : stars >= 3 ? 6 : 0,
+          xpReward: stars >= 4 ? 25 : stars >= 3 ? 18 : 0
         }
       });
     } catch (err: any) {
