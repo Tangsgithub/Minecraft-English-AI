@@ -4,6 +4,7 @@ import { sendChatMessageToAlex } from '../services/aiService';
 import { buildAlexSystemPrompt } from '../utils/aiTeacherPrompt';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
+import { transcribeAudioBlob } from '../services/speechAssessmentService';
 import { hasLessonAccess } from '../utils/volumeProgress';
 import { Send, Volume2, Sparkles, Mic, MicOff, RefreshCw, MessageSquare, Lightbulb, CheckCircle2, Award, Phone, PhoneOff, PhoneCall, Lock, HelpCircle, ExternalLink, AlertTriangle, Check, ShieldAlert } from 'lucide-react';
 import { MinecraftAvatar } from './MinecraftAvatar';
@@ -337,16 +338,24 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     speakText(text, { speaker: 'Alex', rate: speechRate });
   };
 
-  // Web Speech API Voice Input
-  const handleToggleVoiceInput = () => {
+  const chatMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chatAudioChunksRef = useRef<Blob[]>([]);
+  const chatStreamRef = useRef<MediaStream | null>(null);
+
+  // Web Speech API Voice Input + Server-Side AI STT Fallback
+  const handleToggleVoiceInput = async () => {
     if (typeof window === 'undefined') return;
 
     if (isListening) {
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.abort();
+          recognitionRef.current.stop();
         } catch {}
-        recognitionRef.current = null;
+      }
+      if (chatMediaRecorderRef.current && chatMediaRecorderRef.current.state !== 'inactive') {
+        try {
+          chatMediaRecorderRef.current.stop();
+        } catch {}
       }
       setIsListening(false);
       return;
@@ -358,79 +367,109 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
       isSpeakingRef.current = false;
     }
 
+    setIsListening(true);
+    chatAudioChunksRef.current = [];
+    let capturedText = '';
+
+    // 1. Start MediaRecorder for guaranteed Audio Blob
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        chatStreamRef.current = stream;
+
+        let mimeType = '';
+        if (typeof MediaRecorder !== 'undefined') {
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+          else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+          else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+        }
+
+        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chatAudioChunksRef.current.push(e.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          if (chatStreamRef.current) {
+            chatStreamRef.current.getTracks().forEach(t => t.stop());
+            chatStreamRef.current = null;
+          }
+          if (!capturedText.trim() && chatAudioChunksRef.current.length > 0) {
+            const blob = new Blob(chatAudioChunksRef.current, { type: mimeType || recorder.mimeType || 'audio/webm' });
+            if (blob.size > 300) {
+              const transcribed = await transcribeAudioBlob(blob);
+              if (transcribed) {
+                setInputText(transcribed);
+                handleSendMessage(transcribed);
+              }
+            }
+          }
+        };
+
+        recorder.start(100);
+        chatMediaRecorderRef.current = recorder;
+      }
+    } catch (err) {
+      console.warn("MediaRecorder mic access in chat:", err);
+    }
+
+    // 2. Start SpeechRecognition
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
-      if (isPhoneCallActiveRef.current) {
-        setCallMicError('您的浏览器暂不支持网页语音识别，请点击下方快捷卡片进行对话！');
-      } else {
-        alert('您的浏览器暂不支持语音识别，请直接使用键盘输入英文或点击快捷对话卡哦！');
-      }
-      return;
-    }
-
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-        recognitionRef.current = null;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-
-      let capturedText = '';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        if (isPhoneCallActiveRef.current) {
-          setCallMicError(null);
+    if (SpeechRecognition) {
+      try {
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch {}
+          recognitionRef.current = null;
         }
-      };
 
-      recognition.onresult = (event: any) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            capturedText += event.results[i][0].transcript;
-          } else {
-            interim += event.results[i][0].transcript;
+        const recognition = new SpeechRecognition();
+        recognitionRef.current = recognition;
+        recognition.lang = 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+          setIsListening(true);
+          if (isPhoneCallActiveRef.current) {
+            setCallMicError(null);
           }
-        }
-        const current = (capturedText || interim).trim();
-        if (current) {
-          setInputText(current);
-        }
-      };
+        };
 
-      recognition.onerror = (event: any) => {
-        console.warn('SpeechRecognition error:', event?.error);
-        setIsListening(false);
-        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
-          setCallMicError('麦克风权限未开启或被浏览器限制');
-          setShowMicHelpModal(true);
-        } else if (event?.error === 'audio-capture') {
-          setCallMicError('未检测到麦克风输入，请确认麦克风设备');
-        } else if (event?.error === 'network') {
-          setCallMicError('语音网络连接超时，已为您切换为快捷口语卡');
-        }
-      };
+        recognition.onresult = (event: any) => {
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              capturedText += event.results[i][0].transcript;
+            } else {
+              interim += event.results[i][0].transcript;
+            }
+          }
+          const current = (capturedText || interim).trim();
+          if (current) {
+            setInputText(current);
+          }
+        };
 
-      recognition.onend = () => {
-        setIsListening(false);
-        const finalToSubmit = capturedText.trim() || inputText.trim();
-        if (finalToSubmit) {
-          handleSendMessage(finalToSubmit);
-        }
-      };
+        recognition.onerror = (event: any) => {
+          console.warn('SpeechRecognition browser notice (will fallback to audio STT):', event?.error);
+        };
 
-      recognition.start();
-    } catch (err) {
-      console.error('Speech recognition start failed:', err);
-      setIsListening(false);
+        recognition.onend = () => {
+          setIsListening(false);
+          const finalToSubmit = capturedText.trim();
+          if (finalToSubmit) {
+            handleSendMessage(finalToSubmit);
+          }
+        };
+
+        recognition.start();
+      } catch (err) {
+        console.warn('Speech recognition start notice:', err);
+      }
     }
   };
 

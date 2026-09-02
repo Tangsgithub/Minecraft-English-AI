@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, Mic, MicOff, Star, Sparkles, CheckCircle2, RotateCcw, Award, Play, AlertCircle, HelpCircle, ShieldCheck, Zap } from 'lucide-react';
+import { Volume2, Mic, MicOff, Star, Sparkles, CheckCircle2, RotateCcw, Award, Play, AlertCircle, HelpCircle, ShieldCheck, Zap, Loader2 } from 'lucide-react';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound, playLevelUpSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
-import { evaluateSpeech, SpeechAssessmentResult, WordAssessment } from '../services/speechAssessmentService';
+import { assessSpeechAudio, SpeechAssessmentResult, WordAssessment } from '../services/speechAssessmentService';
 import confetti from 'canvas-confetti';
 
 interface OralEvaluationModalProps {
@@ -27,6 +27,7 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
   const [isPlayingStandard, setIsPlayingStandard] = useState(false);
   const [isPlayingMyRecording, setIsPlayingMyRecording] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [hasRealRecording, setHasRealRecording] = useState(false);
@@ -38,6 +39,8 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recordedBlobRef = useRef<Blob | null>(null);
+  const audioLevelsRef = useRef<number[]>([]);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -120,8 +123,10 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
     setLiveTranscript('');
     setSelectedWordTip(null);
     chunksRef.current = [];
+    recordedBlobRef.current = null;
+    audioLevelsRef.current = [];
 
-    // 1. Initialize Web Speech API for real-time speech-to-text recognition
+    // 1. Initialize Web Speech API for real-time speech-to-text recognition (if available)
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     let recognitionInstance: any = null;
     let spokenAcc = '';
@@ -143,13 +148,13 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
         };
 
         recognitionInstance.onerror = (event: any) => {
-          console.warn('SpeechRecognition error:', event?.error);
+          console.warn('SpeechRecognition browser notice (will fallback to AI audio):', event?.error);
         };
 
         recognitionInstance.start();
         recognitionRef.current = recognitionInstance;
       } catch (err) {
-        console.warn('Recognition start error:', err);
+        console.warn('Recognition start notice:', err);
       }
     }
 
@@ -180,6 +185,7 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
                 sum += dataArray[i];
               }
               const avg = sum / dataArray.length;
+              audioLevelsRef.current.push(avg);
               setMicAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
               animFrameRef.current = requestAnimationFrame(updateLevel);
             };
@@ -207,16 +213,18 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
         };
 
         recorder.onstop = () => {
+          let finalBlob: Blob | null = null;
           if (chunksRef.current.length > 0) {
-            const blob = new Blob(chunksRef.current, { type: mimeType || recorder.mimeType || 'audio/webm' });
-            if (blob.size > 0) {
-              const url = URL.createObjectURL(blob);
+            finalBlob = new Blob(chunksRef.current, { type: mimeType || recorder.mimeType || 'audio/webm' });
+            if (finalBlob.size > 0) {
+              const url = URL.createObjectURL(finalBlob);
               setRecordedAudioUrl(url);
               setHasRealRecording(true);
+              recordedBlobRef.current = finalBlob;
             }
           }
           cleanupAudioStream();
-          finishAssessment(spokenAcc || liveTranscript);
+          finishAssessment(spokenAcc || liveTranscript, finalBlob);
         };
 
         recorder.start(100);
@@ -251,40 +259,59 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
       try {
         mediaRecorderRef.current.stop();
       } catch {
-        finishAssessment(liveTranscript);
+        finishAssessment(liveTranscript, recordedBlobRef.current);
       }
     } else {
-      finishAssessment(liveTranscript);
+      finishAssessment(liveTranscript, recordedBlobRef.current);
     }
   };
 
-  const finishAssessment = (spoken: string) => {
+  const finishAssessment = async (spoken: string, blobParam?: Blob | null) => {
+    setIsEvaluating(true);
     const duration = Math.max(1.0, recordingSeconds);
-    const result = evaluateSpeech(targetText, spoken, duration);
-    setEvaluationResult(result);
+    const activeBlob = blobParam || recordedBlobRef.current;
+    const avgAudioLevel = audioLevelsRef.current.length > 0
+      ? audioLevelsRef.current.reduce((a, b) => a + b, 0) / audioLevelsRef.current.length
+      : 0;
 
-    // Audio & Confetti Feedback (Only for genuine 4+ stars)
-    if (result.stars >= 4) {
-      playLevelUpSound();
-      try {
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.6 }
-        });
-      } catch {}
-    } else if (result.stars >= 3) {
-      playEmeraldSound();
-    }
+    try {
+      const result = await assessSpeechAudio({
+        audioBlob: activeBlob,
+        targetText,
+        durationSeconds: duration,
+        liveTranscript: spoken,
+        averageAudioLevel: avgAudioLevel
+      });
 
-    // Award rewards only if valid speech score >= 40
-    if (onAwardEmeralds && result.overallScore >= 40 && (result.emeraldReward > 0 || result.xpReward > 0)) {
-      onAwardEmeralds(result.emeraldReward, result.xpReward, '口语跟读打分');
-    }
+      setEvaluationResult(result);
 
-    // Auto master word only if genuinely 4+ stars
-    if (result.stars >= 4 && onMasterWord && targetText.split(' ').length <= 2) {
-      onMasterWord(targetText);
+      // Audio & Confetti Feedback (Only for genuine 4+ stars)
+      if (result.stars >= 4) {
+        playLevelUpSound();
+        try {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.6 }
+          });
+        } catch {}
+      } else if (result.stars >= 3) {
+        playEmeraldSound();
+      }
+
+      // Award rewards only if valid speech score >= 40
+      if (onAwardEmeralds && result.overallScore >= 40 && (result.emeraldReward > 0 || result.xpReward > 0)) {
+        onAwardEmeralds(result.emeraldReward, result.xpReward, '口语跟读打分');
+      }
+
+      // Auto master word only if genuinely 4+ stars
+      if (result.stars >= 4 && onMasterWord && targetText.split(' ').length <= 2) {
+        onMasterWord(targetText);
+      }
+    } catch (e) {
+      console.error("Evaluation error:", e);
+    } finally {
+      setIsEvaluating(false);
     }
   };
 
@@ -410,7 +437,24 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
           {/* Recording & Oral Practice Section */}
           <div className="text-center space-y-4">
             
-            {!evaluationResult ? (
+            {isEvaluating ? (
+              <div className="bg-slate-900/90 border border-amber-500/50 rounded-2xl p-8 space-y-4 text-center shadow-lg animate-in fade-in">
+                <div className="relative inline-flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center animate-spin">
+                    <Loader2 className="w-8 h-8 text-amber-400" />
+                  </div>
+                  <Sparkles className="w-5 h-5 text-emerald-400 absolute -top-1 -right-1 animate-bounce" />
+                </div>
+                <div>
+                  <p className="text-sm font-black font-mono text-amber-300">
+                    ⛏️ Alex 老师正在精准评测发音...
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 font-mono">
+                    结合音素多模态引擎进行音准、流利度与完整度分析
+                  </p>
+                </div>
+              </div>
+            ) : !evaluationResult ? (
               <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
                 <p className="text-xs font-mono font-bold text-slate-300">
                   {isRecording ? '正在收音，请清晰大声念出上面的英文：' : '点击下方大麦克风，大声跟读上方英文句子：'}

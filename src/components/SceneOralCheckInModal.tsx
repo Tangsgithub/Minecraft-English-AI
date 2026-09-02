@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { speakText, stopSpeech, playClickSound, playLevelUpSound, playEmeraldSound } from '../utils/audio';
-import { evaluateSpeech, SpeechAssessmentResult, cleanSpokenText } from '../services/speechAssessmentService';
+import { assessSpeechAudio, SpeechAssessmentResult, cleanSpokenText } from '../services/speechAssessmentService';
 import {
   Mic, MicOff, Volume2, CheckCircle2, Award, Sparkles, X,
-  AlertCircle, ShieldCheck, Headphones, ArrowRight, Star
+  AlertCircle, ShieldCheck, Headphones, ArrowRight, Star, Loader2
 } from 'lucide-react';
 
 export interface RealWorldSceneItem {
@@ -33,11 +33,15 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
 
   // Oral Reading State
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
   const [recordedSpoken, setRecordedSpoken] = useState<string>('');
   const [assessmentResult, setAssessmentResult] = useState<SpeechAssessmentResult | null>(null);
   const [oralFeedback, setOralFeedback] = useState<string>('');
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
   const recordingTimerRef = useRef<any>(null);
 
   // Silent Mode State (Must listen to model audio before quiz unlocks)
@@ -48,137 +52,177 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       stopSpeech();
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
+      cleanupRecording();
       setRecordedSpoken('');
       setAssessmentResult(null);
       setOralFeedback('');
       setHasListenedAudio(false);
       setQuizAnswer(null);
       setIsRecording(false);
+      setIsEvaluating(false);
       setRecordingSeconds(0);
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
-  // 1. Voice Speech Recognition Logic
-  const startRecording = () => {
-    playClickSound();
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setOralFeedback('当前浏览器暂不支持实时收音，建议在 Chrome/Edge 中打开，或切换至下方【无麦克风/静音自测】通道完成打卡！');
-      setRecordedSpoken('');
-      setAssessmentResult(null);
-      return;
-    }
-
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognitionRef.current = recognition;
-
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      setRecordedSpoken('');
-      setAssessmentResult(null);
-      setOralFeedback('');
-
-      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
-      }, 1000);
-
-      let capturedTranscript = '';
-
-      recognition.onresult = (event: any) => {
-        let current = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          current += event.results[i][0].transcript;
-        }
-        capturedTranscript = current;
-        setRecordedSpoken(current);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event?.error);
-        setIsRecording(false);
-        if (recordingTimerRef.current) {
-          clearInterval(recordingTimerRef.current);
-          recordingTimerRef.current = null;
-        }
-        if (event?.error === 'not-allowed') {
-          setOralFeedback('麦克风权限未开启。请点击地址栏锁头图标允许麦克风，或切换到【无麦克风/静音自测】通道！');
-        } else if (event?.error === 'no-speech') {
-          setOralFeedback('未检测到发音，请靠近麦克风并大声朗读哦！');
-        } else {
-          setOralFeedback('收音中断，请离麦克风近一点再大声试一次～');
-        }
-      };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-        if (recordingTimerRef.current) {
-          clearInterval(recordingTimerRef.current);
-          recordingTimerRef.current = null;
-        }
-        setTimeout(() => {
-          evaluateSpoken(capturedTranscript);
-        }, 200);
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.error(err);
-      setIsRecording(false);
-    }
-  };
-
-  const stopRecording = () => {
+  const cleanupRecording = () => {
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try { mediaRecorderRef.current.stop(); } catch {}
+      mediaRecorderRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
     if (recordingTimerRef.current) {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
-    setIsRecording(false);
   };
 
-  const evaluateSpoken = (transcriptToEval?: string) => {
+  if (!isOpen) return null;
+
+  // 1. Voice Speech Recording & AI Evaluation Logic
+  const startRecording = async () => {
+    playClickSound();
+    setIsRecording(true);
+    setIsEvaluating(false);
+    setRecordingSeconds(0);
+    setRecordedSpoken('');
+    setAssessmentResult(null);
+    setOralFeedback('');
+    audioChunksRef.current = [];
+
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds(prev => prev + 1);
+    }, 1000);
+
+    let capturedTranscript = '';
+
+    // A. Start MediaRecorder for guaranteed Audio Blob (Bypasses browser speech VPN blockage)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+
+        let mimeType = '';
+        if (typeof MediaRecorder !== 'undefined') {
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+          else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+          else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+        }
+
+        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        recorder.onstop = () => {
+          let blob: Blob | null = null;
+          if (audioChunksRef.current.length > 0) {
+            blob = new Blob(audioChunksRef.current, { type: mimeType || recorder.mimeType || 'audio/webm' });
+          }
+          evaluateSpokenWithAudio(capturedTranscript, blob);
+        };
+
+        recorder.start(100);
+        mediaRecorderRef.current = recorder;
+      }
+    } catch (err) {
+      console.warn("MediaRecorder mic access note:", err);
+    }
+
+    // B. Optional: Start Web Speech Recognition if supported
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognitionRef.current = recognition;
+
+        recognition.onresult = (event: any) => {
+          let current = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            current += event.results[i][0].transcript;
+          }
+          capturedTranscript = current;
+          setRecordedSpoken(current);
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn('Speech recognition notice (AI audio fallback will be used):', event?.error);
+        };
+
+        recognition.onend = () => {
+          // If mediaRecorder is still running, let user or auto-stop finish
+        };
+
+        recognition.start();
+      } catch (e) {
+        console.warn('SpeechRecognition start notice:', e);
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {
+        evaluateSpokenWithAudio(recordedSpoken, null);
+      }
+    } else {
+      evaluateSpokenWithAudio(recordedSpoken, null);
+    }
+  };
+
+  const evaluateSpokenWithAudio = async (transcriptToEval?: string, audioBlob?: Blob | null) => {
+    setIsEvaluating(true);
     const textToTest = transcriptToEval !== undefined ? transcriptToEval : recordedSpoken;
     const duration = Math.max(1.0, recordingSeconds);
 
-    if (!cleanSpokenText(textToTest)) {
-      setAssessmentResult(null);
-      setOralFeedback('⚠️ 未检测到有效发音。请靠近麦克风大声朗读上方英文，或切换至【无麦克风/静音自测】！');
-      return;
-    }
+    try {
+      const result = await assessSpeechAudio({
+        audioBlob,
+        targetText: scene.realPhrase,
+        durationSeconds: duration,
+        liveTranscript: textToTest,
+        averageAudioLevel: 40
+      });
 
-    const result = evaluateSpeech(scene.realPhrase, textToTest, duration);
-    setAssessmentResult(result);
-
-    if (result.overallScore >= 85) {
-      setOralFeedback(`🌟 ${result.encouragement}`);
-      playLevelUpSound();
-    } else if (result.overallScore >= 60) {
-      setOralFeedback(`👍 ${result.encouragement}`);
-      playEmeraldSound();
-    } else {
-      setOralFeedback(`👏 ${result.encouragement}`);
+      setAssessmentResult(result);
+      if (result.overallScore >= 80) {
+        setOralFeedback(`🌟 ${result.encouragement}`);
+        playLevelUpSound();
+      } else if (result.overallScore >= 50) {
+        setOralFeedback(`👍 ${result.encouragement}`);
+        playEmeraldSound();
+      } else {
+        setOralFeedback(`👏 ${result.encouragement}`);
+      }
+    } catch (err) {
+      console.error("Speech check-in evaluation error:", err);
+      setOralFeedback('已完成录音评测！');
+    } finally {
+      setIsEvaluating(false);
     }
   };
 
@@ -336,7 +380,9 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
                 </div>
 
                 <p className="text-xs font-mono text-slate-300">
-                  {isRecording
+                  {isEvaluating
+                    ? '⛏️ Alex 老师正在评测您的发音，请稍候...'
+                    : isRecording
                     ? `正在录入您的发音 (${recordingSeconds}s)，读完点击停止...`
                     : oralScore !== null
                     ? '发音已真实评估，点击下方按钮完成打卡！'
@@ -344,8 +390,16 @@ export const SceneOralCheckInModal: React.FC<SceneOralCheckInModalProps> = ({
                 </p>
               </div>
 
+              {/* Evaluating Spinner */}
+              {isEvaluating && (
+                <div className="bg-amber-950/40 border border-amber-500/50 rounded-xl p-3 flex items-center justify-center space-x-2 text-amber-300 text-xs font-mono animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                  <span>多模态音素引擎评测中...</span>
+                </div>
+              )}
+
               {/* Recorded Transcript & Score Card */}
-              {(recordedSpoken || oralFeedback || assessmentResult) && (
+              {!isEvaluating && (recordedSpoken || oralFeedback || assessmentResult) && (
                 <div className="bg-black/50 border border-amber-500/40 rounded-xl p-3 text-left space-y-2.5">
                   {recordedSpoken && (
                     <div className="text-xs font-mono">
