@@ -3,7 +3,8 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*": {
-      "includeFiles": "firebase-applet-config.json"
+      "includeFiles": "firebase-applet-config.json",
+      "maxDuration": 60
     }
   },
   "rewrites": [

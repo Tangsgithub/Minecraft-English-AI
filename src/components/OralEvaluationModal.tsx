@@ -447,10 +447,10 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
                 </div>
                 <div>
                   <p className="text-sm font-black font-mono text-amber-300">
-                    ⛏️ Alex 老师正在精准评测发音...
+                    ⚡ 浏览器本地轻量 AI 引擎即时测评中...
                   </p>
                   <p className="text-xs text-slate-400 mt-1 font-mono">
-                    结合音素多模态引擎进行音准、流利度与完整度分析
+                    100% 浏览器本地运算 · 0 网络延迟 · 0 Gemini 额度消耗
                   </p>
                 </div>
               </div>

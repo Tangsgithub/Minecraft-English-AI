@@ -534,7 +534,8 @@ app.use((req, _res, next) => {
     req.url.startsWith('/chat') ||
     req.url.startsWith('/auth') ||
     req.url.startsWith('/health') ||
-    req.url.startsWith('/test-key')
+    req.url.startsWith('/test-key') ||
+    req.url.startsWith('/speech')
   )) {
     req.url = '/api' + req.url;
   }
