@@ -855,10 +855,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
             }
           }}
           onStartPractice={(lesson) => {
-            if (onCompleteLesson) {
-              setActiveLesson(null);
-              onSelectLessonForChat(lesson);
-            }
+            setActiveLesson(null);
+            onSelectLessonForChat(lesson);
           }}
           onOpenVipModal={onOpenVipModal}
         />

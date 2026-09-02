@@ -517,9 +517,6 @@ export const LessonMap: React.FC<LessonMapProps> = ({
             }
           }}
           onStartPractice={(lesson) => {
-            if (onCompleteLesson) {
-              onCompleteLesson(lesson.id);
-            }
             setActiveLesson(null);
             onSelectLessonForChat(lesson);
           }}

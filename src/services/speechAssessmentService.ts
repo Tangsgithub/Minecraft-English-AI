@@ -536,8 +536,8 @@ export async function transcribeAudioBlob(blob: Blob): Promise<string> {
 }
 
 /**
- * Universal Intelligent Speech Assessment (Hybrid Web Speech API + Server-Side AI Multimodal Audio)
- * Guarantees 100% normal scoring even in mainland China without VPN!
+ * Universal Speech Assessment (Hybrid Multimodal AI Audio + Strict Real-time Alignment)
+ * Strictly evaluates true pronunciation quality, phonetics and words spoken. Never fakes scores.
  */
 export async function assessSpeechAudio(options: {
   audioBlob?: Blob | null;
@@ -546,19 +546,11 @@ export async function assessSpeechAudio(options: {
   liveTranscript?: string;
   averageAudioLevel?: number;
 }): Promise<SpeechAssessmentResult> {
-  const { audioBlob, targetText, durationSeconds = 2, liveTranscript = '', averageAudioLevel = 0 } = options;
+  const { audioBlob, targetText, durationSeconds = 2, liveTranscript = '' } = options;
   const cleanTarget = targetText.trim();
   const dur = Math.max(0.6, durationSeconds);
 
-  // 1. If Web Speech API captured non-empty spoken transcript, evaluate locally first
-  if (liveTranscript && cleanSpokenText(liveTranscript).length > 0) {
-    const localEval = evaluateSpeech(cleanTarget, liveTranscript, dur);
-    if (localEval.overallScore >= 45) {
-      return localEval;
-    }
-  }
-
-  // 2. If recorded audio blob exists (>300 bytes), call backend AI speech assessment (No VPN required!)
+  // 1. If recorded audio blob exists (>300 bytes), call backend AI speech assessment
   if (audioBlob && audioBlob.size > 300) {
     try {
       const base64 = await blobToBase64(audioBlob);
@@ -580,79 +572,29 @@ export async function assessSpeechAudio(options: {
           const res = data.result;
           return {
             overallScore: res.overallScore,
-            stars: res.stars || (res.overallScore >= 92 ? 5 : res.overallScore >= 82 ? 4 : res.overallScore >= 65 ? 3 : 2),
+            stars: res.stars ?? (res.overallScore >= 92 ? 5 : res.overallScore >= 82 ? 4 : res.overallScore >= 65 ? 3 : res.overallScore >= 40 ? 2 : res.overallScore > 0 ? 1 : 0),
             accuracy: res.accuracy ?? res.overallScore,
-            fluency: res.fluency ?? 88,
-            completeness: res.completeness ?? 90,
-            grade: res.grade || 'Fluent',
-            gradeZh: res.gradeZh || '流利标准 (Fluent)',
-            spokenTranscript: res.spokenTranscript || cleanTarget,
+            fluency: res.fluency ?? (res.overallScore > 0 ? 80 : 0),
+            completeness: res.completeness ?? (res.overallScore > 0 ? 85 : 0),
+            grade: res.grade || (res.overallScore >= 92 ? 'Master' : res.overallScore >= 82 ? 'Fluent' : res.overallScore >= 65 ? 'Good' : 'NeedsPractice'),
+            gradeZh: res.gradeZh || (res.overallScore >= 92 ? '完美原声 (Mastery)' : res.overallScore >= 82 ? '流利标准 (Fluent)' : res.overallScore >= 65 ? '良好跟读 (Good)' : '需多练习 (Practice)'),
+            spokenTranscript: res.spokenTranscript || liveTranscript || '',
             wordAssessments: res.wordAssessments || [],
             phonicsTips: extractPhonicsTips(cleanTarget),
-            encouragement: res.encouragement || '发音标准清晰，Alex 老师为你大力点赞！',
-            emeraldReward: res.emeraldReward ?? (res.overallScore >= 82 ? 10 : 6),
-            xpReward: res.xpReward ?? (res.overallScore >= 82 ? 25 : 18),
-            wpm: res.wpm || Math.round((cleanTarget.split(' ').length / dur) * 60)
+            encouragement: res.encouragement || (res.overallScore >= 80 ? '发音非常标准，Alex 老师为你大力点赞！' : res.overallScore > 0 ? '再接再厉，多加模仿练习！' : '未检测到有效声音，请靠近麦克风大声朗读哦！'),
+            emeraldReward: res.emeraldReward ?? (res.overallScore >= 92 ? 15 : res.overallScore >= 82 ? 10 : res.overallScore >= 65 ? 6 : res.overallScore >= 40 ? 3 : 0),
+            xpReward: res.xpReward ?? (res.overallScore >= 92 ? 40 : res.overallScore >= 82 ? 25 : res.overallScore >= 65 ? 18 : res.overallScore >= 40 ? 10 : 0),
+            wpm: res.wpm || (liveTranscript ? Math.round((liveTranscript.split(' ').length / dur) * 60) : 0)
           };
         }
       }
     } catch (apiErr) {
-      console.warn("Backend AI speech assessment error, switching to acoustic fallback:", apiErr);
+      console.warn("Backend AI speech assessment error, switching to strict real deterministic evaluation:", apiErr);
     }
   }
 
-  // 3. Fallback: If microphone recorded sound energy (averageAudioLevel > 5 or audioBlob exists),
-  // compute an encouraging acoustic assessment based on speech pacing and phonics
-  if ((audioBlob && audioBlob.size > 500) || averageAudioLevel > 8 || liveTranscript) {
-    const expectedWords = cleanSpokenText(cleanTarget).split(' ').filter(Boolean);
-    const wordCount = Math.max(1, expectedWords.length);
-    const pace = (wordCount / dur) * 60; // WPM
-
-    let accuracy = 88;
-    let fluency = 90;
-    if (pace >= 70 && pace <= 160) {
-      accuracy = 92;
-      fluency = 94;
-    } else if (pace >= 40 && pace < 70) {
-      accuracy = 86;
-      fluency = 84;
-    } else {
-      accuracy = 82;
-      fluency = 80;
-    }
-
-    const overallScore = Math.round(accuracy * 0.55 + fluency * 0.45);
-    const stars = overallScore >= 92 ? 5 : overallScore >= 82 ? 4 : overallScore >= 65 ? 3 : 2;
-
-    const wordAssessments: WordAssessment[] = expectedWords.map(w => ({
-      word: w,
-      expectedWord: w,
-      score: accuracy,
-      status: (accuracy >= 90 ? 'perfect' : 'good') as const,
-      phoneticTip: getWordPhonicsTip(w),
-      feedback: '发音饱满清晰，音节节奏良好'
-    }));
-
-    return {
-      overallScore,
-      stars,
-      accuracy,
-      fluency,
-      completeness: 95,
-      grade: overallScore >= 92 ? 'Master' : overallScore >= 82 ? 'Fluent' : 'Good',
-      gradeZh: overallScore >= 92 ? '完美原声 (Mastery)' : overallScore >= 82 ? '流利标准 (Fluent)' : '良好跟读 (Good)',
-      spokenTranscript: liveTranscript || cleanTarget,
-      wordAssessments,
-      phonicsTips: extractPhonicsTips(cleanTarget),
-      encouragement: '录音收音完整！发音节奏极佳，Alex 老师为你点赞！',
-      emeraldReward: stars >= 4 ? 10 : 6,
-      xpReward: stars >= 4 ? 25 : 18,
-      wpm: Math.round(pace)
-    };
-  }
-
-  // 4. Default if silence / no mic sound
-  return evaluateSpeech(cleanTarget, liveTranscript, dur);
+  // 2. Fallback: Strict Real Deterministic Evaluation based on real spoken speech
+  return evaluateSpeech(cleanTarget, liveTranscript || '', dur);
 }
 
 

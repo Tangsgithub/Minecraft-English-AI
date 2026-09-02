@@ -1441,10 +1441,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   )}
                   <button
                     onClick={() => {
-                      playEmeraldSound();
-                      if (onCompleteLesson) {
-                        onCompleteLesson(lesson.id);
-                      }
+                      playClickSound();
                       onStartPractice(lesson);
                     }}
                     className="w-full py-3 sm:py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl border-3 border-slate-950 shadow-[3px_3px_0_0_#0F172A] transition-transform active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 text-xs sm:text-sm font-mono cursor-pointer"
