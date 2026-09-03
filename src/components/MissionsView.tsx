@@ -170,15 +170,16 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
           </div>
         </div>
 
-        {/* Quest Chain Progress & Claim All */}
+        {/* Quest Chain Progress & Claim All (Only for fulfilled missions) */}
         <div className="flex items-center space-x-3">
           {readyCount > 0 && (
             <button
               onClick={handleClaimAllReady}
-              className="px-4 py-2 bg-[#487E2C] hover:bg-[#386322] text-white rounded-2xl border-2 border-black font-mono font-black text-xs shadow-[0_3px_0_0_#234114] transform hover:translate-y-0.5 active:translate-y-[3px] active:shadow-none transition-all flex items-center space-x-1.5"
+              className="px-4 py-2 bg-[#487E2C] hover:bg-[#386322] text-white rounded-2xl border-2 border-black font-mono font-black text-xs shadow-[0_3px_0_0_#234114] transform hover:translate-y-0.5 active:translate-y-[3px] active:shadow-none transition-all flex items-center space-x-1.5 cursor-pointer"
+              title="仅一键领取已满足条件的任务奖励，未完成的任务不可领取"
             >
               <Zap className="w-4 h-4 text-[#FFD700] fill-[#FFD700]" />
-              <span>一键领取全部 ({readyCount})</span>
+              <span>一键领取已达成 ({readyCount})</span>
             </button>
           )}
 

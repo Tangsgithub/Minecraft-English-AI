@@ -55,7 +55,16 @@ export function getLevelFromXp(xp: number): number {
   return lvl;
 }
 
-export function getXpProgressForCurrentLevel(xp: number, level: number): { currentLevelMinXp: number; nextLevelMinXp: number; progressPercent: number } {
+export interface XpProgressInfo {
+  currentLevelMinXp: number;
+  nextLevelMinXp: number;
+  progressPercent: number;
+  progressInLevel: number;
+  levelSpan: number;
+  xpNeededForNextLevel: number;
+}
+
+export function getXpProgressForCurrentLevel(xp: number, level: number): XpProgressInfo {
   let lvl = 1;
   let req = 80;
   let accumulated = 0;
@@ -71,8 +80,16 @@ export function getXpProgressForCurrentLevel(xp: number, level: number): { curre
   const progressInLevel = Math.max(0, xp - currentLevelMinXp);
   const span = Math.max(1, nextLevelMinXp - currentLevelMinXp);
   const progressPercent = Math.min(100, Math.round((progressInLevel / span) * 100));
+  const xpNeededForNextLevel = Math.max(0, nextLevelMinXp - xp);
 
-  return { currentLevelMinXp, nextLevelMinXp, progressPercent };
+  return {
+    currentLevelMinXp,
+    nextLevelMinXp,
+    progressPercent,
+    progressInLevel,
+    levelSpan: span,
+    xpNeededForNextLevel
+  };
 }
 
 export const BADGES_DATA: Badge[] = [
@@ -472,12 +489,11 @@ export function evaluateMissionsForProfile(profile: Partial<UserProfile>): strin
 
     let isMet = false;
     switch (mission.id) {
-      // Dailies: STRICTLY evaluated against today's actual actions
+      // Dailies: STRICTLY evaluated against today's actual actions (no passive idle time)
       case 'daily_001':
-        // Daily Check-in & Exploration: Done if todayCheckedIn, or studied >= 1 min today, or passed 1 lesson today, or chatted with Alex today
+        // Daily Check-in & Exploration: Must have explicitly checked in, completed a lesson, chatted with Alex, or mastered a word today
         isMet = Boolean(
           profile.todayCheckedIn ||
-          (profile.todayStudyMinutes || 0) >= 1 ||
           (profile.todayCompletedLessonsCount || 0) >= 1 ||
           profile.todayAlexChatDone ||
           (profile.todayMasteredWordsCount || 0) >= 1
@@ -587,7 +603,6 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
       target = 1;
       const isDaily001Met = Boolean(
         profile.todayCheckedIn ||
-        (profile.todayStudyMinutes || 0) >= 1 ||
         (profile.todayCompletedLessonsCount || 0) >= 1 ||
         profile.todayAlexChatDone ||
         (profile.todayMasteredWordsCount || 0) >= 1

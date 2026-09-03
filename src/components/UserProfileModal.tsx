@@ -103,7 +103,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   };
 
   const tier = getTierForLevel(profile.level);
-  const { currentLevelMinXp, nextLevelMinXp, progressPercent } = getXpProgressForCurrentLevel(profile.xp, profile.level);
+  const { currentLevelMinXp, nextLevelMinXp, progressPercent, progressInLevel, levelSpan, xpNeededForNextLevel } = getXpProgressForCurrentLevel(profile.xp, profile.level);
 
   const parentSettings: ParentSettings = profile.parentSettings || {
     dailyTimeLimitMinutes: 45,
@@ -604,21 +604,26 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             </div>
 
             {/* XP Bar */}
-            <div className="space-y-1">
-              <div className="flex justify-between items-end text-[10px]">
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-[10px]">
                 <span className="font-bold text-slate-300 flex items-center space-x-1">
-                  <Flame className="w-3 h-3 text-amber-500" />
-                  <span>经验值 (XP)</span>
+                  <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  <span>升级经验进度 (本级)</span>
                 </span>
-                <span className="font-mono text-slate-400">
-                  <span className="text-amber-400 font-bold">{profile.xp}</span> / {nextLevelMinXp}
+                <span className="font-mono text-slate-300">
+                  <span className="text-amber-400 font-bold">{progressInLevel}</span> / {levelSpan} XP
+                  <span className="text-slate-400 ml-1.5 font-sans">({progressPercent}%)</span>
                 </span>
               </div>
               <div className="h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800/80 shadow-inner">
                 <div 
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 relative transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-400 relative transition-all duration-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
                   style={{ width: `${progressPercent}%` }}
                 />
+              </div>
+              <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                <span>累计总经验: <strong className="text-amber-300">{profile.xp} XP</strong></span>
+                <span>升至 Lv.{profile.level + 1} 还需: <strong className="text-emerald-400">{xpNeededForNextLevel} XP</strong></span>
               </div>
             </div>
           </div>

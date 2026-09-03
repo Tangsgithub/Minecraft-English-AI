@@ -38,7 +38,7 @@ const DEFAULT_PROFILE: UserProfile = {
   nickname: 'Olaf',
   age: 8,
   level: 1,
-  xp: 40,
+  xp: 0,
   emeralds: 15,
   streakDays: 1,
   totalStudyDays: 1,
@@ -212,7 +212,7 @@ const sanitizeProfile = (raw: any): UserProfile => {
   };
 
   if (merged.nickname === 'Tom') merged.nickname = 'Olaf';
-  merged.level = getLevelFromXp(merged.xp || 40);
+  merged.level = getLevelFromXp(typeof merged.xp === 'number' ? merged.xp : 0);
 
   // If user account is 测试001 or test001, ensure set to regular user (普通用户)
   const cleanAcc = (merged.account || merged.nickname || '').trim().toLowerCase();

@@ -46,7 +46,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const tier = getTierForLevel(profile.level);
   
   // XP calculation for next level
-  const { nextLevelMinXp, progressPercent } = getXpProgressForCurrentLevel(profile.xp, profile.level);
+  const { nextLevelMinXp, progressPercent, progressInLevel, levelSpan, xpNeededForNextLevel } = getXpProgressForCurrentLevel(profile.xp, profile.level);
 
   const handleSoundToggle = () => {
     unlockAudio();
@@ -167,16 +167,36 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
 
             {/* XP Progress Bar */}
-            <div className="w-36">
-              <div className="flex justify-between text-[10px] font-mono font-bold mb-1 text-white">
-                <span className="text-emerald-300 font-black">XP</span>
-                <span className="text-amber-300 font-black">{profile.xp} / {nextLevelMinXp}</span>
+            <div 
+              className="w-40 group/xp relative cursor-help"
+              title={`当前等级: Lv.${profile.level} (${tier.title})\n本级升级进度: ${progressInLevel} / ${levelSpan} XP (${progressPercent}%)\n升至 Lv.${profile.level + 1} 还需: ${xpNeededForNextLevel} XP\n累计总经验: ${profile.xp} XP`}
+            >
+              <div className="flex justify-between items-center text-[10px] font-mono font-bold mb-1 text-white">
+                <div className="flex items-center space-x-1">
+                  <span className="text-emerald-300 font-black">XP</span>
+                  <span className="text-[9px] text-emerald-400/80 font-normal">本级</span>
+                </div>
+                <span className="text-amber-300 font-black tracking-tight">
+                  {progressInLevel} / {levelSpan}
+                </span>
               </div>
               <div className="h-2.5 w-full bg-slate-950 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
                 <div
                   className="h-full bg-gradient-to-r from-emerald-500 via-green-400 to-lime-300 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(74,222,128,0.6)]"
                   style={{ width: `${progressPercent}%` }}
                 />
+              </div>
+
+              {/* Hover details tooltip */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-slate-900/95 backdrop-blur-md border border-emerald-500/50 rounded-xl p-2 shadow-2xl opacity-0 invisible group-hover/xp:opacity-100 group-hover/xp:visible transition-all z-50 text-[10px] font-mono pointer-events-none">
+                <div className="flex justify-between text-slate-300">
+                  <span>累计总经验:</span>
+                  <span className="text-amber-300 font-bold">{profile.xp} XP</span>
+                </div>
+                <div className="flex justify-between text-slate-300 mt-0.5">
+                  <span>升至 Lv.{profile.level + 1} 需:</span>
+                  <span className="text-emerald-300 font-bold">{xpNeededForNextLevel} XP</span>
+                </div>
               </div>
             </div>
 
@@ -318,10 +338,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
 
           {/* XP Progress Bar */}
-          <div className="flex-1 max-w-[150px] xs:max-w-[200px]">
+          <div className="flex-1 max-w-[150px] xs:max-w-[200px]" title={`本级进度: ${progressInLevel}/${levelSpan} XP (${progressPercent}%)\n累计总经验: ${profile.xp} XP\n升至 Lv.${profile.level + 1} 需: ${xpNeededForNextLevel} XP`}>
             <div className="flex justify-between text-[9px] font-bold text-white mb-0.5">
-              <span className="text-emerald-300">XP</span>
-              <span className="text-amber-300">{profile.xp}/{nextLevelMinXp}</span>
+              <span className="text-emerald-300">XP <span className="opacity-70 font-normal">本级</span></span>
+              <span className="text-amber-300 font-mono font-black">{progressInLevel}/{levelSpan}</span>
             </div>
             <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
               <div
