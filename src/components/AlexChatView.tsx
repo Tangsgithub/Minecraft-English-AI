@@ -21,27 +21,40 @@ interface AlexChatViewProps {
   onOpenSettings: () => void;
 }
 
+// Helper function to split dialogue into English and Chinese parts cleanly
+interface DialogueParts {
+  english: string;
+  chinese?: string;
+}
+
+function splitDialogueParts(text: string): DialogueParts {
+  if (!text) return { english: '' };
+  let en = text.trim();
+  let zh = '';
+
+  const bracketMatch = en.match(/\[([^\]]+)\]/);
+  if (bracketMatch) {
+    zh = bracketMatch[1].trim();
+    en = en.replace(/\[[^\]]+\]/g, '').trim();
+  } else {
+    const parenMatch = en.match(/([（(][^）)]*[\u4e00-\u9fa5]+[^）)]*[）)])/);
+    if (parenMatch) {
+      zh = parenMatch[1].replace(/^[（(]|[）)]$/g, '').trim();
+      en = en.replace(/([（(][^）)]*[\u4e00-\u9fa5]+[^）)]*[）)])/g, '').trim();
+    }
+  }
+
+  return { english: en || text, chinese: zh || undefined };
+}
+
 // Helper function to format Alex dialogue with clear linebreaks for kids and translation toggle
 function formatAlexDialogue(text: string, showTranslation: boolean = true): string {
   if (!text) return '';
-  let cleaned = text.trim();
-  if (!showTranslation) {
-    cleaned = cleaned
-      .replace(/\[.*?\]/g, '')
-      .replace(/（.*?[\u4e00-\u9fa5].*?）/g, '')
-      .replace(/\(.*?\u4e00-\u9fa5.*?\)/g, '')
-      .replace(/\n{2,}/g, '\n')
-      .trim();
-    return cleaned;
+  const parts = splitDialogueParts(text);
+  if (!showTranslation || !parts.chinese) {
+    return parts.english;
   }
-  // Ensure [中文...] bracketed translation is on its own paragraph with double linebreaks
-  cleaned = cleaned
-    .replace(/(\S)\s*(\[[^\]]+\])/g, '$1\n\n$2')
-    .replace(/(\[[^\]]+\])\s*(\S)/g, '$1\n\n$2')
-    .replace(/(\S)\s*([（(][^）)]*[\u4e00-\u9fa5]+[^）)]*[）)])/g, '$1\n\n$2')
-    .replace(/([（(][^）)]*[\u4e00-\u9fa5]+[^）)]*[）)])\s*(\S)/g, '$1\n\n$2')
-    .replace(/\n{3,}/g, '\n\n');
-  return cleaned;
+  return `${parts.english}\n\n[${parts.chinese}]`;
 }
 
 export const AlexChatView: React.FC<AlexChatViewProps> = ({
@@ -72,6 +85,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const [autoListenMode, setAutoListenMode] = useState<boolean>(false);
   const [callMicError, setCallMicError] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [isTranscribingVoice, setIsTranscribingVoice] = useState<boolean>(false);
+  const liveTranscriptRef = useRef<string>('');
 
   // Mic Permission Guide Modal & Diagnostic State
   const [showMicHelpModal, setShowMicHelpModal] = useState<boolean>(false);
@@ -115,7 +130,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   // Clean up audio & recognition on unmount
   useEffect(() => {
     return () => {
-      stopPhoneCallAudioLevelMeter();
+      stopAllRecordingAndMeter();
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch {}
         recognitionRef.current = null;
@@ -153,41 +168,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     }
   };
 
-  const startPhoneCallAudioLevelMeter = async () => {
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaStreamRef.current = stream;
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextClass) {
-          const ctx = new AudioContextClass();
-          audioContextRef.current = ctx;
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 64;
-          const source = ctx.createMediaStreamSource(stream);
-          source.connect(analyser);
-          const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-          const checkLevel = () => {
-            if (!isPhoneCallActiveRef.current) return;
-            analyser.getByteFrequencyData(dataArray);
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              sum += dataArray[i];
-            }
-            const avg = sum / dataArray.length;
-            setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
-            animationFrameRef.current = requestAnimationFrame(checkLevel);
-          };
-          checkLevel();
-        }
-      }
-    } catch (err) {
-      console.warn('Audio level meter getUserMedia notice:', err);
-    }
-  };
-
-  const stopPhoneCallAudioLevelMeter = () => {
+  const stopAllRecordingAndMeter = () => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -207,84 +188,6 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setAudioLevel(0);
   };
 
-  const startAutoListening = () => {
-    if (typeof window === 'undefined') return;
-    if (!isPhoneCallActiveRef.current) return;
-    if (isSpeakingRef.current) {
-      stopSpeech();
-      isSpeakingRef.current = false;
-    }
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      setCallMicError('当前浏览器不支持网页实时语音识别，请直接点击下方常用例句卡与 Alex 交流！');
-      return;
-    }
-
-    try {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch {}
-        recognitionRef.current = null;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.lang = 'en-US';
-      recognition.continuous = false;
-      recognition.interimResults = true;
-
-      let capturedText = '';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setCallMicError(null);
-      };
-
-      recognition.onresult = (event: any) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            capturedText += event.results[i][0].transcript;
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
-        const current = (capturedText || interim).trim();
-        if (current) {
-          setInputText(current);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('SpeechRecognition error:', event?.error);
-        setIsListening(false);
-        if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
-          setCallMicError('麦克风权限未开启或被浏览器限制');
-          setShowMicHelpModal(true);
-        } else if (event?.error === 'audio-capture') {
-          setCallMicError('未检测到麦克风输入，请确认麦克风已连接');
-        } else if (event?.error === 'network') {
-          setCallMicError('语音网络连接超时，已为您切换为快捷口语卡');
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-        const finalToSubmit = capturedText.trim() || inputText.trim();
-        if (finalToSubmit && isPhoneCallActiveRef.current) {
-          handleSendMessage(finalToSubmit);
-        }
-      };
-
-      recognition.start();
-    } catch (err) {
-      console.warn('SpeechRecognition start error:', err);
-      setIsListening(false);
-    }
-  };
-
   const handleStartPhoneCall = () => {
     setIsPhoneCallActive(true);
     isPhoneCallActiveRef.current = true;
@@ -292,7 +195,6 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setCallMicError(null);
     playClickSound();
     unlockMobileAudio();
-    startPhoneCallAudioLevelMeter();
 
     const greeting = `Hello ${profile.nickname || 'there'}! I'm Alex! What are you building in Minecraft today? [你好呀！我是 Alex 老师！你今天在我的世界里造了什么呢？]`;
     setPhoneSubtitle(greeting);
@@ -301,7 +203,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     speakText(greeting, () => {
       isSpeakingRef.current = false;
       if (isPhoneCallActiveRef.current && autoListenModeRef.current) {
-        startAutoListening();
+        handleToggleVoiceInput();
       }
     }, { speaker: 'Alex', rate: speechRate });
   };
@@ -309,13 +211,17 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   const handleEndPhoneCall = () => {
     isPhoneCallActiveRef.current = false;
     isSpeakingRef.current = false;
-    stopPhoneCallAudioLevelMeter();
+    stopSpeech();
+    setIsListening(false);
+    setIsTranscribingVoice(false);
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
     }
-    stopSpeech();
-    setIsListening(false);
+    if (chatMediaRecorderRef.current && chatMediaRecorderRef.current.state !== 'inactive') {
+      try { chatMediaRecorderRef.current.stop(); } catch {}
+    }
+    stopAllRecordingAndMeter();
     setCallStatus('ended');
     onAwardEmeralds(5, 10);
     playEmeraldSound();
@@ -340,26 +246,13 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
 
   const chatMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chatAudioChunksRef = useRef<Blob[]>([]);
-  const chatStreamRef = useRef<MediaStream | null>(null);
 
-  // Web Speech API Voice Input + Server-Side AI STT Fallback
+  // Unified Web Speech API + MediaRecorder Audio STT Engine
   const handleToggleVoiceInput = async () => {
     if (typeof window === 'undefined') return;
 
-    if (isListening) {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {}
-      }
-      if (chatMediaRecorderRef.current && chatMediaRecorderRef.current.state !== 'inactive') {
-        try {
-          chatMediaRecorderRef.current.stop();
-        } catch {}
-      }
-      setIsListening(false);
-      return;
-    }
+    playClickSound();
+    unlockMobileAudio();
 
     // If Alex is currently speaking, interrupt playback so the user can speak immediately
     if (isSpeakingRef.current) {
@@ -367,55 +260,121 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
       isSpeakingRef.current = false;
     }
 
-    setIsListening(true);
-    chatAudioChunksRef.current = [];
-    let capturedText = '';
+    // A) If already listening: User clicked to finish speaking & send
+    if (isListening) {
+      setIsListening(false);
+      setIsTranscribingVoice(true);
 
-    // 1. Start MediaRecorder for guaranteed Audio Blob
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        chatStreamRef.current = stream;
-
-        let mimeType = '';
-        if (typeof MediaRecorder !== 'undefined') {
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
-          else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
-          else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
-        }
-
-        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            chatAudioChunksRef.current.push(e.data);
-          }
-        };
-
-        recorder.onstop = async () => {
-          if (chatStreamRef.current) {
-            chatStreamRef.current.getTracks().forEach(t => t.stop());
-            chatStreamRef.current = null;
-          }
-          if (!capturedText.trim() && chatAudioChunksRef.current.length > 0) {
-            const blob = new Blob(chatAudioChunksRef.current, { type: mimeType || recorder.mimeType || 'audio/webm' });
-            if (blob.size > 300) {
-              const transcribed = await transcribeAudioBlob(blob);
-              if (transcribed) {
-                setInputText(transcribed);
-                handleSendMessage(transcribed);
-              }
-            }
-          }
-        };
-
-        recorder.start(100);
-        chatMediaRecorderRef.current = recorder;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
       }
-    } catch (err) {
-      console.warn("MediaRecorder mic access in chat:", err);
+
+      if (chatMediaRecorderRef.current && chatMediaRecorderRef.current.state !== 'inactive') {
+        try {
+          chatMediaRecorderRef.current.stop();
+        } catch {
+          finalizeVoiceInput();
+        }
+      } else {
+        finalizeVoiceInput();
+      }
+      return;
     }
 
-    // 2. Start SpeechRecognition
+    // B) Not listening: User clicked to start talking
+    setCallMicError(null);
+    liveTranscriptRef.current = '';
+    chatAudioChunksRef.current = [];
+
+    // 1. Check browser mediaDevices support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errMsg = '当前浏览器环境不支持麦克风录音，请在 Chrome / Edge 中打开，或点击下方例句卡直接交流。';
+      setCallMicError(errMsg);
+      setShowMicHelpModal(true);
+      return;
+    }
+
+    // 2. Request microphone stream
+    let stream: MediaStream;
+    try {
+      stopAllRecordingAndMeter();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+    } catch (err: any) {
+      console.warn('Microphone permission / access error:', err);
+      setIsListening(false);
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        setCallMicError('麦克风权限被拒绝。请在浏览器地址栏点击 🔒 允许麦克风，或在新标签页打开。');
+        setShowMicHelpModal(true);
+      } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+        setCallMicError('未检测到可用的麦克风硬件设备，请检查耳机或麦克风连接。');
+      } else {
+        setCallMicError(`麦克风启动失败 (${err?.name || '未知原因'})，请重试或在新标签页打开。`);
+      }
+      return;
+    }
+
+    // 3. Set listening state
+    setIsListening(true);
+
+    // 4. Setup AudioContext Analyser for real-time audio volume visualizer
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const ctx = new AudioContextClass();
+        audioContextRef.current = ctx;
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        const source = ctx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const checkLevel = () => {
+          if (!mediaStreamRef.current) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const avg = sum / dataArray.length;
+          setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+          animationFrameRef.current = requestAnimationFrame(checkLevel);
+        };
+        checkLevel();
+      }
+    } catch (e) {
+      console.warn('AudioContext setup notice:', e);
+    }
+
+    // 5. Setup MediaRecorder
+    let mimeType = '';
+    if (typeof MediaRecorder !== 'undefined') {
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+      else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+      else if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+      else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac';
+    }
+
+    try {
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      chatMediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chatAudioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        finalizeVoiceInput(mimeType || recorder.mimeType);
+      };
+
+      recorder.start(100);
+    } catch (recErr) {
+      console.warn('MediaRecorder start notice:', recErr);
+    }
+
+    // 6. Concurrently start Web Speech Recognition for instant on-screen transcription
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -432,45 +391,60 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
         recognition.continuous = false;
         recognition.interimResults = true;
 
-        recognition.onstart = () => {
-          setIsListening(true);
-          if (isPhoneCallActiveRef.current) {
-            setCallMicError(null);
-          }
-        };
-
         recognition.onresult = (event: any) => {
-          let interim = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              capturedText += event.results[i][0].transcript;
-            } else {
-              interim += event.results[i][0].transcript;
-            }
+          let words = '';
+          for (let i = 0; i < event.results.length; ++i) {
+            words += event.results[i][0].transcript + ' ';
           }
-          const current = (capturedText || interim).trim();
-          if (current) {
-            setInputText(current);
+          const clean = words.trim();
+          if (clean) {
+            liveTranscriptRef.current = clean;
+            setInputText(clean);
           }
         };
 
         recognition.onerror = (event: any) => {
-          console.warn('SpeechRecognition browser notice (will fallback to audio STT):', event?.error);
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-          const finalToSubmit = capturedText.trim();
-          if (finalToSubmit) {
-            handleSendMessage(finalToSubmit);
-          }
+          console.warn('Web Speech recognition notice:', event?.error);
         };
 
         recognition.start();
       } catch (err) {
-        console.warn('Speech recognition start notice:', err);
+        console.warn('SpeechRecognition start notice:', err);
       }
     }
+  };
+
+  const finalizeVoiceInput = async (mimeType?: string) => {
+    stopAllRecordingAndMeter();
+
+    const quickCaptured = liveTranscriptRef.current.trim() || inputText.trim();
+    liveTranscriptRef.current = '';
+
+    if (quickCaptured) {
+      setIsTranscribingVoice(false);
+      handleSendMessage(quickCaptured);
+      return;
+    }
+
+    // Fallback to server-side AI transcription if Web Speech API didn't capture text
+    if (chatAudioChunksRef.current.length > 0) {
+      try {
+        const blob = new Blob(chatAudioChunksRef.current, { type: mimeType || 'audio/webm' });
+        if (blob.size > 200) {
+          const transcribed = await transcribeAudioBlob(blob);
+          setIsTranscribingVoice(false);
+          if (transcribed && transcribed.trim()) {
+            handleSendMessage(transcribed.trim());
+            return;
+          }
+        }
+      } catch (sttErr) {
+        console.warn('Server transcribe error:', sttErr);
+      }
+    }
+
+    setIsTranscribingVoice(false);
+    setCallMicError('未能听清声音，请离麦克风近一点重试，或点击下方快捷卡交流~');
   };
 
   const handleSendMessage = async (customText?: string) => {
@@ -529,7 +503,7 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     speakText(formattedAlexText, () => {
       isSpeakingRef.current = false;
       if (isPhoneCallActiveRef.current && autoListenModeRef.current) {
-        startAutoListening();
+        handleToggleVoiceInput();
       }
     }, { speaker: 'Alex', rate: speechRate });
 
@@ -626,85 +600,85 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-12rem)] min-h-[420px] max-h-[820px] bg-white border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] text-[#2D2D2D]">
+    <div className="flex flex-col h-[calc(100dvh-13rem)] min-h-[440px] max-h-[760px] bg-white border border-emerald-700/40 rounded-2xl overflow-hidden shadow-md text-[#2D2D2D]">
       
       {/* Top Banner: Alex NPC Status & Active Lesson */}
-      <div className="bg-[#487E2C] p-2.5 sm:p-4 border-b-2 sm:border-b-4 border-[#355E20] text-white flex items-center justify-between gap-2">
-        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+      <div className="bg-[#487E2C] px-3 py-2 sm:px-4 sm:py-2.5 border-b border-[#355E20] text-white flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2.5 min-w-0">
           {/* Animated Alex Character Frame with Moods */}
           <div className="relative shrink-0">
-            <MinecraftAvatar speaker="Alex" size={44} />
-            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-[#7CFC00] border-2 border-black rounded-full animate-pulse" title="Alex 在线伴学" />
+            <MinecraftAvatar speaker="Alex" size={36} />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#7CFC00] border-2 border-[#355E20] rounded-full animate-pulse" title="Alex 在线伴学" />
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center space-x-1.5 sm:space-x-2">
-              <h3 className="font-black font-mono text-white text-xs sm:text-base drop-shadow-sm truncate">
+            <div className="flex items-center space-x-1.5">
+              <h3 className="font-bold font-mono text-white text-xs sm:text-sm truncate">
                 Alex 老师
               </h3>
-              <span className="text-[9px] sm:text-[10px] bg-[#FF6321] text-white font-black px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+              <span className="text-[10px] bg-emerald-950/50 text-emerald-200 border border-emerald-400/30 font-medium px-1.5 py-0.5 rounded shrink-0">
                 {profile.apiKeyConfig.provider === 'deepseek' ? 'DeepSeek' : 'Gemini AI'}
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-white/90 font-bold truncate flex items-center gap-1">
-              <span>{activeLesson ? `Lesson ${activeLesson.id} - ${activeLesson.title}` : 'Minecraft 自由口语角'}</span>
+            <p className="text-[11px] text-emerald-100/90 font-normal truncate">
+              {activeLesson ? `Lesson ${activeLesson.id} · ${activeLesson.title}` : 'Minecraft 自由口语角'}
             </p>
           </div>
         </div>
 
         {/* Translation Toggle, Speech Speed, Font Size, Phone Call & Key Config */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2">
-          {/* Phone Call Alex Button */}
+        <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-1.5">
+          {/* Phone Call Button */}
           <button
             onClick={handleStartPhoneCall}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 bg-[#7CFC00] hover:bg-[#68d600] text-emerald-950 rounded-xl border-2 border-black text-xs font-black shadow-md flex items-center gap-1.5 shrink-0 animate-pulse transition-transform active:scale-95"
-            title="与 Alex 老师打语音电话"
+            className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-[#7CFC00] hover:bg-[#6edb00] text-emerald-950 rounded-lg border border-emerald-900/30 text-xs font-bold shadow-2xs flex items-center gap-1 shrink-0 transition-transform active:translate-y-0.5 cursor-pointer"
+            title="与 Alex 老师打实时语音电话"
           >
-            <PhoneCall className="w-4 h-4 text-emerald-950" />
-            <span>📞 电话连线 Alex</span>
+            <PhoneCall className="w-3.5 h-3.5 text-emerald-950" />
+            <span className="hidden xs:inline">语音通话</span>
           </button>
 
-          {/* Font Size Toggle for Kids */}
-          <button
-            onClick={() => setIsLargeFont(!isLargeFont)}
-            className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold bg-emerald-100 text-emerald-950 border-2 border-black shadow-sm flex items-center gap-1 shrink-0"
-            title="切换聊天字体大小"
-          >
-            {isLargeFont ? '🔍 特大字' : '🔎 标准字'}
-          </button>
-
-          {/* Speech Rate Toggle button for kids */}
-          <button
-            onClick={() => setSpeechRate(prev => (prev === 0.85 ? 1.0 : 0.85))}
-            className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold bg-amber-400 text-amber-950 border-2 border-black shadow-sm flex items-center gap-1 shrink-0"
-            title="点击切换 Alex 语音语速"
-          >
-            {speechRate === 0.85 ? '🐢 0.7x 慢速' : '🐇 1.0x 标准'}
-          </button>
-
+          {/* Bilingual Toggle */}
           <button
             onClick={() => setShowTranslations(!showTranslations)}
-            className={`px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-mono font-bold border-2 transition-all ${
+            className={`px-2 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
               showTranslations
-                ? 'bg-white text-[#487E2C] border-white shadow-sm'
-                : 'bg-black/20 text-white/80 border-white/30 hover:bg-black/30'
+                ? 'bg-white text-emerald-900 border-white shadow-2xs'
+                : 'bg-black/20 text-white/90 border-white/20 hover:bg-black/30'
             }`}
             title="切换中文解释显示"
           >
-            {showTranslations ? '双语' : '仅英文'}
+            {showTranslations ? '双语' : '仅英'}
           </button>
 
-          {/* Mic Help & Diagnostics Button */}
+          {/* Speech Rate Toggle */}
+          <button
+            onClick={() => setSpeechRate(prev => (prev === 0.85 ? 1.0 : 0.85))}
+            className="px-2 py-1 rounded-md text-[11px] font-medium bg-amber-400 hover:bg-amber-300 text-amber-950 border border-amber-500/60 shadow-2xs flex items-center gap-1 shrink-0 cursor-pointer"
+            title="点击切换 Alex 语音语速"
+          >
+            {speechRate === 0.85 ? '🐢 慢速' : '🐇 标准'}
+          </button>
+
+          {/* Font Size Toggle */}
+          <button
+            onClick={() => setIsLargeFont(!isLargeFont)}
+            className="hidden md:flex px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-900/60 hover:bg-emerald-900 text-emerald-100 border border-emerald-500/30 shadow-2xs items-center gap-1 shrink-0 cursor-pointer"
+            title="切换聊天字体大小"
+          >
+            {isLargeFont ? '放大' : '标准'}
+          </button>
+
+          {/* Mic Help Button */}
           <button
             onClick={() => {
               playClickSound();
               setShowMicHelpModal(true);
             }}
-            className="px-2 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white rounded-xl border-2 border-black text-xs font-bold shadow-sm flex items-center gap-1 shrink-0"
+            className="p-1 text-white/80 hover:text-white rounded-md bg-black/20 hover:bg-black/30 border border-white/20 text-xs shadow-2xs flex items-center gap-1 shrink-0 cursor-pointer"
             title="麦克风权限排查与帮助"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">麦克风权限</span>
           </button>
 
           {activeLesson && (() => {
@@ -713,50 +687,48 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             const canAccessNext = hasLessonAccess(profile, currentVolId, nextLessonId);
 
             return (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    playEmeraldSound();
-                    onCompleteLesson(activeLesson.id);
-                    onBackToMap();
-                  }}
-                  className={`px-2.5 py-1.5 sm:px-3 sm:py-2 font-black font-mono text-[10px] sm:text-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-none flex items-center gap-1 shrink-0 animate-in fade-in zoom-in ${
-                    canAccessNext
-                      ? 'bg-amber-400 hover:bg-amber-300 text-amber-950'
-                      : 'bg-emerald-400 hover:bg-emerald-300 text-emerald-950'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span>{canAccessNext ? `通关解锁 L${nextLessonId}` : '完成本课学习 ❇️'}</span>
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  playEmeraldSound();
+                  onCompleteLesson(activeLesson.id);
+                  onBackToMap();
+                }}
+                className={`px-2 py-1 font-bold text-[11px] rounded-md border shadow-2xs active:translate-y-0.5 flex items-center gap-1 shrink-0 cursor-pointer ${
+                  canAccessNext
+                    ? 'bg-amber-400 hover:bg-amber-300 text-amber-950 border-amber-500/50'
+                    : 'bg-emerald-400 hover:bg-emerald-300 text-emerald-950 border-emerald-500/50'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{canAccessNext ? `通关 L${nextLessonId}` : '完成本课'}</span>
+              </button>
             );
           })()}
 
           <button
             onClick={onOpenSettings}
-            className="px-2 py-1.5 bg-[#FF6321] hover:bg-[#e05316] text-white rounded-xl border-2 border-black text-xs font-bold shadow-sm"
+            className="px-2 py-1 bg-[#FF6321] hover:bg-[#e05316] text-white rounded-md border border-orange-600/40 text-[11px] font-medium shadow-2xs cursor-pointer"
             title="配置 Key"
           >
-            ⚙️ Key
+            Key
           </button>
         </div>
       </div>
 
       {/* Messages Scroll View */}
-      <div className="flex-1 p-3 sm:p-5 overflow-y-auto space-y-4 bg-[#F9F9F9]">
+      <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 bg-[#F8FAFC]">
         
         {/* Welcome Message if empty */}
         {messages.length === 0 && (
-          <div className="text-center py-6 sm:py-10 space-y-3 max-w-md mx-auto">
-            <div className="w-16 h-16 bg-[#EEDDCC] border-4 border-[#C89D7C] rounded-2xl mx-auto flex items-center justify-center text-3xl shadow-sm animate-bounce">
+          <div className="text-center py-6 sm:py-8 space-y-2.5 max-w-sm mx-auto">
+            <div className="w-12 h-12 bg-amber-100 border-2 border-amber-300 rounded-xl mx-auto flex items-center justify-center text-2xl shadow-xs">
               👩‍🦰
             </div>
-            <h4 className="text-lg sm:text-xl font-black font-mono text-[#2D2D2D]">
+            <h4 className="text-sm sm:text-base font-bold text-slate-800">
               Hi, adventurer {profile.nickname || 'Tom'}! 👋
             </h4>
-            <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-bold bg-amber-50 p-3.5 rounded-2xl border-2 border-amber-200">
-              我是你的 Alex 老师！我会用精简、好懂的英语和你聊天。快试着用下面的按钮或直接用麦克风和我说话吧！
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed bg-amber-50/80 p-3 rounded-xl border border-amber-200/80">
+              我是你的 Alex 老师！我会用精简、地道的英语和你聊天。试着用下方的例句或直接点击麦克风和我交流吧！
             </p>
           </div>
         )}
@@ -767,66 +739,90 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
           return (
             <div
               key={msg.id}
-              className={`flex items-start space-x-3 ${isAlex ? '' : 'flex-row-reverse space-x-reverse'}`}
+              className={`flex items-start space-x-2.5 ${isAlex ? '' : 'flex-row-reverse space-x-reverse'}`}
             >
               {/* Avatar */}
-              <div className="shrink-0">
+              <div className="shrink-0 mt-0.5">
                 <MinecraftAvatar
                   speaker={isAlex ? 'Alex' : (profile.nickname || 'Steve')}
                   avatar={isAlex ? '👩‍🦰' : profile.selectedAvatar}
-                  size={44}
+                  size={34}
                 />
               </div>
 
               {/* Message Content Bubble */}
-              <div className={`max-w-[85%] rounded-2xl p-3.5 sm:p-4.5 border-2 text-sm sm:text-base leading-snug space-y-2 shadow-sm ${
+              <div className={`max-w-[82%] rounded-2xl p-2.5 sm:p-3 border text-xs sm:text-sm leading-relaxed space-y-1.5 shadow-2xs ${
                 isAlex
-                  ? 'bg-white border-slate-300 text-[#2D2D2D] rounded-tl-none'
-                  : 'bg-[#95ec69] border-[#82e054] text-slate-950 rounded-tr-none'
+                  ? 'bg-white border-slate-200/80 text-slate-800 rounded-tl-xs'
+                  : 'bg-[#8de460] border-[#7cd351] text-slate-950 rounded-tr-xs'
               }`}>
                 
                 {/* Sender Title */}
-                <div className={`flex items-center justify-between text-xs sm:text-sm font-mono border-b pb-1.5 mb-1.5 ${
-                  isAlex ? 'border-slate-200' : 'border-[#82e054]/80'
+                <div className={`flex items-center justify-between text-[11px] font-semibold pb-1 border-b ${
+                  isAlex ? 'border-slate-100 text-slate-500' : 'border-[#7cd351]/80 text-slate-900'
                 }`}>
-                  <span className={isAlex ? 'text-[#487E2C] font-black' : 'text-slate-950 font-black'}>
+                  <span className={isAlex ? 'text-emerald-800 font-bold' : 'text-slate-950 font-bold'}>
                     {isAlex ? 'Alex 老师' : profile.nickname || 'You'}
                   </span>
                   
                   {isAlex && (
                     <button
-                      onClick={() => speakText(msg.text, { speaker: 'Alex', rate: speechRate })}
-                      className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-[#487E2C] border border-emerald-300 rounded-lg text-xs font-bold flex items-center space-x-1 shadow-xs transition-all active:scale-95"
+                      onClick={() => {
+                        const parts = splitDialogueParts(msg.text);
+                        speakText(parts.english || msg.text, { speaker: 'Alex', rate: speechRate });
+                      }}
+                      className="px-2 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded text-[10px] font-medium flex items-center space-x-1 transition-colors cursor-pointer"
                       title="朗读 Alex 语音"
                     >
-                      <Volume2 className="w-4 h-4 text-[#487E2C]" />
-                      <span>🔊 听发音</span>
+                      <Volume2 className="w-3 h-3 text-emerald-700" />
+                      <span>发音</span>
                     </button>
                   )}
                 </div>
 
-                {/* Main Text - Extra large and clear for kids */}
-                <div className={`whitespace-pre-wrap font-sans font-bold transition-all ${
-                  isLargeFont
-                    ? 'text-base sm:text-xl leading-relaxed tracking-wide'
-                    : 'text-sm sm:text-base leading-normal'
-                }`}>
-                  {isAlex ? formatAlexDialogue(msg.text, showTranslations) : msg.text}
-                </div>
+                {/* Main Text Content */}
+                {(() => {
+                  if (!isAlex) {
+                    return (
+                      <div className={`font-sans font-medium text-slate-950 leading-relaxed ${
+                        isLargeFont ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'
+                      }`}>
+                        {msg.text}
+                      </div>
+                    );
+                  }
+                  const parts = splitDialogueParts(msg.text);
+                  return (
+                    <div className="space-y-1">
+                      <div className={`font-sans font-medium text-slate-900 leading-relaxed ${
+                        isLargeFont ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'
+                      }`}>
+                        {parts.english}
+                      </div>
+                      {showTranslations && parts.chinese && (
+                        <div className={`font-sans text-slate-500 font-normal leading-normal pt-1 border-t border-slate-100 ${
+                          isLargeFont ? 'text-xs sm:text-sm' : 'text-[11px] sm:text-xs'
+                        }`}>
+                          {parts.chinese}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Optional Alex Encouragement Badge */}
                 {isAlex && msg.encouragement && (
-                  <div className="inline-flex items-center space-x-1.5 bg-amber-100 border-2 border-amber-300 px-3 py-1 rounded-full text-xs sm:text-sm font-mono font-bold text-amber-950 shadow-xs">
-                    <Award className="w-4 h-4 text-[#FF6321]" />
+                  <div className="inline-flex items-center space-x-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-[11px] font-medium text-amber-900 shadow-2xs">
+                    <Award className="w-3.5 h-3.5 text-[#FF6321]" />
                     <span>{msg.encouragement}</span>
                   </div>
                 )}
 
                 {/* Better Expression Suggestion */}
                 {isAlex && msg.betterExpression && (
-                  <div className="p-2.5 sm:p-3 bg-blue-50 border-2 border-blue-200 rounded-xl text-xs sm:text-sm font-mono text-blue-900 leading-normal">
-                    <span className="font-bold text-blue-700">✨ 试试这样说 (Try this): </span>
-                    <span className="font-black">"{msg.betterExpression}"</span>
+                  <div className="p-2 bg-sky-50 border border-sky-200/80 rounded-lg text-xs font-sans text-sky-900 leading-normal">
+                    <span className="font-semibold text-sky-700">✨ 试试这样说: </span>
+                    <span className="font-bold">"{msg.betterExpression}"</span>
                   </div>
                 )}
 
@@ -837,13 +833,13 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
 
         {/* Loading Indicator */}
         {isLoading && (
-          <div className="flex items-start space-x-3">
-            <div className="shrink-0 animate-pulse">
-              <MinecraftAvatar speaker="Alex" size={40} />
+          <div className="flex items-start space-x-2.5">
+            <div className="shrink-0 animate-pulse mt-0.5">
+              <MinecraftAvatar speaker="Alex" size={34} />
             </div>
-            <div className="bg-white border-2 border-[#487E2C] p-3.5 rounded-2xl rounded-tl-none text-xs font-mono font-bold text-[#487E2C] flex items-center space-x-2 shadow-sm">
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Alex 老师正在按 Minecraft 世界观思考回复...</span>
+            <div className="bg-white border border-emerald-500/50 px-3 py-2 rounded-xl rounded-tl-xs text-xs font-medium text-emerald-800 flex items-center space-x-2 shadow-2xs">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+              <span>Alex 老师正在思考回复...</span>
             </div>
           </div>
         )}
@@ -852,9 +848,9 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
       </div>
 
       {/* Gift Items to Alex Bar */}
-      <div className="px-3 sm:px-4 py-2 bg-amber-50/90 border-t-2 border-amber-200 flex items-center space-x-2 overflow-x-auto scrollbar-none">
-        <span className="text-xs sm:text-sm font-mono font-black text-amber-900 whitespace-nowrap flex items-center space-x-1 shrink-0">
-          <span>🎁 给 Alex 送礼：</span>
+      <div className="px-3 py-1.5 bg-amber-50/70 border-t border-amber-200/70 flex items-center space-x-1.5 overflow-x-auto scrollbar-none">
+        <span className="text-[11px] font-bold text-amber-900 whitespace-nowrap flex items-center space-x-1 shrink-0">
+          <span>🎁 给 Alex 送礼:</span>
         </span>
         {[
           { emoji: '🗡️', name: '钻石剑', text: 'Here is a diamond sword for you, Alex!' },
@@ -867,52 +863,99 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
             key={idx}
             onClick={() => handleGiftAlex(gift.emoji, gift.name, gift.text)}
             disabled={isLoading}
-            className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-100 border-2 border-amber-300 text-amber-950 text-xs sm:text-sm font-mono font-bold whitespace-nowrap transition-all shadow-xs flex items-center gap-1 shrink-0 active:scale-95"
+            className="px-2 py-0.5 rounded-lg bg-white hover:bg-amber-100/80 border border-amber-200 text-amber-950 text-xs font-normal whitespace-nowrap transition-colors shadow-2xs flex items-center gap-1 shrink-0 active:scale-95 cursor-pointer"
           >
-            <span className="text-base">{gift.emoji}</span>
+            <span>{gift.emoji}</span>
             <span>{gift.name}</span>
           </button>
         ))}
       </div>
 
       {/* Categorized Quick Scenario Roleplay Chips */}
-      <div className="px-3 sm:px-4 py-2 bg-slate-100 border-t border-slate-200 space-y-1.5 overflow-x-auto scrollbar-none">
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1 no-scrollbar">
-          <span className="text-xs sm:text-sm font-mono font-black text-slate-600 whitespace-nowrap flex items-center space-x-1 uppercase shrink-0">
-            <Lightbulb className="w-4 h-4 text-[#FFD700]" />
-            <span>快捷例句卡:</span>
-          </span>
-          {promptCategories.map((cat, catIdx) => (
-            <div key={catIdx} className="flex items-center gap-1.5 shrink-0">
-              <span className="text-xs font-mono font-bold text-slate-500 pl-1">{cat.categoryName}</span>
-              {cat.prompts.map((hint, hIdx) => (
-                <button
-                  key={hIdx}
-                  onClick={() => handleSendMessage(hint)}
-                  disabled={isLoading}
-                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-50 border border-slate-300 hover:border-[#487E2C] text-slate-800 hover:text-[#487E2C] text-xs sm:text-sm font-mono font-bold whitespace-nowrap transition-all shadow-xs"
-                >
-                  {hint}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
+      <div className="px-3 py-1.5 bg-slate-100/80 border-t border-slate-200/80 flex items-center space-x-2 overflow-x-auto scrollbar-none">
+        <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap flex items-center space-x-1 shrink-0">
+          <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+          <span>例句卡:</span>
+        </span>
+        {promptCategories.map((cat, catIdx) => (
+          <div key={catIdx} className="flex items-center gap-1 shrink-0">
+            <span className="text-[11px] text-slate-500 font-medium">{cat.categoryName}:</span>
+            {cat.prompts.map((hint, hIdx) => (
+              <button
+                key={hIdx}
+                onClick={() => handleSendMessage(hint)}
+                disabled={isLoading}
+                className="px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-500 text-slate-700 hover:text-emerald-800 text-xs font-normal whitespace-nowrap transition-colors shadow-2xs cursor-pointer"
+              >
+                {hint}
+              </button>
+            ))}
+          </div>
+        ))}
       </div>
 
+      {/* Mic Error Banner in Main Chat View */}
+      {callMicError && !isPhoneCallActive && (
+        <div className="px-3 py-1.5 bg-amber-100 border-t border-amber-300 text-amber-950 text-xs font-medium flex items-center justify-between gap-2 shrink-0">
+          <span className="truncate">⚠️ {callMicError}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isInIframe && (
+              <button
+                onClick={() => window.open(window.location.href, '_blank')}
+                className="px-2 py-0.5 bg-amber-400 hover:bg-amber-500 text-amber-950 border border-amber-950 rounded text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>新标签打开</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowMicHelpModal(true)}
+              className="px-2 py-0.5 bg-white border border-amber-400 text-amber-900 rounded text-[11px] font-bold hover:bg-amber-50 cursor-pointer"
+            >
+              帮助
+            </button>
+            <button
+              onClick={() => setCallMicError(null)}
+              className="text-amber-800 hover:text-amber-950 text-xs px-1 cursor-pointer font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Input Field */}
-      <div className="p-3 sm:p-4 bg-white border-t-4 border-[#487E2C] flex items-center space-x-2">
+      <div className="p-2.5 sm:p-3 bg-white border-t border-slate-200 flex items-center gap-1.5 sm:gap-2">
+        {/* Call Alex Quick Green Button */}
+        <button
+          onClick={handleStartPhoneCall}
+          className="px-2.5 py-2 bg-[#7CFC00] hover:bg-[#6edb00] text-emerald-950 border border-emerald-900/30 rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 shadow-2xs active:translate-y-0.5 cursor-pointer"
+          title="点击拨打与 Alex 老师的实时语音电话"
+        >
+          <Phone className="w-3.5 h-3.5" />
+          <span className="hidden xs:inline">通话</span>
+        </button>
+
         {/* Mic Voice Input Button */}
         <button
           onClick={handleToggleVoiceInput}
-          className={`p-3 rounded-xl border-2 transition-all ${
-            isListening
-              ? 'bg-rose-600 border-black text-white animate-pulse'
-              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+          disabled={isTranscribingVoice || isLoading}
+          className={`p-2 sm:p-2.5 rounded-xl border transition-colors cursor-pointer ${
+            isTranscribingVoice
+              ? 'bg-amber-400 border-amber-500 text-amber-950 animate-pulse'
+              : isListening
+                ? 'bg-rose-600 border-rose-700 text-white animate-pulse'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
           }`}
-          title={isListening ? '正在录音...再次点击结束' : '按住用英文说话'}
+          title={isListening ? '正在录音...点击结束并发送' : '点击进行语音输入'}
         >
-          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5 text-[#487E2C]" />}
+          {isTranscribingVoice ? (
+            <RefreshCw className="w-4 h-4 animate-spin text-amber-950" />
+          ) : isListening ? (
+            <MicOff className="w-4 h-4 text-white" />
+          ) : (
+            <Mic className="w-4 h-4 text-[#487E2C]" />
+          )}
         </button>
 
         {/* Text Area Input */}
@@ -926,203 +969,227 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
               handleSendMessage();
             }
           }}
-          placeholder={isListening ? '请用英文说话...' : '用英文与 Alex 老师对话 (例: "Where is the house?")...'}
-          className="flex-1 bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 font-mono font-bold focus:border-[#487E2C] focus:outline-none"
+          placeholder={isTranscribingVoice ? '正在识别您的语音中...' : isListening ? '正在录音中...请说英文' : '用英文与 Alex 对话 (如: "Where is the house?")...'}
+          className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-800 font-sans focus:border-[#487E2C] focus:bg-white focus:outline-none"
         />
 
         {/* Send Button */}
         <button
           onClick={() => handleSendMessage()}
           disabled={!inputText.trim() || isLoading}
-          className="bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white px-5 py-2.5 rounded-xl font-mono text-sm font-black shadow-[0_4px_0_0_#2A4718] disabled:opacity-40 disabled:cursor-not-allowed transition-all transform hover:translate-y-0.5 active:translate-y-[4px] active:shadow-none"
+          className="bg-[#487E2C] hover:bg-[#355E20] text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors active:translate-y-0.5 cursor-pointer flex items-center justify-center shrink-0"
           title="发送消息"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-3.5 h-3.5" />
         </button>
       </div>
 
-      {/* Fullscreen Alex Voice Phone Call Overlay Modal */}
+      {/* Fullscreen Alex Voice Phone Call Overlay Modal - Simplified, Clean, 100% In-View */}
       {isPhoneCallActive && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-8 animate-fadeIn text-white font-mono">
+        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex flex-col justify-between items-center p-3 sm:p-5 animate-fadeIn text-white font-mono select-none overflow-hidden max-h-[100dvh]">
           
           {/* Top Call Info Bar */}
-          <div className="w-full max-w-lg flex items-center justify-between bg-emerald-950/80 border-2 border-emerald-500/50 rounded-2xl px-4 py-3 shadow-lg">
+          <div className="w-full max-w-sm flex items-center justify-between bg-emerald-950/90 border border-emerald-500/40 rounded-xl px-3 py-1.5 shadow-lg shrink-0">
             <div className="flex items-center space-x-2">
-              <span className="w-3 h-3 bg-emerald-400 rounded-full animate-ping" />
-              <span className="text-xs sm:text-sm font-bold text-emerald-300 uppercase tracking-widest">
-                {callStatus === 'connected' ? '📞 实时免提双工通话中' : '通话结束'}
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+              <span className="text-xs font-bold text-emerald-300">
+                通话中 · Alex 老师
               </span>
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="text-xs font-mono text-amber-300 bg-black/40 px-2 py-0.5 rounded-lg border border-amber-400/20">
+                ⏱️ {Math.floor(callDuration / 60).toString().padStart(2, '0')}:{(callDuration % 60).toString().padStart(2, '0')}
+              </div>
               <button
-                onClick={() => {
-                  playClickSound();
-                  setShowMicHelpModal(true);
-                }}
-                className="px-2 py-1 rounded-xl text-xs font-bold bg-amber-500/20 border border-amber-400/50 text-amber-300 flex items-center gap-1 hover:bg-amber-500/30"
-                title="麦克风排查与帮助"
+                onClick={handleEndPhoneCall}
+                className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-colors cursor-pointer"
+                title="挂断通话"
               >
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>权限帮助</span>
+                挂断
               </button>
-
-              <button
-                onClick={() => setAutoListenMode(!autoListenMode)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
-                  autoListenMode
-                    ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                    : 'bg-slate-800 border-slate-600 text-slate-300'
-                }`}
-              >
-                {autoListenMode ? '⚡ 免提全自动' : '👆 手动按键说'}
-              </button>
-            </div>
-            
-            <div className="text-base sm:text-lg font-black font-mono text-amber-300 bg-black/40 px-3 py-1 rounded-xl border border-amber-400/30">
-              ⏱️ {Math.floor(callDuration / 60).toString().padStart(2, '0')}:{(callDuration % 60).toString().padStart(2, '0')}
             </div>
           </div>
 
           {/* Center Alex Character Voice Call Visualizer */}
-          <div className="my-auto flex flex-col items-center text-center max-w-lg w-full space-y-6">
+          <div className="flex-1 flex flex-col items-center justify-center max-w-sm w-full my-auto space-y-2.5 min-h-0 overflow-y-auto px-1 py-1">
             
-            {/* Alex Animated Portrait Frame */}
-            <div className="relative">
-              {/* Outer Soundwaves Pulse */}
-              <div className={`absolute -inset-4 rounded-full blur-sm transition-all ${
-                isListening ? 'bg-emerald-400/40 animate-ping' : 'bg-emerald-500/20 animate-pulse'
-              }`} />
-              <div className="absolute -inset-8 bg-amber-500/10 rounded-full animate-pulse blur-md" />
-
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36 bg-[#EEDDCC] border-4 sm:border-6 border-[#C89D7C] rounded-3xl flex items-center justify-center text-6xl sm:text-7xl shadow-2xl">
-                👩‍🦰
+            {/* Alex Animated Character & Status */}
+            <div className="flex flex-col items-center space-y-1.5 shrink-0">
+              <div className="relative">
+                <div className={`absolute -inset-1.5 rounded-2xl blur-xs transition-all ${
+                  isListening ? 'bg-emerald-400/50 animate-ping' : isLoading ? 'bg-amber-400/40 animate-pulse' : 'bg-emerald-500/20'
+                }`} />
+                <div className="relative w-16 h-16 sm:w-18 sm:h-18 bg-[#EEDDCC] border-2 border-[#C89D7C] rounded-2xl flex items-center justify-center text-3xl sm:text-4xl shadow-md">
+                  👩‍🦰
+                </div>
               </div>
 
+              {/* Status Pill */}
               {isLoading ? (
-                <div className="absolute -bottom-2 bg-amber-400 text-amber-950 text-xs font-black px-3 py-1 rounded-full border-2 border-black animate-bounce shadow-md">
-                  Alex 思考中... 💭
+                <div className="bg-amber-400 text-amber-950 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-500 flex items-center gap-1.5">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>Alex 思考中...</span>
+                </div>
+              ) : isTranscribingVoice ? (
+                <div className="bg-amber-400 text-amber-950 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-500 animate-pulse flex items-center gap-1.5">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>正在识别语音...</span>
                 </div>
               ) : isListening ? (
-                <div className="absolute -bottom-2 bg-emerald-400 text-emerald-950 text-xs font-black px-3 py-1 rounded-full border-2 border-black animate-pulse shadow-md">
-                  🎙️ 听你说话中...
+                <div className="bg-emerald-400 text-emerald-950 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-500 animate-pulse flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-950 animate-ping" />
+                  <span>正在听你说话...</span>
                 </div>
               ) : (
-                <div className="absolute -bottom-2 bg-blue-500 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-black shadow-md">
-                  🔊 Alex 发音中...
+                <div className="bg-emerald-900/80 text-emerald-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5">
+                  <Volume2 className="w-3 h-3 text-emerald-400" />
+                  <span>通话正常 · 点击下方绿色按钮说话</span>
                 </div>
               )}
-            </div>
 
-            <div className="space-y-1">
-              <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow-md">
-                Alex 老师
-              </h2>
-              <p className="text-xs sm:text-sm text-emerald-300 font-bold flex items-center justify-center gap-1">
-                <span>💬 全自动无感实时口语对练</span>
-              </p>
+              {/* Real-time Dynamic Volume Visualizer Bar when listening */}
+              {isListening && (
+                <div className="w-44 bg-black/60 border border-emerald-500/50 rounded-full px-2.5 py-0.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                  <span className="text-[10px] text-emerald-300 font-medium shrink-0">音量</span>
+                  <div className="flex-1 h-1.5 bg-emerald-950 rounded-full overflow-hidden border border-emerald-700/50">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all duration-75"
+                      style={{ width: `${Math.max(12, audioLevel)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Subtitle Dialogue Box */}
-            <div className="w-full bg-slate-900/90 border-2 sm:border-4 border-[#487E2C] rounded-2xl p-4 sm:p-5 text-left shadow-2xl min-h-[120px] max-h-[220px] overflow-y-auto">
-              <div className="text-xs font-bold text-emerald-400 mb-2 flex items-center justify-between border-b border-emerald-800 pb-1">
-                <span>💬 Alex 说:</span>
+            <div className="w-full bg-slate-900/90 border border-[#487E2C] rounded-xl p-2.5 sm:p-3 text-left shadow-md max-h-24 sm:max-h-28 overflow-y-auto">
+              <div className="text-[10px] font-semibold text-emerald-400 mb-1 flex items-center justify-between border-b border-emerald-800/60 pb-0.5">
+                <span>💬 Alex 老师说:</span>
                 <button
-                  onClick={() => speakText(phoneSubtitle, { speaker: 'Alex', rate: speechRate })}
-                  className="text-xs bg-emerald-800/80 hover:bg-emerald-700 text-white px-2 py-0.5 rounded-md flex items-center gap-1"
+                  onClick={() => {
+                    const parts = splitDialogueParts(phoneSubtitle);
+                    speakText(parts.english || phoneSubtitle, { speaker: 'Alex', rate: speechRate });
+                  }}
+                  className="text-[10px] bg-emerald-800/80 hover:bg-emerald-700 text-white px-1.5 py-0.5 rounded flex items-center gap-1 cursor-pointer"
                 >
-                  <Volume2 className="w-3.5 h-3.5" />
+                  <Volume2 className="w-2.5 h-2.5" />
                   <span>重听</span>
                 </button>
               </div>
-              <div className="text-base sm:text-xl font-bold leading-relaxed whitespace-pre-wrap text-white tracking-wide">
-                {formatAlexDialogue(phoneSubtitle, showTranslations)}
-              </div>
+              {(() => {
+                const parts = splitDialogueParts(phoneSubtitle);
+                return (
+                  <div className="space-y-1">
+                    <div className="text-xs sm:text-sm font-medium leading-relaxed text-white">
+                      {parts.english}
+                    </div>
+                    {showTranslations && parts.chinese && (
+                      <div className="text-[11px] text-emerald-300/90 font-normal leading-normal pt-0.5 border-t border-emerald-800/40">
+                        {parts.chinese}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Current Real-Time Live Speech Recognition Hint & Audio Level */}
-            <div className="w-full space-y-2">
-              <div className="w-full bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-3 text-center text-xs text-emerald-200">
-                {isListening ? (
-                  <div className="flex flex-col items-center justify-center space-y-2 text-emerald-300 font-bold">
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
-                      <span>🎙️ 正在倾听中... 请直接说英文 (说完后将自动发送)</span>
-                    </div>
-                    {/* Audio Level Volume Bar */}
-                    <div className="w-48 h-2 bg-emerald-900 rounded-full overflow-hidden border border-emerald-600/40">
-                      <div
-                        className="h-full bg-emerald-400 transition-all duration-75"
-                        style={{ width: `${Math.max(8, audioLevel)}%` }}
-                      />
-                    </div>
-                  </div>
-                ) : isLoading ? (
-                  <div className="flex items-center justify-center space-x-2 text-amber-300 font-bold">
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Alex 老师正在按 Minecraft 世界观思考回复...</span>
-                  </div>
-                ) : (
-                  <span className="text-slate-300">💡 点击下方绿色「开启麦克风」按钮说话，或点击快捷句卡直接对练</span>
-                )}
-              </div>
-
-              {callMicError && (
-                <div className="text-xs bg-amber-500/20 border border-amber-400/50 text-amber-200 p-2.5 rounded-xl text-center font-bold flex items-center justify-between gap-2">
-                  <span>⚠️ {callMicError}</span>
+            {/* Mic Error Notice */}
+            {callMicError && (
+              <div className="w-full text-xs bg-amber-500/20 border border-amber-400/50 text-amber-200 p-2 rounded-xl text-center font-medium flex items-center justify-between gap-1.5 shrink-0">
+                <span className="truncate flex-1 text-left">⚠️ {callMicError}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {isInIframe && (
+                    <button
+                      onClick={() => window.open(window.location.href, '_blank')}
+                      className="px-2 py-0.5 bg-amber-400 text-amber-950 rounded text-[10px] font-bold hover:bg-amber-300 cursor-pointer flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      <span>新标签打开</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowMicHelpModal(true)}
-                    className="px-2 py-0.5 bg-amber-400 text-amber-950 rounded text-xs font-black shrink-0 hover:bg-amber-300"
+                    className="px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-medium hover:bg-white/30 cursor-pointer"
                   >
-                    查看解决指引
+                    排查
                   </button>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Quick Talk Chips in Call */}
-              <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {/* Quick Talk Chips in Call */}
+            <div className="w-full">
+              <p className="text-[10px] text-slate-400 font-medium mb-1 text-center">💡 点击直接说:</p>
+              <div className="flex items-center justify-center gap-1 flex-wrap">
                 {[
                   'Hello Alex! 👩‍🦰',
-                  'I built a wooden house! 🪵',
+                  'I built a house! 🪵',
                   'Let\'s go mining! ⛏️',
                   'Look at this diamond! 💎'
                 ].map((chip, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(chip.replace(/[^\w\s!?,]/g, '').trim())}
-                    disabled={isLoading}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 rounded-lg text-xs font-bold border border-slate-600 whitespace-nowrap transition-colors"
+                    disabled={isLoading || isTranscribingVoice}
+                    className="px-2 py-0.5 bg-slate-800 hover:bg-emerald-950 hover:border-emerald-500 text-slate-200 rounded text-xs font-normal border border-slate-700 whitespace-nowrap transition-colors cursor-pointer active:scale-95 disabled:opacity-50"
                   >
                     {chip}
                   </button>
                 ))}
               </div>
             </div>
+
           </div>
 
           {/* Bottom Voice Call Action Controls */}
-          <div className="w-full max-w-lg flex items-center justify-center gap-4 sm:gap-6 pt-4 border-t border-slate-800">
-            {/* Mic Speech Button */}
-            <button
-              onClick={handleToggleVoiceInput}
-              className={`flex-1 py-4 sm:py-5 rounded-2xl font-black text-base sm:text-lg border-2 sm:border-4 border-black shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                isListening
-                  ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse'
-                  : 'bg-[#7CFC00] hover:bg-[#68d600] text-emerald-950'
-              }`}
-            >
-              {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              <span>{isListening ? '🛑 结束说话并发送' : '🎙️ 开启麦克风对讲'}</span>
-            </button>
+          <div className="w-full max-w-sm shrink-0 pt-2 pb-1 border-t border-slate-800 flex flex-col items-center gap-1.5">
+            <div className="flex items-center justify-center gap-2.5 w-full">
+              {/* PRIMARY GREEN TALK BUTTON */}
+              <button
+                onClick={handleToggleVoiceInput}
+                disabled={isTranscribingVoice || isLoading}
+                className={`flex-1 py-2.5 sm:py-3 px-4 rounded-xl font-bold text-sm sm:text-base border border-emerald-900/40 shadow-sm flex items-center justify-center gap-2 transition-all active:translate-y-0.5 cursor-pointer ${
+                  isTranscribingVoice
+                    ? 'bg-amber-400 text-amber-950 animate-pulse cursor-wait'
+                    : isListening
+                      ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse'
+                      : 'bg-[#7CFC00] hover:bg-[#68d600] text-emerald-950'
+                }`}
+                title={isListening ? '点击结束录音并发送' : '点击开始说话'}
+              >
+                {isTranscribingVoice ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-950" />
+                    <span>正在解析语音...</span>
+                  </>
+                ) : isListening ? (
+                  <>
+                    <MicOff className="w-4 h-4" />
+                    <span>说完了，点击发送</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4 text-emerald-950" />
+                    <span>🎙️ 点击开始说话</span>
+                  </>
+                )}
+              </button>
 
-            {/* Hang Up Button */}
-            <button
-              onClick={handleEndPhoneCall}
-              className="p-4 sm:p-5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl border-2 sm:border-4 border-black shadow-lg flex items-center justify-center active:scale-95"
-              title="挂断电话"
-            >
-              <PhoneOff className="w-7 h-7" />
-            </button>
+              {/* Hang Up Button */}
+              <button
+                onClick={handleEndPhoneCall}
+                className="p-2.5 sm:p-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl border border-rose-800 shadow-sm flex items-center justify-center transition-all active:translate-y-0.5 cursor-pointer shrink-0"
+                title="挂断电话"
+              >
+                <PhoneOff className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-[10px] text-slate-400 text-center">
+              {isTranscribingVoice ? '正在将您的发音转换为文字...' : isListening ? '正在录音中，说英文后点击红色按钮发送' : '点击绿色按钮说话，说完再点一下即可发送'}
+            </p>
           </div>
 
         </div>
