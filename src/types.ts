@@ -28,8 +28,8 @@ export interface CourseVolumeConfig {
 export const APP_VERSION_INFO = {
   version: 'v2.0.0',
   buildCode: '2026.08.13-BUILD-PROD',
-  editionName: 'Minecraft English World (新概念第1册 + 第2册 100% 官方全量版)',
-  releaseNotes: '《新概念英语》第1册（1~144关）与第2册（1~96关）共 240 篇权威原版课文已 100% 全量真实上线！覆盖基础句型与红石复杂语法，第3、4册处于教研打磨中，敬请期待！',
+  editionName: 'Minecraft English World (新概念第1册 100% 官方全量版)',
+  releaseNotes: '《新概念英语》第1册（1~144关）共 144 篇权威原版课文已 100% 全量真实上线！结合 Minecraft 像素世界观沉浸式掌握基础词汇与高频句型。',
   volumes: [
     {
       id: 'vol1',
@@ -43,45 +43,6 @@ export const APP_VERSION_INFO = {
       description: '适合 6-12 岁零基础孩子，100% 真实新概念课文与双语例句，结合 Minecraft 场景掌握 144 个基础双语词汇与高频句型。',
       targetAge: '6-12 岁 / 零基础~初级',
       features: ['144个100%真实新概念关卡', 'Alex AI真人级跟读纠音', '配套全套精讲与练习']
-    },
-    {
-      id: 'vol2',
-      title: '新概念英语 第2册',
-      subtitle: 'Minecraft 红石工业与复杂句型篇 (锁定打磨中)',
-      mcWorldTheme: '⚡ 红石机械与要塞探险',
-      badge: '2册 敬请期待 (教研打磨锁定中)',
-      totalLessons: 96,
-      unlockedLevelReq: 999,
-      status: 'coming_soon',
-      description: '【教研深度打磨中】第二册 96 关红石机械进阶剧情、长句复述与复杂句型语法正在进行精细化教研打磨，当前已全面锁定，暂未开放，敬请期待后续版本！',
-      targetAge: '8-14 岁 / 进阶中级',
-      features: ['96个红石剧情关卡（教研打磨中）', 'Alex AI长句复述与情景对话', '精细语法考点与实战例句']
-    },
-    {
-      id: 'vol3',
-      title: '新概念英语 第3册',
-      subtitle: 'Minecraft 主题建筑与高级美文篇',
-      mcWorldTheme: '🌌 末地神殿与建筑艺术典籍',
-      badge: '3册 敬请期待 (锁定中)',
-      totalLessons: 60,
-      unlockedLevelReq: 999,
-      status: 'coming_soon',
-      description: '【敬请期待 · 教研精磨中】赏析长篇美文、培养高级写作词汇与辩论口语，即将上线。',
-      targetAge: '10-16 岁 / 雅思/小托福进阶',
-      features: ['60篇长篇美文架构分析', 'Alex AI 辩论与原声配音', '敬请期待上线']
-    },
-    {
-      id: 'vol4',
-      title: '新概念英语 第4册',
-      subtitle: 'Minecraft 末地龙巢与流利英语篇',
-      mcWorldTheme: '🐉 末地龙巢与终界风暴',
-      badge: '4册 敬请期待 (锁定中)',
-      totalLessons: 48,
-      unlockedLevelReq: 999,
-      status: 'coming_soon',
-      description: '【敬请期待 · 教研精磨中】挑战顶级名篇与哲学美文，同 Alex 探讨深层科技与思辨，即将上线。',
-      targetAge: '12-18 岁 / 高级流利',
-      features: ['48篇世界名篇思想碰撞', 'Alex AI 辩论与深度思辨', '敬请期待上线']
     }
   ] as CourseVolumeConfig[]
 };
@@ -94,6 +55,9 @@ export interface ParentSettings {
   speechRate: number; // e.g. 0.9
   correctionStrictness: 'gentle' | 'standard' | 'strict';
   customRewardTitle?: string;
+  dailyTimeGoalMinutes?: number; // e.g. 15
+  dailyWordsGoal?: number; // e.g. 5
+  dailyDialogueGoal?: number; // e.g. 2
 }
 
 export interface VolumeProgress {
@@ -132,6 +96,7 @@ export interface UserProfile {
   readyToClaimMissionIds?: string[];
   unlockedBadgeIds: string[];
   masteredWords: string[];
+  oralEvaluationCount?: number;
   apiKeyConfig: ApiKeyConfig;
   isInitialSetupDone: boolean;
   todayStudyMinutes?: number;
@@ -176,6 +141,17 @@ export interface DialogueTurn {
   avatar?: string;
 }
 
+export interface LessonTeachingMaterial {
+  videoType?: 'bilibili' | 'youtube' | 'mp4' | 'custom';
+  videoUrl?: string;
+  videoTitle?: string;
+  pptType?: 'office_online' | 'pdf' | 'custom_link';
+  pptUrl?: string;
+  pptTitle?: string;
+  teacherNote?: string;
+  updatedAt?: number;
+}
+
 export interface Lesson {
   id: number;
   unit: number;
@@ -191,6 +167,7 @@ export interface Lesson {
   targetSentenceTranslations: string[];
   dialogueScript: DialogueTurn[];
   grammarNote: string;
+  teachingMaterial?: LessonTeachingMaterial;
 }
 
 export interface Mission {

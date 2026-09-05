@@ -437,16 +437,52 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "ago",
-        "phonetic": "/əˈɡəʊ/",
-        "meaning": "adv. 以前",
-        "mcItem": "Clock",
-        "mcItemIcon": "⌛",
-        "sampleSentence": "Three days ago.",
-        "sampleTranslation": "三天前。"
-      }
-    ],
+        {
+                "word": "ago",
+                "phonetic": "/əˈɡəʊ/",
+                "meaning": "副词：以前",
+                "mcItem": "Clock",
+                "mcItemIcon": "⏳",
+                "sampleSentence": "I saw him two days ago in the village.",
+                "sampleTranslation": "两天前我在村庄里见过他。"
+        },
+        {
+                "word": "buy",
+                "phonetic": "/baɪ/",
+                "meaning": "动词：买；购买",
+                "mcItem": "Emerald",
+                "mcItemIcon": "🛒",
+                "sampleSentence": "Did you buy that diamond sword yesterday?",
+                "sampleTranslation": "你昨天买了那把钻石剑吗？"
+        },
+        {
+                "word": "pair",
+                "phonetic": "/peər/",
+                "meaning": "名词：一双；一对",
+                "mcItem": "Boots",
+                "mcItemIcon": "👞",
+                "sampleSentence": "He bought a new pair of shoes.",
+                "sampleTranslation": "他买了一双新鞋。"
+        },
+        {
+                "word": "week",
+                "phonetic": "/wiːk/",
+                "meaning": "名词：星期；周",
+                "mcItem": "Calendar",
+                "mcItemIcon": "🗓️",
+                "sampleSentence": "We went to London last week.",
+                "sampleTranslation": "我们上周去了伦敦。"
+        },
+        {
+                "word": "month",
+                "phonetic": "/mʌnθ/",
+                "meaning": "名词：月；月份",
+                "mcItem": "Moon Banner",
+                "mcItemIcon": "🌙",
+                "sampleSentence": "He moved to this city three months ago.",
+                "sampleTranslation": "他三个月前搬到了这座城市。"
+        }
+      ],
     "grammarNote": "时间段 + ago 是典型的一般过去时标志词：an hour ago, two days ago, three weeks ago, a year ago。"
   },
   "77": {
@@ -621,16 +657,52 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "appointment",
-        "phonetic": "/əˈpɔɪntmənt/",
-        "meaning": "n. 约会，预约",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "Make an appointment.",
-        "sampleTranslation": "预约挂号。"
-      }
-    ],
+        {
+                "word": "last",
+                "phonetic": "/lɑːst/",
+                "meaning": "形容词：刚过去的；最后的",
+                "mcItem": "Clock",
+                "mcItemIcon": "⏮️",
+                "sampleSentence": "We had a party last night.",
+                "sampleTranslation": "我们昨晚举行了聚会。"
+        },
+        {
+                "word": "night",
+                "phonetic": "/naɪt/",
+                "meaning": "名词：夜晚；夜间",
+                "mcItem": "Bed",
+                "mcItemIcon": "🌃",
+                "sampleSentence": "Phantoms fly high into the night sky.",
+                "sampleTranslation": "幻翼在夜空高处盘旋。"
+        },
+        {
+                "word": "afternoon",
+                "phonetic": "/ˌɑːf.təˈnuːn/",
+                "meaning": "名词：下午",
+                "mcItem": "Sunflower",
+                "mcItemIcon": "☀️",
+                "sampleSentence": "She played tennis yesterday afternoon.",
+                "sampleTranslation": "她昨天下午打了网球。"
+        },
+        {
+                "word": "year",
+                "phonetic": "/jɪər/",
+                "meaning": "名词：年；年度",
+                "mcItem": "Clock",
+                "mcItemIcon": "🗓️",
+                "sampleSentence": "They visited Australia last year.",
+                "sampleTranslation": "他们去年访问了澳大利亚。"
+        },
+        {
+                "word": "weekend",
+                "phonetic": "/ˌwiːkˈend/",
+                "meaning": "名词：周末",
+                "mcItem": "Campfire",
+                "mcItemIcon": "⛺",
+                "sampleSentence": "What did you do last weekend?",
+                "sampleTranslation": "上周末你做了什么？"
+        }
+      ],
     "grammarNote": "make an appointment (预约) / have an appointment (有预约)。"
   },
   "79": {
@@ -798,25 +870,52 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "toothpaste",
-        "phonetic": "/ˈtuːθpeɪst/",
-        "meaning": "n. 牙膏",
-        "mcItem": "Potion",
-        "mcItemIcon": "🪥",
-        "sampleSentence": "A tube of toothpaste.",
-        "sampleTranslation": "一管牙膏。"
-      },
-      {
-        "word": "chemist",
-        "phonetic": "/ˈkemɪst/",
-        "meaning": "n. 药剂师，药房",
-        "mcItem": "Brewing Stand",
-        "mcItemIcon": "💊",
-        "sampleSentence": "At the chemist's.",
-        "sampleTranslation": "在药房。"
-      }
-    ],
+        {
+                "word": "must",
+                "phonetic": "/mʌst/",
+                "meaning": "情态动词：必须；应当",
+                "mcItem": "Shield",
+                "mcItemIcon": "🛡️",
+                "sampleSentence": "You must take a torch into dark caves.",
+                "sampleTranslation": "你进黑暗洞穴必须带火把。"
+        },
+        {
+                "word": "find",
+                "phonetic": "/faɪnd/",
+                "meaning": "动词：找到；发现",
+                "mcItem": "Spyglass",
+                "mcItemIcon": "🔍",
+                "sampleSentence": "I must find my lost iron key.",
+                "sampleTranslation": "我必须找到我丢失的铁钥匙。"
+        },
+        {
+                "word": "call",
+                "phonetic": "/kɔːl/",
+                "meaning": "动词：打电话；呼唤",
+                "mcItem": "Bell",
+                "mcItemIcon": "📞",
+                "sampleSentence": "You must call a doctor immediately.",
+                "sampleTranslation": "你必须立即叫医生。"
+        },
+        {
+                "word": "hurry",
+                "phonetic": "/ˈhʌr.i/",
+                "meaning": "动词：赶快；急忙",
+                "mcItem": "Potion of Swiftness",
+                "mcItemIcon": "🏃",
+                "sampleSentence": "We must hurry or we will miss the train.",
+                "sampleTranslation": "我们必须赶快，否则就要赶不上火车了。"
+        },
+        {
+                "word": "remember",
+                "phonetic": "/rɪˈmem.bər/",
+                "meaning": "动词：记住；想起",
+                "mcItem": "Book",
+                "mcItemIcon": "🧠",
+                "sampleSentence": "Remember to lock the gate at night.",
+                "sampleTranslation": "记住晚上要把大门锁好。"
+        }
+      ],
     "grammarNote": "情态动词 must (主观必须) 与 实义动词 need (需要) 的用法区别。"
   },
   "81": {
@@ -988,16 +1087,52 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "carrot",
-        "phonetic": "/ˈkærət/",
-        "meaning": "n. 胡萝卜",
-        "mcItem": "Carrot",
-        "mcItemIcon": "🥕",
-        "sampleSentence": "Rabbits like carrots.",
-        "sampleTranslation": "兔子喜欢胡萝卜。"
-      }
-    ],
+        {
+                "word": "had",
+                "phonetic": "/hæd/",
+                "meaning": "动词：有（have的过去式）",
+                "mcItem": "Golden Apple",
+                "mcItemIcon": "🍎",
+                "sampleSentence": "He had a terrible toothache yesterday.",
+                "sampleTranslation": "他昨天牙痛得很厉害。"
+        },
+        {
+                "word": "toothache",
+                "phonetic": "/ˈtuːθ.eɪk/",
+                "meaning": "名词：牙痛",
+                "mcItem": "Potion",
+                "mcItemIcon": "🦷",
+                "sampleSentence": "He had toothache and saw a dentist.",
+                "sampleTranslation": "他牙疼并去看了牙医。"
+        },
+        {
+                "word": "headache",
+                "phonetic": "/ˈhed.eɪk/",
+                "meaning": "名词：头痛",
+                "mcItem": "Helmet",
+                "mcItemIcon": "🤕",
+                "sampleSentence": "She had a bad headache last night.",
+                "sampleTranslation": "她昨晚头痛得厉害。"
+        },
+        {
+                "word": "fever",
+                "phonetic": "/ˈfiː.vər/",
+                "meaning": "名词：发烧；发热",
+                "mcItem": "Blaze Powder",
+                "mcItemIcon": "🌡️",
+                "sampleSentence": "The patient had a high fever.",
+                "sampleTranslation": "病人发了高烧。"
+        },
+        {
+                "word": "medicine",
+                "phonetic": "/ˈmed.sən/",
+                "meaning": "名词：药；药物",
+                "mcItem": "Potion",
+                "mcItemIcon": "💊",
+                "sampleSentence": "Take this medicine three times a day.",
+                "sampleTranslation": "这种药每天吃三次。"
+        }
+      ],
     "grammarNote": "不规则过去式：drink -> drank, forget -> forgot, buy -> bought。"
   },
   "83": {
@@ -1177,7 +1312,62 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他还没写那封电子邮件。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "breakfast",
+        "phonetic": "/ˈbrek.fəst/",
+        "meaning": "n. 早餐",
+        "mcItem": "Bread",
+        "mcItemIcon": "🍳",
+        "sampleSentence": "Have you had breakfast yet?",
+        "sampleTranslation": "你吃过早餐了吗？"
+      },
+      {
+        "word": "lunch",
+        "phonetic": "/lʌntʃ/",
+        "meaning": "n. 午餐",
+        "mcItem": "Cooked Beef",
+        "mcItemIcon": "🥪",
+        "sampleSentence": "We have already had lunch.",
+        "sampleTranslation": "我们已经吃过午餐了。"
+      },
+      {
+        "word": "dinner",
+        "phonetic": "/ˈdɪn.ər/",
+        "meaning": "n. 晚餐，正餐",
+        "mcItem": "Cooked Porkchop",
+        "mcItemIcon": "🍲",
+        "sampleSentence": "They are preparing dinner together.",
+        "sampleTranslation": "他们正一起准备晚餐。"
+      },
+      {
+        "word": "meal",
+        "phonetic": "/miːl/",
+        "meaning": "n. 一餐，膳食",
+        "mcItem": "Golden Carrot",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "Enjoy a delicious three-course meal.",
+        "sampleTranslation": "享受美味的三道菜大餐。"
+      },
+      {
+        "word": "holiday",
+        "phonetic": "/ˈhɒl.ə.deɪ/",
+        "meaning": "n. 假日，度假",
+        "mcItem": "Campfire",
+        "mcItemIcon": "🏖️",
+        "sampleSentence": "Have you had a good holiday?",
+        "sampleTranslation": "你假期过得愉快吗？"
+      },
+      {
+        "word": "party",
+        "phonetic": "/ˈpɑː.ti/",
+        "meaning": "n. 聚会，晚会",
+        "mcItem": "Cake",
+        "mcItemIcon": "🎈",
+        "sampleSentence": "They had a wonderful time at the party.",
+        "sampleTranslation": "他们在聚会上玩得很尽兴。"
+      }
+    ],
     "grammarNote": "现在完成时肯定句通常用 already；疑问句和否定句句末用 yet。"
   },
   "85": {
@@ -1342,7 +1532,62 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
         "zh": "我已经把床铺好了。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "paint",
+        "phonetic": "/peɪnt/",
+        "meaning": "v. 油漆，粉刷",
+        "mcItem": "Dye",
+        "mcItemIcon": "🎨",
+        "sampleSentence": "He has painted the door white.",
+        "sampleTranslation": "他已经把门刷成了白色。"
+      },
+      {
+        "word": "empty",
+        "phonetic": "/ˈemp.ti/",
+        "meaning": "v. 倒空; adj. 空的",
+        "mcItem": "Bucket",
+        "mcItemIcon": "🪣",
+        "sampleSentence": "She has emptied the rubbish bin.",
+        "sampleTranslation": "她已经倒空了垃圾桶。"
+      },
+      {
+        "word": "wash",
+        "phonetic": "/wɒʃ/",
+        "meaning": "v. 洗涤，清洗",
+        "mcItem": "Water Bucket",
+        "mcItemIcon": "🫧",
+        "sampleSentence": "She has washed all the clothes.",
+        "sampleTranslation": "她已经把所有衣服洗好了。"
+      },
+      {
+        "word": "shut",
+        "phonetic": "/ʃʌt/",
+        "meaning": "v. 关上，闭合",
+        "mcItem": "Trapdoor",
+        "mcItemIcon": "🚪",
+        "sampleSentence": "He has shut the window.",
+        "sampleTranslation": "他已经关上了窗户。"
+      },
+      {
+        "word": "turn off",
+        "phonetic": "/tɜːn ɒf/",
+        "meaning": "phr. 关掉(电器等)",
+        "mcItem": "Lever",
+        "mcItemIcon": "🔌",
+        "sampleSentence": "He has turned off the television.",
+        "sampleTranslation": "他已经关掉了电视。"
+      },
+      {
+        "word": "boil",
+        "phonetic": "/bɔɪl/",
+        "meaning": "v. 煮沸，烧开",
+        "mcItem": "Campfire",
+        "mcItemIcon": "☕",
+        "sampleSentence": "She has boiled the water.",
+        "sampleTranslation": "她已经把水烧开了。"
+      }
+    ],
     "grammarNote": "现在完成时强调过去动作对现在留下的结果或影响。"
   },
   "87": {
@@ -1521,7 +1766,62 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他们还没有报警。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "yet",
+        "phonetic": "/jet/",
+        "meaning": "adv. 已经，还(否定/疑问)",
+        "mcItem": "Clock",
+        "mcItemIcon": "⏳",
+        "sampleSentence": "Have you seen the doctor yet?",
+        "sampleTranslation": "你看过医生了吗？"
+      },
+      {
+        "word": "already",
+        "phonetic": "/ɔːlˈred.i/",
+        "meaning": "adv. 已经(肯定句)",
+        "mcItem": "Experience Bottle",
+        "mcItemIcon": "✨",
+        "sampleSentence": "I have already finished my homework.",
+        "sampleTranslation": "我已经写完了作业。"
+      },
+      {
+        "word": "post",
+        "phonetic": "/pəʊst/",
+        "meaning": "v. 邮寄",
+        "mcItem": "Paper",
+        "mcItemIcon": "📮",
+        "sampleSentence": "Have you posted the letter yet?",
+        "sampleTranslation": "你把信寄出去了吗？"
+      },
+      {
+        "word": "answer",
+        "phonetic": "/ˈɑːn.sər/",
+        "meaning": "v. 回答，回复",
+        "mcItem": "Book and Quill",
+        "mcItemIcon": "✍️",
+        "sampleSentence": "He hasn't answered the telephone yet.",
+        "sampleTranslation": "他还没有接听电话。"
+      },
+      {
+        "word": "see",
+        "phonetic": "/siː/",
+        "meaning": "v. 看见，就诊",
+        "mcItem": "Eye of Ender",
+        "mcItemIcon": "👁️",
+        "sampleSentence": "I have already seen the dentist.",
+        "sampleTranslation": "我已经看过了牙医。"
+      },
+      {
+        "word": "write",
+        "phonetic": "/raɪt/",
+        "meaning": "v. 书写，写下",
+        "mcItem": "Feather",
+        "mcItemIcon": "🖋️",
+        "sampleSentence": "I haven't written the report yet.",
+        "sampleTranslation": "我还没写好报告。"
+      }
+    ],
     "grammarNote": "yet 用于疑问句（表示“已经……了吗”）和否定句（表示“还未”）；already 用于肯定句。"
   },
   "89": {
@@ -1683,16 +1983,52 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "never",
-        "phonetic": "/ˈnevə/",
-        "meaning": "adv. 从未",
-        "mcItem": "Barrier",
-        "mcItemIcon": "⛔",
-        "sampleSentence": "I have never been there.",
-        "sampleTranslation": "我从未去过那里。"
-      }
-    ],
+        {
+                "word": "time",
+                "phonetic": "/taɪm/",
+                "meaning": "名词：时间；时刻",
+                "mcItem": "Clock",
+                "mcItemIcon": "⏱️",
+                "sampleSentence": "What is the exact time by your watch?",
+                "sampleTranslation": "你的表现在准确时间是几点？"
+        },
+        {
+                "word": "quarter",
+                "phonetic": "/ˈkwɔː.tər/",
+                "meaning": "名词：一刻钟；四分之一",
+                "mcItem": "Clock",
+                "mcItemIcon": "🕒",
+                "sampleSentence": "It is a quarter past seven now.",
+                "sampleTranslation": "现在是七点一刻。"
+        },
+        {
+                "word": "half",
+                "phonetic": "/hɑːf/",
+                "meaning": "名词：半；一半",
+                "mcItem": "Clock",
+                "mcItemIcon": "🕧",
+                "sampleSentence": "The train leaves at half past eight.",
+                "sampleTranslation": "火车在八点半出发。"
+        },
+        {
+                "word": "past",
+                "phonetic": "/pɑːst/",
+                "meaning": "介词：过（几点）",
+                "mcItem": "Compass",
+                "mcItemIcon": "➡️",
+                "sampleSentence": "It is ten minutes past ten.",
+                "sampleTranslation": "现在是十点过十分。"
+        },
+        {
+                "word": "to",
+                "phonetic": "/tuː/",
+                "meaning": "介词：差（几点）",
+                "mcItem": "Arrow",
+                "mcItemIcon": "⬅️",
+                "sampleSentence": "It is twenty minutes to four.",
+                "sampleTranslation": "现在差二十分四点。"
+        }
+      ],
     "grammarNote": "ever (曾经 - 用于疑问句), never (从未 - 带有否定意义用于肯定句型)。"
   },
   "91": {
@@ -1873,25 +2209,52 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "tomorrow",
-        "phonetic": "/təˈmɒrəʊ/",
-        "meaning": "adv. & n. 明天",
-        "mcItem": "Clock",
-        "mcItemIcon": "⏩",
-        "sampleSentence": "See you tomorrow.",
-        "sampleTranslation": "明天见。"
-      },
-      {
-        "word": "next",
-        "phonetic": "/nekst/",
-        "meaning": "adj. 下一个的",
-        "mcItem": "Compass",
-        "mcItemIcon": "⏭️",
-        "sampleSentence": "Next week.",
-        "sampleTranslation": "下周。"
-      }
-    ],
+        {
+                "word": "will",
+                "phonetic": "/wɪl/",
+                "meaning": "助动词：将；将会",
+                "mcItem": "Nether Star",
+                "mcItemIcon": "⭐",
+                "sampleSentence": "When will the bus arrive at the terminal?",
+                "sampleTranslation": "公共汽车什么时候到终点站？"
+        },
+        {
+                "word": "arrive",
+                "phonetic": "/əˈraɪv/",
+                "meaning": "动词：到达；抵达",
+                "mcItem": "Minecart",
+                "mcItemIcon": "🏁",
+                "sampleSentence": "The train will arrive in ten minutes.",
+                "sampleTranslation": "火车将在十分钟内到达。"
+        },
+        {
+                "word": "depart",
+                "phonetic": "/dɪˈpɑːt/",
+                "meaning": "动词：出发；离开",
+                "mcItem": "Boat",
+                "mcItemIcon": "🚢",
+                "sampleSentence": "Our flight will depart on schedule.",
+                "sampleTranslation": "我们的航班将按时起飞。"
+        },
+        {
+                "word": "soon",
+                "phonetic": "/suːn/",
+                "meaning": "副词：不久；马上",
+                "mcItem": "Clock",
+                "mcItemIcon": "⚡",
+                "sampleSentence": "The rain will stop very soon.",
+                "sampleTranslation": "雨很快就会停。"
+        },
+        {
+                "word": "tomorrow",
+                "phonetic": "/təˈmɒr.əʊ/",
+                "meaning": "名词/副词：明天",
+                "mcItem": "Daylight Detector",
+                "mcItemIcon": "🌅",
+                "sampleSentence": "We will visit the desert temple tomorrow.",
+                "sampleTranslation": "我们明天去参观沙漠神殿。"
+        }
+      ],
     "grammarNote": "一般将来时标志词：tomorrow, next week/month/year, in the future, soon。"
   },
   "93": {
@@ -2054,7 +2417,62 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
         "zh": "她很快就会回来的。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "will",
+        "phonetic": "/wɪl/",
+        "meaning": "modal v. 将，会",
+        "mcItem": "Potion of Swiftness",
+        "mcItemIcon": "🚀",
+        "sampleSentence": "The train will arrive at platform 3.",
+        "sampleTranslation": "火车将在3号站台进站。"
+      },
+      {
+        "word": "train",
+        "phonetic": "/treɪn/",
+        "meaning": "n. 火车，列车",
+        "mcItem": "Minecart",
+        "mcItemIcon": "🚆",
+        "sampleSentence": "When will the train leave?",
+        "sampleTranslation": "火车什么时候开出？"
+      },
+      {
+        "word": "plane",
+        "phonetic": "/pleɪn/",
+        "meaning": "n. 飞机",
+        "mcItem": "Elytra",
+        "mcItemIcon": "✈️",
+        "sampleSentence": "The plane will land in twenty minutes.",
+        "sampleTranslation": "飞机将在二十分钟后降落。"
+      },
+      {
+        "word": "platform",
+        "phonetic": "/ˈplæt.fɔːm/",
+        "meaning": "n. 站台，月台",
+        "mcItem": "Stone Bricks",
+        "mcItemIcon": "🚉",
+        "sampleSentence": "Wait on the platform safely.",
+        "sampleTranslation": "在站台上安全候车。"
+      },
+      {
+        "word": "station",
+        "phonetic": "/ˈsteɪ.ʃən/",
+        "meaning": "n. 车站",
+        "mcItem": "Redstone Lamp",
+        "mcItemIcon": "🏢",
+        "sampleSentence": "We will meet at the railway station.",
+        "sampleTranslation": "我们将在火车站会合。"
+      },
+      {
+        "word": "arrive",
+        "phonetic": "/əˈraɪv/",
+        "meaning": "v. 到达，抵达",
+        "mcItem": "Compass",
+        "mcItemIcon": "🏁",
+        "sampleSentence": "They will arrive next Monday.",
+        "sampleTranslation": "他们下周一到达。"
+      }
+    ],
     "grammarNote": "in + 时间段 表示“在……之后”(常用于将来时)：in ten minutes (10分钟后), in three days (3天后)。"
   },
   "95": {
@@ -2249,11 +2667,47 @@ export const NCE_BOOK1_UNIT4_DATA: Record<number, LessonCorpusItem> = {
       {
         "word": "if",
         "phonetic": "/ɪf/",
-        "meaning": "conj. 如果",
-        "mcItem": "Redstone",
+        "meaning": "连词：如果；假如",
+        "mcItem": "Redstone Repeater",
         "mcItemIcon": "🔀",
-        "sampleSentence": "If you are ready.",
-        "sampleTranslation": "如果你准备好了。"
+        "sampleSentence": "If you are ready, we can start our adventure.",
+        "sampleTranslation": "如果你准备好了，我们可以开始探险。"
+      },
+      {
+        "word": "miss",
+        "phonetic": "/mɪs/",
+        "meaning": "动词：错过；未赶上",
+        "mcItem": "Clock",
+        "mcItemIcon": "⌛",
+        "sampleSentence": "Hurry up, or we will miss the village train!",
+        "sampleTranslation": "快点，否则我们要错过村庄火车了！"
+      },
+      {
+        "word": "catch",
+        "phonetic": "/kætʃ/",
+        "meaning": "动词：赶上；抓住",
+        "mcItem": "Fishing Rod",
+        "mcItemIcon": "🎣",
+        "sampleSentence": "Run fast and you will catch the bus.",
+        "sampleTranslation": "跑快点，你就会赶上公交车。"
+      },
+      {
+        "word": "study",
+        "phonetic": "/ˈstʌd.i/",
+        "meaning": "动词：学习；研究",
+        "mcItem": "Book",
+        "mcItemIcon": "📖",
+        "sampleSentence": "If you study hard, you will learn English well.",
+        "sampleTranslation": "如果你努力学习，你就会把英语学好。"
+      },
+      {
+        "word": "pass",
+        "phonetic": "/pɑːs/",
+        "meaning": "动词：通过；经过",
+        "mcItem": "Emerald",
+        "mcItemIcon": "✅",
+        "sampleSentence": "Steve passed the English challenge with flying colors.",
+        "sampleTranslation": "史蒂夫出色地通过了英语挑战。"
       }
     ],
     "grammarNote": "真实条件状语从句主将从现原则：主句用一般将来时 (will + do)，if 从句用一般现在时 (rains, comes)。"

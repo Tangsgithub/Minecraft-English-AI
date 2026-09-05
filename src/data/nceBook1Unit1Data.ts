@@ -125,51 +125,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "对不起，这是您的手提包吗？"
       },
       {
-        "word": "me",
-        "phonetic": "/miː/",
-        "meaning": "pron. 我 (宾格)",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👤",
-        "sampleSentence": "Give me the book, please.",
-        "sampleTranslation": "请把那本书给我。"
-      },
-      {
-        "word": "yes",
-        "phonetic": "/jes/",
-        "meaning": "adv. 是的",
-        "mcItem": "Emerald",
-        "mcItemIcon": "✅",
-        "sampleSentence": "Yes, it is.",
-        "sampleTranslation": "是的，它是。"
-      },
-      {
-        "word": "is",
-        "phonetic": "/ɪz/",
-        "meaning": "v. be 动词现在时第三人称单数",
-        "mcItem": "Beacon",
-        "mcItemIcon": "🔹",
-        "sampleSentence": "Is this your pencil?",
-        "sampleTranslation": "这是你的铅笔吗？"
-      },
-      {
-        "word": "this",
-        "phonetic": "/ðɪs/",
-        "meaning": "pron. 这",
-        "mcItem": "Compass",
-        "mcItemIcon": "👉",
-        "sampleSentence": "This is my coat.",
-        "sampleTranslation": "这是我的外套。"
-      },
-      {
-        "word": "your",
-        "phonetic": "/jɔː/",
-        "meaning": "possessive adj. 你的，你们的",
-        "mcItem": "Name Tag",
-        "mcItemIcon": "🏷️",
-        "sampleSentence": "Is this your handbag?",
-        "sampleTranslation": "这是你的手提包吗？"
-      },
-      {
         "word": "handbag",
         "phonetic": "/ˈhændbæɡ/",
         "meaning": "n. (女用)手提包",
@@ -188,29 +143,11 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "对不起，我没听清。"
       },
       {
-        "word": "it",
-        "phonetic": "/ɪt/",
-        "meaning": "pron. 它",
-        "mcItem": "Item Frame",
-        "mcItemIcon": "📦",
-        "sampleSentence": "It is a new car.",
-        "sampleTranslation": "这是一辆新车。"
-      },
-      {
         "word": "thank you",
         "phonetic": "/ˈθæŋk juː/",
         "meaning": "感谢你(们)",
         "mcItem": "Heart",
         "mcItemIcon": "💖",
-        "sampleSentence": "Thank you very much.",
-        "sampleTranslation": "非常感谢。"
-      },
-      {
-        "word": "very much",
-        "phonetic": "/ˈveri mʌtʃ/",
-        "meaning": "adv. 非常地",
-        "mcItem": "Star",
-        "mcItemIcon": "⭐",
         "sampleSentence": "Thank you very much.",
         "sampleTranslation": "非常感谢。"
       }
@@ -338,15 +275,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "这是一支铅笔。"
       },
       {
-        "word": "book",
-        "phonetic": "/bʊk/",
-        "meaning": "n. 书",
-        "mcItem": "Book",
-        "mcItemIcon": "📖",
-        "sampleSentence": "Is this your book?",
-        "sampleTranslation": "这是你的书吗？"
-      },
-      {
         "word": "watch",
         "phonetic": "/wɒtʃ/",
         "meaning": "n. 手表",
@@ -374,15 +302,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "她穿着一条漂亮的连衣裙。"
       },
       {
-        "word": "skirt",
-        "phonetic": "/skɜːt/",
-        "meaning": "n. 裙子",
-        "mcItem": "Leather Leggings",
-        "mcItemIcon": "👗",
-        "sampleSentence": "Her skirt is blue.",
-        "sampleTranslation": "她的裙子是蓝色的。"
-      },
-      {
         "word": "shirt",
         "phonetic": "/ʃɜːt/",
         "meaning": "n. 衬衣",
@@ -390,24 +309,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "👔",
         "sampleSentence": "Is this your shirt?",
         "sampleTranslation": "这是你的衬衫吗？"
-      },
-      {
-        "word": "car",
-        "phonetic": "/kɑː/",
-        "meaning": "n. 小汽车",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🚗",
-        "sampleSentence": "It is a red car.",
-        "sampleTranslation": "这是一辆红色的小汽车。"
-      },
-      {
-        "word": "house",
-        "phonetic": "/haʊs/",
-        "meaning": "n. 房子",
-        "mcItem": "Oak Door",
-        "mcItemIcon": "🏠",
-        "sampleSentence": "This is our house.",
-        "sampleTranslation": "这是我们的房子。"
       }
     ],
     "grammarNote": "句型练习：Is this your ...? 否定回答：No, it isn't. / No, it isn't my ... It's your ..."
@@ -546,33 +447,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "随身带一把伞。"
       },
       {
-        "word": "please",
-        "phonetic": "/pliːz/",
-        "meaning": "int. 请",
-        "mcItem": "Emerald",
-        "mcItemIcon": "🙏",
-        "sampleSentence": "Please give me my ticket.",
-        "sampleTranslation": "请把我的票给我。"
-      },
-      {
-        "word": "here",
-        "phonetic": "/hɪə/",
-        "meaning": "adv. 这里",
-        "mcItem": "Compass",
-        "mcItemIcon": "📍",
-        "sampleSentence": "Here is your ticket.",
-        "sampleTranslation": "这是您的票。"
-      },
-      {
-        "word": "my",
-        "phonetic": "/maɪ/",
-        "meaning": "possessive adj. 我的",
-        "mcItem": "Name Tag",
-        "mcItemIcon": "🏷️",
-        "sampleSentence": "This is my coat.",
-        "sampleTranslation": "这是我的大衣。"
-      },
-      {
         "word": "ticket",
         "phonetic": "/ˈtɪkɪt/",
         "meaning": "n. 票，牌子",
@@ -591,13 +465,13 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "请看5号。"
       },
       {
-        "word": "five",
-        "phonetic": "/faɪv/",
-        "meaning": "num. 五",
-        "mcItem": "Gold Ingot",
-        "mcItemIcon": "5️⃣",
-        "sampleSentence": "I have five books.",
-        "sampleTranslation": "我有五本书。"
+        "word": "cloakroom",
+        "phonetic": "/ˈkləʊkrʊm/",
+        "meaning": "n. 衣帽存放处",
+        "mcItem": "Chest",
+        "mcItemIcon": "🚪",
+        "sampleSentence": "Leave your coat in the cloakroom.",
+        "sampleTranslation": "把大衣留在衣帽存放处。"
       },
       {
         "word": "sorry",
@@ -607,24 +481,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "😔",
         "sampleSentence": "Sorry, sir.",
         "sampleTranslation": "对不起，先生。"
-      },
-      {
-        "word": "sir",
-        "phonetic": "/sɜː/",
-        "meaning": "n. 先生",
-        "mcItem": "Iron Helmet",
-        "mcItemIcon": "🎩",
-        "sampleSentence": "Yes, sir.",
-        "sampleTranslation": "是的，先生。"
-      },
-      {
-        "word": "cloakroom",
-        "phonetic": "/ˈkləʊkrʊm/",
-        "meaning": "n. 衣帽存放处",
-        "mcItem": "Chest",
-        "mcItemIcon": "🚪",
-        "sampleSentence": "Leave your coat in the cloakroom.",
-        "sampleTranslation": "把大衣留在衣帽存放处。"
       }
     ],
     "grammarNote": "Here's 是 Here is 的缩写形式。Sorry = I'm sorry。Is this it? 中 it 代替前面提到的 your umbrella。"
@@ -892,51 +748,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "Mr.",
-        "phonetic": "/ˈmɪstə/",
-        "meaning": "先生",
-        "mcItem": "Iron Helmet",
-        "mcItemIcon": "🎩",
-        "sampleSentence": "Good morning, Mr. Blake.",
-        "sampleTranslation": "早上好，布莱克先生。"
-      },
-      {
-        "word": "good",
-        "phonetic": "/ɡʊd/",
-        "meaning": "adj. 好",
-        "mcItem": "Golden Apple",
-        "mcItemIcon": "👍",
-        "sampleSentence": "Good morning!",
-        "sampleTranslation": "早上好！"
-      },
-      {
-        "word": "morning",
-        "phonetic": "/ˈmɔːnɪŋ/",
-        "meaning": "n. 早晨",
-        "mcItem": "Clock",
-        "mcItemIcon": "🌅",
-        "sampleSentence": "In the morning, the sun rises.",
-        "sampleTranslation": "早晨，太阳升起。"
-      },
-      {
-        "word": "Miss",
-        "phonetic": "/mɪs/",
-        "meaning": "小姐",
-        "mcItem": "Flower",
-        "mcItemIcon": "👩",
-        "sampleSentence": "This is Miss Sophie Dupont.",
-        "sampleTranslation": "这位是索菲娅·杜邦小姐。"
-      },
-      {
-        "word": "new",
-        "phonetic": "/njuː/",
-        "meaning": "adj. 新的",
-        "mcItem": "Emerald",
-        "mcItemIcon": "✨",
-        "sampleSentence": "Sophie is a new student.",
-        "sampleTranslation": "索菲娅是个新学生。"
-      },
-      {
         "word": "student",
         "phonetic": "/ˈstjuːdnt/",
         "meaning": "n. 学生",
@@ -980,42 +791,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🤝",
         "sampleSentence": "Nice to meet you.",
         "sampleTranslation": "很高兴见到你。"
-      },
-      {
-        "word": "Japanese",
-        "phonetic": "/ˌdʒæpəˈniːz/",
-        "meaning": "adj. & n. 日本人",
-        "mcItem": "Banner",
-        "mcItemIcon": "🇯🇵",
-        "sampleSentence": "She's Japanese.",
-        "sampleTranslation": "她是日本人。"
-      },
-      {
-        "word": "Korean",
-        "phonetic": "/kəˈrɪən/",
-        "meaning": "adj. & n. 韩国人",
-        "mcItem": "Banner",
-        "mcItemIcon": "🇰🇷",
-        "sampleSentence": "He's Korean.",
-        "sampleTranslation": "他是韩国人。"
-      },
-      {
-        "word": "Chinese",
-        "phonetic": "/ˌtʃaɪˈniːz/",
-        "meaning": "adj. & n. 中国人",
-        "mcItem": "Banner",
-        "mcItemIcon": "🇨🇳",
-        "sampleSentence": "He's Chinese.",
-        "sampleTranslation": "他是中国人。"
-      },
-      {
-        "word": "too",
-        "phonetic": "/tuː/",
-        "meaning": "adv. 也",
-        "mcItem": "Repeater",
-        "mcItemIcon": "➕",
-        "sampleSentence": "She is Chinese, too.",
-        "sampleTranslation": "她也是中国人。"
       }
     ],
     "grammarNote": "This is Miss ... 一般用于将某人介绍给他人。Nice to meet you 用于初次与同学、朋友见面等非正式场合。"
@@ -1146,78 +921,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🇮🇹",
         "sampleSentence": "Fiat is an Italian make.",
         "sampleTranslation": "菲亚特是意大利品牌。"
-      },
-      {
-        "word": "Volvo",
-        "phonetic": "/ˈvɒlvəʊ/",
-        "meaning": "n. 沃尔沃",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🚙",
-        "sampleSentence": "It's a Volvo.",
-        "sampleTranslation": "这是一辆沃尔沃。"
-      },
-      {
-        "word": "Peugeot",
-        "phonetic": "/ˈpɜːʒəʊ/",
-        "meaning": "n. 标致",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🚗",
-        "sampleSentence": "It's a Peugeot.",
-        "sampleTranslation": "这是一辆标致。"
-      },
-      {
-        "word": "Mercedes",
-        "phonetic": "/məˈseɪdiːz/",
-        "meaning": "n. 梅赛德斯",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🏎️",
-        "sampleSentence": "It's a Mercedes.",
-        "sampleTranslation": "这是一辆梅赛德斯。"
-      },
-      {
-        "word": "Toyota",
-        "phonetic": "/təʊˈjəʊtə/",
-        "meaning": "n. 丰田",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🚘",
-        "sampleSentence": "It's a Toyota.",
-        "sampleTranslation": "这是一辆丰田。"
-      },
-      {
-        "word": "Daewoo",
-        "phonetic": "/ˈdaɪwuː/",
-        "meaning": "n. 大宇",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🛺",
-        "sampleSentence": "It's a Daewoo.",
-        "sampleTranslation": "这是一辆大宇。"
-      },
-      {
-        "word": "Mini",
-        "phonetic": "/ˈmɪni/",
-        "meaning": "n. 迷你",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🚙",
-        "sampleSentence": "It's a Mini.",
-        "sampleTranslation": "这是一辆迷你。"
-      },
-      {
-        "word": "Ford",
-        "phonetic": "/fɔːd/",
-        "meaning": "n. 福特",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🚗",
-        "sampleSentence": "It's a Ford.",
-        "sampleTranslation": "这是一辆福特。"
-      },
-      {
-        "word": "Fiat",
-        "phonetic": "/ˈfiːæt/",
-        "meaning": "n. 菲亚特",
-        "mcItem": "Minecart",
-        "mcItemIcon": "🏎️",
-        "sampleSentence": "It's a Fiat.",
-        "sampleTranslation": "这是一辆菲亚特。"
       }
     ],
     "grammarNote": "句型：What make is it? 选择疑问句：Is it a Swedish car or a French car? It isn't a French car. It's a Swedish car."
@@ -1353,33 +1056,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "I",
-        "phonetic": "/aɪ/",
-        "meaning": "pron. 我",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👤",
-        "sampleSentence": "I am a student.",
-        "sampleTranslation": "我是个学生。"
-      },
-      {
-        "word": "am",
-        "phonetic": "/æm/",
-        "meaning": "v. be 动词现在时第一人称单数",
-        "mcItem": "Beacon",
-        "mcItemIcon": "🔹",
-        "sampleSentence": "I am Robert.",
-        "sampleTranslation": "我是罗伯特。"
-      },
-      {
-        "word": "are",
-        "phonetic": "/ɑː/",
-        "meaning": "v. be 动词现在时复数及第二人称",
-        "mcItem": "Beacon",
-        "mcItemIcon": "🔹",
-        "sampleSentence": "Are you a teacher?",
-        "sampleTranslation": "你是老师吗？"
-      },
-      {
         "word": "name",
         "phonetic": "/neɪm/",
         "meaning": "n. 名字",
@@ -1387,15 +1063,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🏷️",
         "sampleSentence": "My name is Sophie.",
         "sampleTranslation": "我的名字叫索菲娅。"
-      },
-      {
-        "word": "what",
-        "phonetic": "/wɒt/",
-        "meaning": "adj. & pron. 什么",
-        "mcItem": "Compass",
-        "mcItemIcon": "❓",
-        "sampleSentence": "What is your job?",
-        "sampleTranslation": "你的工作是什么？"
       },
       {
         "word": "nationality",
@@ -1557,15 +1224,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "他是一名警察。"
       },
       {
-        "word": "policewoman",
-        "phonetic": "/pəˈliːsˌwʊmən/",
-        "meaning": "n. 女警察",
-        "mcItem": "Iron Helmet",
-        "mcItemIcon": "👮‍♀️",
-        "sampleSentence": "She is a policewoman.",
-        "sampleTranslation": "她是一名女警察。"
-      },
-      {
         "word": "taxi driver",
         "phonetic": "/ˈtæksi ˈdraɪvə/",
         "meaning": "n. 出租汽车司机",
@@ -1582,15 +1240,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "✈️",
         "sampleSentence": "She is an air hostess.",
         "sampleTranslation": "她是一名空姐。"
-      },
-      {
-        "word": "postman",
-        "phonetic": "/ˈpəʊstmən/",
-        "meaning": "n. 邮递员",
-        "mcItem": "Chest",
-        "mcItemIcon": "📮",
-        "sampleSentence": "The postman brings letters.",
-        "sampleTranslation": "邮递员送来信件。"
       },
       {
         "word": "nurse",
@@ -1618,24 +1267,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "💇",
         "sampleSentence": "She is a hairdresser.",
         "sampleTranslation": "她是一名理发师。"
-      },
-      {
-        "word": "housewife",
-        "phonetic": "/ˈhaʊswaɪf/",
-        "meaning": "n. 家庭妇女",
-        "mcItem": "Furnace",
-        "mcItemIcon": "👩‍🍳",
-        "sampleSentence": "I'm a housewife.",
-        "sampleTranslation": "我是一名家庭主妇。"
-      },
-      {
-        "word": "milkman",
-        "phonetic": "/ˈmɪlkmən/",
-        "meaning": "n. 送牛奶的人",
-        "mcItem": "Milk Bucket",
-        "mcItemIcon": "🥛",
-        "sampleSentence": "I'm a milkman.",
-        "sampleTranslation": "我是送牛奶的人。"
       }
     ],
     "grammarNote": "职业句型：What's his/her job? Is he/she a/an ...? Yes, he/she is."
@@ -1747,33 +1378,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "hello",
-        "phonetic": "/həˈləʊ/",
-        "meaning": "int. 喂 (表示问候)",
-        "mcItem": "Bell",
-        "mcItemIcon": "👋",
-        "sampleSentence": "Hello, Helen.",
-        "sampleTranslation": "你好，海伦。"
-      },
-      {
-        "word": "hi",
-        "phonetic": "/haɪ/",
-        "meaning": "int. 喂，嗨",
-        "mcItem": "Bell",
-        "mcItemIcon": "🖐️",
-        "sampleSentence": "Hi, Steven.",
-        "sampleTranslation": "嗨，史蒂文。"
-      },
-      {
-        "word": "how",
-        "phonetic": "/haʊ/",
-        "meaning": "adv. 怎样",
-        "mcItem": "Compass",
-        "mcItemIcon": "❓",
-        "sampleSentence": "How are you today?",
-        "sampleTranslation": "你今天好吗？"
-      },
-      {
         "word": "today",
         "phonetic": "/təˈdeɪ/",
         "meaning": "adv. 今天",
@@ -1817,15 +1421,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🚪",
         "sampleSentence": "Goodbye, Helen.",
         "sampleTranslation": "再见，海伦。"
-      },
-      {
-        "word": "see",
-        "phonetic": "/siː/",
-        "meaning": "v. 见",
-        "mcItem": "Eye of Ender",
-        "mcItemIcon": "👀",
-        "sampleSentence": "Nice to see you.",
-        "sampleTranslation": "见到你真高兴。"
       }
     ],
     "grammarNote": "How are you? 是熟人见面问候语。And you? = And how are you? Nice to see you. 用于熟人见面客气话。"
@@ -1929,33 +1524,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "fat",
-        "phonetic": "/fæt/",
-        "meaning": "adj. 胖的",
-        "mcItem": "Porkchop",
-        "mcItemIcon": "🥩",
-        "sampleSentence": "He is fat.",
-        "sampleTranslation": "他很胖。"
-      },
-      {
-        "word": "woman",
-        "phonetic": "/ˈwʊmən/",
-        "meaning": "n. 女人",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👩",
-        "sampleSentence": "Look at that woman!",
-        "sampleTranslation": "看那个女人！"
-      },
-      {
-        "word": "thin",
-        "phonetic": "/θɪn/",
-        "meaning": "adj. 瘦的",
-        "mcItem": "Stick",
-        "mcItemIcon": "📏",
-        "sampleSentence": "She is thin.",
-        "sampleTranslation": "她很瘦。"
-      },
-      {
         "word": "tall",
         "phonetic": "/tɔːl/",
         "meaning": "adj. 高的",
@@ -1990,42 +1558,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "✨",
         "sampleSentence": "The room is clean.",
         "sampleTranslation": "房间很干净。"
-      },
-      {
-        "word": "hot",
-        "phonetic": "/hɒt/",
-        "meaning": "adj. 热的",
-        "mcItem": "Lava Bucket",
-        "mcItemIcon": "🔥",
-        "sampleSentence": "Steven is hot.",
-        "sampleTranslation": "史蒂文很热。"
-      },
-      {
-        "word": "cold",
-        "phonetic": "/kəʊld/",
-        "meaning": "adj. 冷的",
-        "mcItem": "Ice",
-        "mcItemIcon": "❄️",
-        "sampleSentence": "Emma is cold.",
-        "sampleTranslation": "埃玛很冷。"
-      },
-      {
-        "word": "old",
-        "phonetic": "/əʊld/",
-        "meaning": "adj. 老的",
-        "mcItem": "Cobblestone",
-        "mcItemIcon": "👴",
-        "sampleSentence": "The milkman is old.",
-        "sampleTranslation": "送奶工老了。"
-      },
-      {
-        "word": "young",
-        "phonetic": "/jʌŋ/",
-        "meaning": "adj. 年轻的",
-        "mcItem": "Wheat Seeds",
-        "mcItemIcon": "🧒",
-        "sampleSentence": "She is young.",
-        "sampleTranslation": "她很年轻。"
       },
       {
         "word": "busy",
@@ -2365,24 +1897,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "👦",
         "sampleSentence": "He is my brother.",
         "sampleTranslation": "他是我的兄弟。"
-      },
-      {
-        "word": "his",
-        "phonetic": "/hɪz/",
-        "meaning": "possessive adj. 他的",
-        "mcItem": "Name Tag",
-        "mcItemIcon": "🏷️",
-        "sampleSentence": "That is his coat.",
-        "sampleTranslation": "那是他的外套。"
-      },
-      {
-        "word": "her",
-        "phonetic": "/hɜː/",
-        "meaning": "possessive adj. 她的",
-        "mcItem": "Name Tag",
-        "mcItemIcon": "🏷️",
-        "sampleSentence": "This is her car.",
-        "sampleTranslation": "这是她的车。"
       }
     ],
     "grammarNote": "Whose is this ...? / It's my father's. 名词后加 's 表示所有格。"
@@ -2508,15 +2022,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "连衣裙是绿色的。"
       },
       {
-        "word": "come",
-        "phonetic": "/kʌm/",
-        "meaning": "v. 来",
-        "mcItem": "Lead",
-        "mcItemIcon": "🚶",
-        "sampleSentence": "Come upstairs and see it.",
-        "sampleTranslation": "到楼上来看看吧。"
-      },
-      {
         "word": "upstairs",
         "phonetic": "/ˌʌpˈsteəz/",
         "meaning": "adv. 楼上",
@@ -2542,15 +2047,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "👒",
         "sampleSentence": "My hat is new.",
         "sampleTranslation": "我的帽子是新的。"
-      },
-      {
-        "word": "same",
-        "phonetic": "/seɪm/",
-        "meaning": "adj. 相同的",
-        "mcItem": "Repeater",
-        "mcItemIcon": "♊",
-        "sampleSentence": "It's the same colour.",
-        "sampleTranslation": "它是一样的颜色。"
       },
       {
         "word": "lovely",
@@ -2833,33 +2329,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "海关官员检查了我们的护照。"
       },
       {
-        "word": "girl",
-        "phonetic": "/ɡɜːl/",
-        "meaning": "n. 女孩，姑娘",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👧",
-        "sampleSentence": "The girl is a tourist.",
-        "sampleTranslation": "那个女孩是个游客。"
-      },
-      {
-        "word": "Danish",
-        "phonetic": "/ˈdeɪnɪʃ/",
-        "meaning": "adj. & n. 丹麦人",
-        "mcItem": "Banner",
-        "mcItemIcon": "🇩🇰",
-        "sampleSentence": "We are Danish.",
-        "sampleTranslation": "我们是丹麦人。"
-      },
-      {
-        "word": "friend",
-        "phonetic": "/frend/",
-        "meaning": "n. 朋友",
-        "mcItem": "Heart",
-        "mcItemIcon": "🤝",
-        "sampleSentence": "They are my friends.",
-        "sampleTranslation": "他们是我的朋友。"
-      },
-      {
         "word": "Norwegian",
         "phonetic": "/nɔːˈwiːdʒən/",
         "meaning": "adj. & n. 挪威人",
@@ -2876,15 +2345,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🛂",
         "sampleSentence": "Here are our passports.",
         "sampleTranslation": "这是我们的护照。"
-      },
-      {
-        "word": "brown",
-        "phonetic": "/braʊn/",
-        "meaning": "adj. 棕色的",
-        "mcItem": "Cocoa Beans",
-        "mcItemIcon": "🟤",
-        "sampleSentence": "Our cases are brown.",
-        "sampleTranslation": "我们的箱子是棕色的。"
       },
       {
         "word": "tourist",
@@ -2979,24 +2439,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "他们是荷兰人。"
       },
       {
-        "word": "these",
-        "phonetic": "/ðiːz/",
-        "meaning": "pron. 这些",
-        "mcItem": "Compass",
-        "mcItemIcon": "👉",
-        "sampleSentence": "Are these your books?",
-        "sampleTranslation": "这些是你的书吗？"
-      },
-      {
-        "word": "red",
-        "phonetic": "/red/",
-        "meaning": "adj. 红色的",
-        "mcItem": "Red Dye",
-        "mcItemIcon": "🔴",
-        "sampleSentence": "These are red books.",
-        "sampleTranslation": "这些是红色的书。"
-      },
-      {
         "word": "grey",
         "phonetic": "/ɡreɪ/",
         "meaning": "adj. 灰色的",
@@ -3013,15 +2455,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🟡",
         "sampleSentence": "The tickets are yellow.",
         "sampleTranslation": "票是黄色的。"
-      },
-      {
-        "word": "black",
-        "phonetic": "/blæk/",
-        "meaning": "adj. 黑色的",
-        "mcItem": "Black Dye",
-        "mcItemIcon": "⚫",
-        "sampleSentence": "He has a black hat.",
-        "sampleTranslation": "他有一顶黑帽子。"
       },
       {
         "word": "orange",
@@ -3177,15 +2610,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "他们是推销员。"
       },
       {
-        "word": "man",
-        "phonetic": "/mæn/",
-        "meaning": "n. 男人",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👨",
-        "sampleSentence": "Who is this young man?",
-        "sampleTranslation": "这个年轻人是谁？"
-      },
-      {
         "word": "office",
         "phonetic": "/ˈɒfɪs/",
         "meaning": "n. 办公室",
@@ -3303,7 +2727,53 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "zh": "她们是女警察。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "job",
+        "phonetic": "/dʒɒb/",
+        "meaning": "n. 职业，工作",
+        "mcItem": "Workstation",
+        "mcItemIcon": "💼",
+        "sampleSentence": "What are their jobs in the village?",
+        "sampleTranslation": "他们在村庄里从事什么工作？"
+      },
+      {
+        "word": "customs",
+        "phonetic": "/ˈkʌs.təmz/",
+        "meaning": "n. 海关",
+        "mcItem": "Iron Bars",
+        "mcItemIcon": "🛃",
+        "sampleSentence": "Pass through the customs gate.",
+        "sampleTranslation": "通过海关通道。"
+      },
+      {
+        "word": "officer",
+        "phonetic": "/ˈɒf.ɪ.sər/",
+        "meaning": "n. 官员，军官",
+        "mcItem": "Iron Helmet",
+        "mcItemIcon": "👮",
+        "sampleSentence": "He is a polite customs officer.",
+        "sampleTranslation": "他是一名礼貌的海关官员。"
+      },
+      {
+        "word": "hostess",
+        "phonetic": "/ˈhəʊ.stəs/",
+        "meaning": "n. 女乘务员，女机舱服务员",
+        "mcItem": "Feather",
+        "mcItemIcon": "👩‍✈️",
+        "sampleSentence": "The air hostess served drinks to passengers.",
+        "sampleTranslation": "空中小姐为乘客们提供了饮品。"
+      },
+      {
+        "word": "hairdresser",
+        "phonetic": "/ˈheəˌdres.ər/",
+        "meaning": "n. 理发师",
+        "mcItem": "Shears",
+        "mcItemIcon": "💇",
+        "sampleSentence": "They are experienced hairdressers.",
+        "sampleTranslation": "他们是经验丰富的理发师。"
+      }
+    ],
     "grammarNote": "不规则复数：man -> men, woman -> women, housewife -> housewives, milkman -> milkmen, policeman -> policemen。"
   },
   "19": {
@@ -3462,15 +2932,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "我们很累。"
       },
       {
-        "word": "boy",
-        "phonetic": "/bɔɪ/",
-        "meaning": "n. 男孩",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👦",
-        "sampleSentence": "He is a good boy.",
-        "sampleTranslation": "他是个好男孩。"
-      },
-      {
         "word": "thirsty",
         "phonetic": "/ˈθɜːsti/",
         "meaning": "adj. 渴",
@@ -3478,33 +2939,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🥤",
         "sampleSentence": "I am thirsty.",
         "sampleTranslation": "我渴了。"
-      },
-      {
-        "word": "Mum",
-        "phonetic": "/mʌm/",
-        "meaning": "n. 妈妈 (儿语)",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👩",
-        "sampleSentence": "Thanks, Mum.",
-        "sampleTranslation": "谢谢妈妈。"
-      },
-      {
-        "word": "sit down",
-        "phonetic": "/ˌsɪt ˈdaʊn/",
-        "meaning": "坐下",
-        "mcItem": "Stairs",
-        "mcItemIcon": "🪑",
-        "sampleSentence": "Sit down here, please.",
-        "sampleTranslation": "请坐在这里。"
-      },
-      {
-        "word": "right",
-        "phonetic": "/raɪt/",
-        "meaning": "adj. 好，可以",
-        "mcItem": "Emerald",
-        "mcItemIcon": "👌",
-        "sampleSentence": "Are you all right now?",
-        "sampleTranslation": "你现在好些了吗？"
       },
       {
         "word": "ice cream",
@@ -3597,24 +3031,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "big",
-        "phonetic": "/bɪɡ/",
-        "meaning": "adj. 大的",
-        "mcItem": "Giant",
-        "mcItemIcon": "🐘",
-        "sampleSentence": "They're big.",
-        "sampleTranslation": "它们很大。"
-      },
-      {
-        "word": "small",
-        "phonetic": "/smɔːl/",
-        "meaning": "adj. 小的",
-        "mcItem": "Button",
-        "mcItemIcon": "🐜",
-        "sampleSentence": "They're small.",
-        "sampleTranslation": "它们很小。"
-      },
-      {
         "word": "open",
         "phonetic": "/ˈəʊpən/",
         "meaning": "adj. 开着的",
@@ -3651,15 +3067,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "箱子很重。"
       },
       {
-        "word": "long",
-        "phonetic": "/lɒŋ/",
-        "meaning": "adj. 长的",
-        "mcItem": "Stick",
-        "mcItemIcon": "📏",
-        "sampleSentence": "They are long.",
-        "sampleTranslation": "它们很长。"
-      },
-      {
         "word": "shoe",
         "phonetic": "/ʃuː/",
         "meaning": "n. 鞋子",
@@ -3676,15 +3083,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "👴",
         "sampleSentence": "My grandfather is reading.",
         "sampleTranslation": "我祖父在看书。"
-      },
-      {
-        "word": "grandmother",
-        "phonetic": "/ˈɡrændˌmʌðə/",
-        "meaning": "n. 祖母，外祖母",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👵",
-        "sampleSentence": "My grandmother is kind.",
-        "sampleTranslation": "我祖母很慈祥。"
       }
     ],
     "grammarNote": "反义词对比：big/small, open/shut, light/heavy, old/young, short/long。They're = They are。"
@@ -3896,24 +3294,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "瓶子是满的。"
       },
       {
-        "word": "large",
-        "phonetic": "/lɑːdʒ/",
-        "meaning": "adj. 大的",
-        "mcItem": "Chest",
-        "mcItemIcon": "📦",
-        "sampleSentence": "This is a large box.",
-        "sampleTranslation": "这是一个大盒子。"
-      },
-      {
-        "word": "little",
-        "phonetic": "/ˈlɪtl/",
-        "meaning": "adj. 小的",
-        "mcItem": "Button",
-        "mcItemIcon": "🔘",
-        "sampleSentence": "Give me the little one.",
-        "sampleTranslation": "给我那个小的。"
-      },
-      {
         "word": "sharp",
         "phonetic": "/ʃɑːp/",
         "meaning": "adj. 尖的，锋利的",
@@ -3932,51 +3312,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "小刀钝了。"
       },
       {
-        "word": "box",
-        "phonetic": "/bɒks/",
-        "meaning": "n. 盒子，箱子",
-        "mcItem": "Chest",
-        "mcItemIcon": "📦",
-        "sampleSentence": "Pass me that box.",
-        "sampleTranslation": "把那个盒子递给我。"
-      },
-      {
-        "word": "glass",
-        "phonetic": "/ɡlɑːs/",
-        "meaning": "n. 杯子",
-        "mcItem": "Glass",
-        "mcItemIcon": "🥛",
-        "sampleSentence": "There is a glass on the table.",
-        "sampleTranslation": "桌上有个玻璃杯。"
-      },
-      {
-        "word": "cup",
-        "phonetic": "/kʌp/",
-        "meaning": "n. 茶杯",
-        "mcItem": "Flower Pot",
-        "mcItemIcon": "☕",
-        "sampleSentence": "Give me a cup, please.",
-        "sampleTranslation": "请给我一只茶杯。"
-      },
-      {
-        "word": "bottle",
-        "phonetic": "/ˈbɒtl/",
-        "meaning": "n. 瓶子",
-        "mcItem": "Glass Bottle",
-        "mcItemIcon": "🍾",
-        "sampleSentence": "The bottle is on the table.",
-        "sampleTranslation": "瓶子在桌上。"
-      },
-      {
-        "word": "tin",
-        "phonetic": "/tɪn/",
-        "meaning": "n. 罐头",
-        "mcItem": "Iron Ingot",
-        "mcItemIcon": "🥫",
-        "sampleSentence": "Open the tin.",
-        "sampleTranslation": "打开罐头。"
-      },
-      {
         "word": "knife",
         "phonetic": "/naɪf/",
         "meaning": "n. 刀子",
@@ -3993,15 +3328,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🍴",
         "sampleSentence": "Here is a fork.",
         "sampleTranslation": "这是一把叉子。"
-      },
-      {
-        "word": "spoon",
-        "phonetic": "/spuːn/",
-        "meaning": "n. 勺子",
-        "mcItem": "Shovel",
-        "mcItemIcon": "🥄",
-        "sampleSentence": "The spoon is in the cup.",
-        "sampleTranslation": "勺子在杯子里。"
       }
     ],
     "grammarNote": "人称代词宾格：me, him, her, us, them。祈使句结构：Give + 宾格 + 名词。"
@@ -4091,20 +3417,47 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
       {
         "word": "on",
         "phonetic": "/ɒn/",
-        "meaning": "prep. 在……之上",
-        "mcItem": "Oak Trapdoor",
-        "mcItemIcon": "🔝",
-        "sampleSentence": "The glasses are on the shelf.",
-        "sampleTranslation": "玻璃杯在架子上。"
+        "meaning": "介词：在……上面",
+        "mcItem": "Oak Slab",
+        "mcItemIcon": "🪵",
+        "sampleSentence": "The cup is on the wooden table.",
+        "sampleTranslation": "杯子在木桌上面。"
       },
       {
         "word": "shelf",
         "phonetic": "/ʃelf/",
-        "meaning": "n. 架子，搁板",
+        "meaning": "名词：架子；搁板",
         "mcItem": "Bookshelf",
-        "mcItemIcon": "🪜",
-        "sampleSentence": "Put the books on the shelf.",
-        "sampleTranslation": "把书放在书架上。"
+        "mcItemIcon": "📚",
+        "sampleSentence": "There are glass bottles on the shelf.",
+        "sampleTranslation": "架子上有玻璃瓶。"
+      },
+      {
+        "word": "plate",
+        "phonetic": "/pleɪt/",
+        "meaning": "名词：盘子",
+        "mcItem": "Bowl",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "Put the golden apple on the plate.",
+        "sampleTranslation": "把金苹果放在盘子里。"
+      },
+      {
+        "word": "cupboard",
+        "phonetic": "/ˈkʌb.əd/",
+        "meaning": "名词：食橱；碗柜",
+        "mcItem": "Barrel",
+        "mcItemIcon": "🗄️",
+        "sampleSentence": "The clean cups are in the cupboard.",
+        "sampleTranslation": "干净的茶杯在碗柜里。"
+      },
+      {
+        "word": "fork",
+        "phonetic": "/fɔːk/",
+        "meaning": "名词：叉子",
+        "mcItem": "Trident",
+        "mcItemIcon": "🍴",
+        "sampleSentence": "Here is a knife and a fork.",
+        "sampleTranslation": "这是一把刀和一把叉子。"
       }
     ],
     "grammarNote": "Give me some glasses 中，give 后面接双宾语（间接宾语 me，直接宾语 some glasses）。The ones on the shelf 中的 ones 代表 glasses。"
@@ -4194,33 +3547,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "desk",
-        "phonetic": "/desk/",
-        "meaning": "n. 课桌",
-        "mcItem": "Crafting Table",
-        "mcItemIcon": "🪵",
-        "sampleSentence": "The pens are on the desk.",
-        "sampleTranslation": "钢笔在书桌上。"
-      },
-      {
-        "word": "table",
-        "phonetic": "/ˈteɪbl/",
-        "meaning": "n. 桌子",
-        "mcItem": "Oak Fence",
-        "mcItemIcon": "🪑",
-        "sampleSentence": "The spoons are on the table.",
-        "sampleTranslation": "勺子在桌上。"
-      },
-      {
-        "word": "plate",
-        "phonetic": "/pleɪt/",
-        "meaning": "n. 盘子",
-        "mcItem": "Pressure Plate",
-        "mcItemIcon": "🍽️",
-        "sampleSentence": "Put the plate on the table.",
-        "sampleTranslation": "把盘子放在桌上。"
-      },
-      {
         "word": "cupboard",
         "phonetic": "/ˈkʌbəd/",
         "meaning": "n. 食橱",
@@ -4228,15 +3554,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🗄️",
         "sampleSentence": "The plates are on the cupboard.",
         "sampleTranslation": "盘子在食橱上。"
-      },
-      {
-        "word": "cigarette",
-        "phonetic": "/ˌsɪɡəˈret/",
-        "meaning": "n. 香烟",
-        "mcItem": "Torch",
-        "mcItemIcon": "🚬",
-        "sampleSentence": "There are cigarettes on the television.",
-        "sampleTranslation": "电视机上有香烟。"
       },
       {
         "word": "television",
@@ -4257,15 +3574,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "箱子在地板上。"
       },
       {
-        "word": "dressing table",
-        "phonetic": "/ˈdresɪŋ ˌteɪbl/",
-        "meaning": "梳妆台",
-        "mcItem": "Crafting Table",
-        "mcItemIcon": "🪞",
-        "sampleSentence": "The bottles are on the dressing table.",
-        "sampleTranslation": "瓶子在梳妆台上。"
-      },
-      {
         "word": "magazine",
         "phonetic": "/ˌmæɡəˈziːn/",
         "meaning": "n. 杂志",
@@ -4273,15 +3581,6 @@ export const NCE_BOOK1_UNIT1_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "📰",
         "sampleSentence": "She is reading a magazine.",
         "sampleTranslation": "她正在看一本杂志。"
-      },
-      {
-        "word": "bed",
-        "phonetic": "/bed/",
-        "meaning": "n. 床",
-        "mcItem": "Red Bed",
-        "mcItemIcon": "🛏️",
-        "sampleSentence": "The magazines are on the bed.",
-        "sampleTranslation": "杂志在床上。"
       },
       {
         "word": "newspaper",

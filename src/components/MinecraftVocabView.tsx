@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA, getLessonById } from '../data/lessonsData';
 import { getFullBook1VocabList } from '../data/book1VocabManager';
+import { NCE_WORD_CRAFTING_RECIPES } from '../data/craftingRecipesData';
 import { VocabItem, UserProfile, CourseVolumeId } from '../types';
-import { Volume2, Search, CheckCircle, Sparkles, BookOpen, Layers, Play, Award, RotateCcw, HelpCircle, CheckCircle2, XCircle, Lock, Unlock, Filter, ArrowRight, Crown, MapPin } from 'lucide-react';
+import { Volume2, Search, CheckCircle, Sparkles, BookOpen, Layers, Play, Award, RotateCcw, HelpCircle, CheckCircle2, XCircle, Lock, Unlock, Filter, ArrowRight, Crown, MapPin, Hammer } from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText, playLevelUpSound } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
 import { getVolumeProgress, hasLessonAccess, isLessonPaywallLocked, isVolumeFullyUnlocked } from '../utils/volumeProgress';
@@ -15,6 +16,7 @@ interface MinecraftVocabViewProps {
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
   onOpenVipModal?: () => void;
   onNavigateToLesson?: (lessonId: number) => void;
+  onNavigateToCrafting?: () => void;
 }
 
 export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
@@ -22,7 +24,8 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   onToggleMasterWord,
   onAwardEmeralds,
   onOpenVipModal,
-  onNavigateToLesson
+  onNavigateToLesson,
+  onNavigateToCrafting
 }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'quiz' | 'ebbinghaus'>('grid');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -56,52 +59,8 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   // Case-insensitive Mastered Words Set for 100% accurate status matching
   const masteredSet = new Set((profile.masteredWords || []).map(w => w.toLowerCase()));
 
-  // 1. Extract vocabulary according to active volume (Volume 1 contains full 900+ words across 144 lessons)
-  let combinedList: VocabItem[] = [];
-
-  if (currentVolId === 'vol1') {
-    combinedList = getFullBook1VocabList();
-  } else {
-    const totalLessonCount = currentVolId === 'vol2' ? 96 : 60;
-    const currentVolumeLessons = Array.from({ length: totalLessonCount }, (_, i) => getLessonById(i + 1, currentVolId));
-    const allLessonVocab: VocabItem[] = currentVolumeLessons.flatMap(l =>
-      l.vocabulary.map(v => ({
-        ...v,
-        category: 'Course',
-        requiredLessonId: v.requiredLessonId || l.id
-      }))
-    );
-
-    const wordMap = new Map<string, VocabItem>();
-    allLessonVocab.forEach(lv => {
-      const key = lv.word.toLowerCase();
-      if (!wordMap.has(key)) {
-        wordMap.set(key, lv);
-      }
-    });
-
-    MINECRAFT_VOCABULARY.forEach(mv => {
-      const key = mv.word.toLowerCase();
-      if (wordMap.has(key)) {
-        const existing = wordMap.get(key)!;
-        wordMap.set(key, {
-          ...existing,
-          category: 'Minecraft',
-          mcItem: mv.mcItem || existing.mcItem,
-          mcItemIcon: mv.mcItemIcon || existing.mcItemIcon
-        });
-      } else {
-        wordMap.set(key, {
-          ...mv,
-          category: 'Minecraft',
-          requiredLessonId: mv.requiredLessonId || 1
-        });
-      }
-    });
-
-    wordMap.forEach(item => combinedList.push(item));
-    combinedList.sort((a, b) => (a.requiredLessonId || 1) - (b.requiredLessonId || 1));
-  }
+  // 1. Extract vocabulary for Book 1 (Volume 1 contains full 900+ words across 144 lessons)
+  const combinedList: VocabItem[] = getFullBook1VocabList();
 
   // Helper to check if item is Minecraft specific
   const mcIds = new Set(MINECRAFT_VOCABULARY.map(m => m.id));
@@ -130,8 +89,18 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
   const totalMasteredInLibrary = combinedList.filter(item => masteredSet.has(item.word.toLowerCase())).length;
   const masteredUnlockedCount = unlockedVocabList.filter(item => masteredSet.has(item.word.toLowerCase())).length;
 
+  // 构词配方索引表（用于双向关联配方实验室）
+  const craftableWordsMap = useMemo(() => {
+    const map = new Map<string, typeof NCE_WORD_CRAFTING_RECIPES[0]>();
+    NCE_WORD_CRAFTING_RECIPES.forEach(r => {
+      map.set(r.nameEn.toLowerCase(), r);
+    });
+    return map;
+  }, []);
+
   const categories = [
     { id: 'all', label: '全部种类', icon: '📚' },
+    { id: 'Crafting', label: `构词合成 (${NCE_WORD_CRAFTING_RECIPES.length})`, icon: '🔨' },
     { id: 'Minecraft', label: 'Minecraft 方块/道具', icon: '🟩' },
     { id: 'Course', label: '新概念核心课文词', icon: '📖' }
   ];
@@ -141,6 +110,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
     const isMc = isMcVocabItem(item);
     const isUnlocked = isWordUnlocked(item);
     const reqLesson = item.requiredLessonId || 1;
+    const isCraftable = craftableWordsMap.has(item.word.toLowerCase());
 
     // Specific Lesson Filter (e.g. user chose Lesson 10)
     if (selectedSpecificLesson !== null && reqLesson !== selectedSpecificLesson) {
@@ -161,6 +131,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
     // Category Filter
     const matchesCategory =
       activeCategory === 'all' ||
+      (activeCategory === 'Crafting' && isCraftable) ||
       (activeCategory === 'Minecraft' && isMc) ||
       (activeCategory === 'Course' && !isMc);
 
@@ -728,7 +699,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
 
                     {/* Bottom Card Action: Mark Mastered */}
                     <div className="pt-3 mt-3 border-t-2 border-slate-100 flex items-center justify-between text-xs font-mono">
-                      <div className="flex items-center space-x-1 overflow-hidden">
+                      <div className="flex items-center space-x-1 overflow-hidden flex-wrap gap-y-1">
                         {isMcVocabItem(item) ? (
                           <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-md text-[10px] font-black shrink-0">
                             🟩 MC 专属
@@ -737,6 +708,20 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                           <span className="bg-blue-100 text-blue-800 border border-blue-300 px-2 py-0.5 rounded-md text-[10px] font-black shrink-0">
                             📖 新概念 1
                           </span>
+                        )}
+                        {craftableWordsMap.has(item.word.toLowerCase()) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playClickSound();
+                              onNavigateToCrafting?.();
+                            }}
+                            className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md text-[10px] font-black shrink-0 flex items-center gap-0.5 transition-all shadow-sm"
+                            title="已收录进配方宝典库，点击前往合成实验室进行 3×3 构词合成拼装"
+                          >
+                            <span>🔨</span>
+                            <span>配方可合成</span>
+                          </button>
                         )}
                         <span className="text-[10px] text-slate-400 font-bold truncate">
                           {item.category || ''}

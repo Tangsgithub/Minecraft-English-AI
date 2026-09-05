@@ -120,33 +120,6 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "一个蓝色小箱子。"
       },
       {
-        "word": "mine",
-        "phonetic": "/maɪn/",
-        "meaning": "pron. 我的 (名词性物主代词)",
-        "mcItem": "Player Head",
-        "mcItemIcon": "🙋",
-        "sampleSentence": "This book is mine.",
-        "sampleTranslation": "这本书是我的。"
-      },
-      {
-        "word": "yours",
-        "phonetic": "/jɔːz/",
-        "meaning": "pron. 你的，你们的",
-        "mcItem": "Player Head",
-        "mcItemIcon": "🫵",
-        "sampleSentence": "Is this yours?",
-        "sampleTranslation": "这是你的吗？"
-      },
-      {
-        "word": "hers",
-        "phonetic": "/hɜːz/",
-        "meaning": "pron. 她的",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👧",
-        "sampleSentence": "The bag is hers.",
-        "sampleTranslation": "那个包是她的。"
-      },
-      {
         "word": "lost",
         "phonetic": "/lɒst/",
         "meaning": "adj. 遗失的",
@@ -222,22 +195,49 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "ours",
-        "phonetic": "/ˈaʊəz/",
-        "meaning": "pron. 我们的",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👥",
-        "sampleSentence": "The classroom is ours.",
-        "sampleTranslation": "教室是我们的。"
+        "word": "whose",
+        "phonetic": "/huːz/",
+        "meaning": "代词：谁的",
+        "mcItem": "Name Tag",
+        "mcItemIcon": "🏷️",
+        "sampleSentence": "Whose diamond sword is this on the table?",
+        "sampleTranslation": "桌上这把钻石剑是谁的？"
+      },
+      {
+        "word": "mine",
+        "phonetic": "/maɪn/",
+        "meaning": "名词性物主代词：我的",
+        "mcItem": "Diamond Pickaxe",
+        "mcItemIcon": "⛏️",
+        "sampleSentence": "That iron armor is mine, not his.",
+        "sampleTranslation": "那件铁盔甲是我的，不是他的。"
+      },
+      {
+        "word": "yours",
+        "phonetic": "/jɔːz/",
+        "meaning": "名词性物主代词：你的；你们的",
+        "mcItem": "Golden Apple",
+        "mcItemIcon": "🍎",
+        "sampleSentence": "Is this golden apple yours or hers?",
+        "sampleTranslation": "这个金苹果是你的还是她的？"
+      },
+      {
+        "word": "hers",
+        "phonetic": "/hɜːz/",
+        "meaning": "名词性物主代词：她的",
+        "mcItem": "Emerald",
+        "mcItemIcon": "💚",
+        "sampleSentence": "The emerald pendant on the shelf is hers.",
+        "sampleTranslation": "架子上的绿宝石吊坠是她的。"
       },
       {
         "word": "theirs",
         "phonetic": "/ðeəz/",
-        "meaning": "pron. 他们的",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👥",
-        "sampleSentence": "The car is theirs.",
-        "sampleTranslation": "那辆车是他们的。"
+        "meaning": "名词性物主代词：他们的",
+        "mcItem": "Chest",
+        "mcItemIcon": "📦",
+        "sampleSentence": "That wooden cottage belongs to them; it is theirs.",
+        "sampleTranslation": "那座木屋归他们所有，是他们的。"
       }
     ],
     "grammarNote": "Whose 引导特殊疑问句提问归属：Whose is this...? / Whose are these...?"
@@ -245,191 +245,254 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
   "99": {
     "id": 99,
     "unit": 5,
-    "title": "Owl Hall",
-    "titleZh": "猫头鹰庄园",
-    "topic": "Hotel Booking & Room Preferences",
-    "topicZh": "旅馆入住与房间偏好",
-    "grammar": "I'd like a room / Which one do you prefer? / Comparatives",
+    "title": "Ow!",
+    "titleZh": "啊哟！",
+    "topic": "Emergencies & Accidents",
+    "topicZh": "意外摔倒与就医",
+    "grammar": "Past events & indirect reporting: I slipped and fell / What's the matter?",
     "difficulty": "medium",
     "dialogue": [
       {
-        "speaker": "RECEPTIONIST",
-        "text": "Good evening, sir. Can I help you?",
-        "translation": "晚上好，先生。有什么我可以帮您的吗？",
-        "avatar": "👨‍💼"
+        "speaker": "Pat",
+        "text": "What's the matter, Andy?",
+        "translation": "怎么了，安迪？",
+        "avatar": "👩"
       },
       {
-        "speaker": "MR. CRANE",
-        "text": "Good evening. I'd like a room for the night, please.",
-        "translation": "晚上好。我想订一间今晚的房间。",
-        "avatar": "👨"
+        "speaker": "Andy",
+        "text": "Ow! I slipped and fell downstairs.",
+        "translation": "哎呀！我滑倒从楼梯上摔下来了。",
+        "avatar": "👦"
       },
       {
-        "speaker": "RECEPTIONIST",
-        "text": "Do you want a single room or a double room?",
-        "translation": "您想要单人间还是双人间？",
-        "avatar": "👨‍💼"
+        "speaker": "Pat",
+        "text": "Have you hurt yourself?",
+        "translation": "你伤着了吗？",
+        "avatar": "👩"
       },
       {
-        "speaker": "MR. CRANE",
-        "text": "A single room, please.",
-        "translation": "单人间。",
-        "avatar": "👨"
+        "speaker": "Andy",
+        "text": "Yes, I think so. My back hurts badly.",
+        "translation": "是的，我想是摔伤了。我的背疼得厉害。",
+        "avatar": "👦"
       },
       {
-        "speaker": "RECEPTIONIST",
-        "text": "We have Room 12 on the first floor and Room 24 on the second floor. Room 12 is larger, but Room 24 is quieter.",
-        "translation": "我们一楼有12号房，二楼有24号房。12号房大一些，但24号房更安静。",
-        "avatar": "👨‍💼"
+        "speaker": "Pat",
+        "text": "Can you stand up?",
+        "translation": "你能站起来吗？",
+        "avatar": "👩"
       },
       {
-        "speaker": "MR. CRANE",
-        "text": "I'll take Room 24. I prefer a quiet room.",
-        "translation": "我要24号房。我喜欢安静的房间。",
-        "avatar": "👨"
+        "speaker": "Andy",
+        "text": "No, I can't. Don't touch me!",
+        "translation": "不，我站不起来。别碰我！",
+        "avatar": "👦"
+      },
+      {
+        "speaker": "Pat",
+        "text": "Don't move. I will call the doctor immediately.",
+        "translation": "别动。我马上打电话叫医生。",
+        "avatar": "👩"
       }
     ],
     "sentences": [
       {
-        "en": "I'd like a room for the night, please.",
-        "zh": "我想订一间今晚的房间。"
+        "en": "What's the matter, Andy?",
+        "zh": "怎么了，安迪？"
       },
       {
-        "en": "Do you want a single room or a double room?",
-        "zh": "您想要单人间还是双人间？"
+        "en": "I slipped and fell downstairs.",
+        "zh": "我滑倒从楼梯上摔下来了。"
       },
       {
-        "en": "Room 12 is larger, but Room 24 is quieter.",
-        "zh": "12号房大一些，但24号房更安静。"
+        "en": "My back hurts badly.",
+        "zh": "我的背疼得厉害。"
       },
       {
-        "en": "I'll take Room 24. I prefer a quiet room.",
-        "zh": "我要24号房。我喜欢安静的房间。"
+        "en": "I will call the doctor immediately.",
+        "zh": "我马上打电话叫医生。"
       }
     ],
     "words": [
       {
-        "word": "hall",
-        "phonetic": "/hɔːl/",
-        "meaning": "n. 大厅，庄园",
-        "mcItem": "Bricks",
-        "mcItemIcon": "🏰",
-        "sampleSentence": "In the hotel hall.",
-        "sampleTranslation": "在旅馆大厅里。"
+        "word": "slip",
+        "phonetic": "/slɪp/",
+        "meaning": "v. 滑倒，滑脱",
+        "mcItem": "Ice",
+        "mcItemIcon": "🧊",
+        "sampleSentence": "He slipped on the wet stone stairs.",
+        "sampleTranslation": "他在湿滑的石阶上滑倒了。"
       },
       {
-        "word": "double",
-        "phonetic": "/ˈdʌbl/",
-        "meaning": "adj. 双人的，双重的",
-        "mcItem": "Red Bed",
-        "mcItemIcon": "🛏️",
-        "sampleSentence": "A double room.",
-        "sampleTranslation": "双人间。"
+        "word": "fall",
+        "phonetic": "/fɔːl/",
+        "meaning": "v. 跌倒，下落",
+        "mcItem": "Feather",
+        "mcItemIcon": "🍂",
+        "sampleSentence": "Be careful not to fall downstairs.",
+        "sampleTranslation": "小心不要从楼梯上摔下去。"
       },
       {
-        "word": "quiet",
-        "phonetic": "/ˈkwaɪət/",
-        "meaning": "adj. 安静的",
-        "mcItem": "Wool",
-        "mcItemIcon": "🤫",
-        "sampleSentence": "A quiet place.",
-        "sampleTranslation": "安静的地方。"
+        "word": "downstairs",
+        "phonetic": "/ˌdaʊnˈsteəz/",
+        "meaning": "adv. 往楼下，在楼下",
+        "mcItem": "Ladder",
+        "mcItemIcon": "🪜",
+        "sampleSentence": "He walked downstairs carefully.",
+        "sampleTranslation": "他小心翼翼地走下楼。"
       },
       {
-        "word": "prefer",
-        "phonetic": "/prɪˈfɜː/",
-        "meaning": "v. 更喜欢",
-        "mcItem": "Heart",
-        "mcItemIcon": "❤️",
-        "sampleSentence": "I prefer tea to coffee.",
-        "sampleTranslation": "相比咖啡我更喜欢茶。"
+        "word": "hurt",
+        "phonetic": "/hɜːt/",
+        "meaning": "v. 伤害，感到疼痛",
+        "mcItem": "Potion of Harming",
+        "mcItemIcon": "🩹",
+        "sampleSentence": "My back hurts badly after the fall.",
+        "sampleTranslation": "摔倒后我的背部疼得厉害。"
+      },
+      {
+        "word": "back",
+        "phonetic": "/bæk/",
+        "meaning": "n. 背部，后背",
+        "mcItem": "Leather Tunic",
+        "mcItemIcon": "🥋",
+        "sampleSentence": "Lie down flat on your back.",
+        "sampleTranslation": "平躺在你的背上。"
+      },
+      {
+        "word": "immediately",
+        "phonetic": "/ɪˈmiː.di.ət.li/",
+        "meaning": "adv. 立即，马上",
+        "mcItem": "Splash Potion of Healing",
+        "mcItemIcon": "⚡",
+        "sampleSentence": "Call the doctor immediately.",
+        "sampleTranslation": "立即打电话叫医生。"
       }
     ],
-    "grammarNote": "形容词比较级：large -> larger, quiet -> quieter。I'd like (= I would like) 表示客气意愿。prefer 表示“更喜欢”。"
+    "grammarNote": "学习表示意外跌倒与身体疼痛的句型：slip (slipped), fall (fell), hurt (hurt)。"
   },
   "100": {
     "id": 100,
     "unit": 5,
-    "title": "Which one do you want?",
-    "titleZh": "你要哪一个？",
-    "topic": "Comparatives & Superlatives",
-    "topicZh": "比较级与最高级选择",
-    "grammar": "Which one is better/cheaper/larger? This one is...-er than that one.",
+    "title": "He says that ... She says that ...",
+    "titleZh": "他说…… / 她说……",
+    "topic": "Reported Speech",
+    "topicZh": "间接引语转述",
+    "grammar": "Subject + says/tells that + clause (转述某人所说内容)",
     "difficulty": "medium",
     "dialogue": [
       {
         "speaker": "A",
-        "text": "Which room do you want?",
-        "translation": "你想要哪个房间？",
+        "text": "What does Andy say?",
+        "translation": "安迪说了什么？",
         "avatar": "👦"
       },
       {
         "speaker": "B",
-        "text": "I want the smaller one. It's cheaper.",
-        "translation": "我想要小的那间。更便宜些。",
+        "text": "He says that he slipped and fell downstairs.",
+        "translation": "他说他滑倒从楼梯上摔下来了。",
         "avatar": "👧"
       },
       {
         "speaker": "A",
-        "text": "Which car is faster?",
-        "translation": "哪辆车更快？",
+        "text": "Does he say that he can stand up?",
+        "translation": "他说他能站起来吗？",
         "avatar": "👦"
       },
       {
         "speaker": "B",
-        "text": "The red one is faster than the blue one.",
-        "translation": "红色的那辆比蓝色的那辆快。",
+        "text": "No, he says that he can't move his leg.",
+        "translation": "不，他说他的腿动不了。",
+        "avatar": "👧"
+      },
+      {
+        "speaker": "A",
+        "text": "What does the doctor say?",
+        "translation": "医生怎么说？",
+        "avatar": "👦"
+      },
+      {
+        "speaker": "B",
+        "text": "The doctor says that Andy must stay in bed for a week.",
+        "translation": "医生说安迪必须卧床休息一周。",
         "avatar": "👧"
       }
     ],
     "sentences": [
       {
-        "en": "This coat is warmer than that one.",
-        "zh": "这件大衣比那件更保暖。"
+        "en": "He says that he slipped and fell downstairs.",
+        "zh": "他说他滑倒从楼梯上摔下来了。"
       },
       {
-        "en": "This suitcase is heavier than mine.",
-        "zh": "这个箱子比我的更沉。"
+        "en": "She says that she feels much better today.",
+        "zh": "她说她今天感觉好多了。"
       },
       {
-        "en": "That bicycle is cheaper than this one.",
-        "zh": "那辆自行车比这辆便宜。"
+        "en": "The doctor tells him that he must rest in bed.",
+        "zh": "医生告诉他他必须卧床休息。"
       },
       {
-        "en": "My brother is taller than me.",
-        "zh": "我哥哥比我高。"
+        "en": "They say that the train will be on time.",
+        "zh": "他们说火车会准时到达。"
       }
     ],
     "words": [
       {
-        "word": "cheaper",
-        "phonetic": "/ˈtʃiːpə/",
-        "meaning": "adj. 更便宜的",
-        "mcItem": "Emerald",
-        "mcItemIcon": "🏷️",
-        "sampleSentence": "It is cheaper.",
-        "sampleTranslation": "它更便宜。"
+        "word": "say",
+        "phonetic": "/seɪ/",
+        "meaning": "v. 说，讲",
+        "mcItem": "Book",
+        "mcItemIcon": "💬",
+        "sampleSentence": "He says that he is ready to help.",
+        "sampleTranslation": "他说他准备好提供帮助了。"
       },
       {
-        "word": "heavier",
-        "phonetic": "/ˈheviə/",
-        "meaning": "adj. 更重的",
-        "mcItem": "Anvil",
-        "mcItemIcon": "⚖️",
-        "sampleSentence": "Heavier box.",
-        "sampleTranslation": "更重的箱子。"
+        "word": "tell",
+        "phonetic": "/tel/,",
+        "meaning": "v. 告诉，吩咐",
+        "mcItem": "Note Block",
+        "mcItemIcon": "🗣️",
+        "sampleSentence": "She tells me that the exam is over.",
+        "sampleTranslation": "她告诉我考试结束了。"
       },
       {
-        "word": "faster",
-        "phonetic": "/ˈfɑːstə/",
-        "meaning": "adj. 更快的",
-        "mcItem": "Sugar",
-        "mcItemIcon": "⚡",
-        "sampleSentence": "Run faster.",
-        "sampleTranslation": "跑得更快。"
+        "word": "licence",
+        "phonetic": "/ˈlaɪ.səns/",
+        "meaning": "n. 执照，许可证",
+        "mcItem": "Paper",
+        "mcItemIcon": "🪪",
+        "sampleSentence": "He says that he forgot his licence at home.",
+        "sampleTranslation": "他说他把执照忘在家里了。"
+      },
+      {
+        "word": "headache",
+        "phonetic": "/ˈhed.eɪk/",
+        "meaning": "n. 头痛",
+        "mcItem": "Potion",
+        "mcItemIcon": "🤕",
+        "sampleSentence": "She says that she has a bad headache.",
+        "sampleTranslation": "她说她头痛得厉害。"
+      },
+      {
+        "word": "rest",
+        "phonetic": "/rest/",
+        "meaning": "v./n. 休息",
+        "mcItem": "Bed",
+        "mcItemIcon": "🛏️",
+        "sampleSentence": "The doctor says that you must rest.",
+        "sampleTranslation": "医生说你必须休息。"
+      },
+      {
+        "word": "better",
+        "phonetic": "/ˈbet.ər/",
+        "meaning": "adj. 更好的，病情好转的",
+        "mcItem": "Golden Apple",
+        "mcItemIcon": "🌟",
+        "sampleSentence": "He feels much better this afternoon.",
+        "sampleTranslation": "他今天下午感觉好多了。"
       }
     ],
-    "grammarNote": "比较级基本句型：A + be + 形容词比较级 + than + B (This room is cheaper than that one)。"
+    "grammarNote": "间接引语宾语从句：主句动词为 say / tell 时，引导词 that 常可省略。注意从句中的人称转换。"
   },
   "101": {
     "id": 101,
@@ -589,7 +652,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他告诉我他喜欢英语。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "say",
+        "phonetic": "/seɪ/",
+        "meaning": "v. 说，讲",
+        "mcItem": "Paper",
+        "mcItemIcon": "💬",
+        "sampleSentence": "He says that he feels tired.",
+        "sampleTranslation": "他说他感到疲劳。"
+      },
+      {
+        "word": "tell",
+        "phonetic": "/tel/",
+        "meaning": "v. 告诉，吩咐",
+        "mcItem": "Book and Quill",
+        "mcItemIcon": "📢",
+        "sampleSentence": "She tells me to wait here.",
+        "sampleTranslation": "她叫我在这里等候。"
+      },
+      {
+        "word": "tired",
+        "phonetic": "/taɪəd/",
+        "meaning": "adj. 累的，疲倦的",
+        "mcItem": "Bed",
+        "mcItemIcon": "🥱",
+        "sampleSentence": "He says that he is too tired to continue.",
+        "sampleTranslation": "他说他太累了无法继续。"
+      },
+      {
+        "word": "thirsty",
+        "phonetic": "/ˈθɜː.sti/",
+        "meaning": "adj. 口渴的",
+        "mcItem": "Water Bottle",
+        "mcItemIcon": "💧",
+        "sampleSentence": "She says that she needs a drink.",
+        "sampleTranslation": "她说她需要喝点水。"
+      },
+      {
+        "word": "hungry",
+        "phonetic": "/ˈhʌŋ.ɡri/",
+        "meaning": "adj. 饥饿的",
+        "mcItem": "Cooked Mutton",
+        "mcItemIcon": "🍖",
+        "sampleSentence": "The miners say that they are very hungry.",
+        "sampleTranslation": "矿工们说他们非常饥饿。"
+      },
+      {
+        "word": "cold",
+        "phonetic": "/kəʊld/",
+        "meaning": "adj. 寒冷的",
+        "mcItem": "Snowball",
+        "mcItemIcon": "❄️",
+        "sampleSentence": "He tells me that the wind is cold outside.",
+        "sampleTranslation": "他告诉我外面风很大很冷。"
+      }
+    ],
     "grammarNote": "say that... (说……), tell somebody that... (告诉某人……)。that 在口语中经常省略。"
   },
   "103": {
@@ -744,7 +862,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "这个房间足够大，能容纳十个人。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "too",
+        "phonetic": "/tuː/",
+        "meaning": "adv. 太，过于",
+        "mcItem": "Anvil",
+        "mcItemIcon": "🏋️",
+        "sampleSentence": "The tea is too hot to drink.",
+        "sampleTranslation": "茶太烫了喝不下。"
+      },
+      {
+        "word": "enough",
+        "phonetic": "/ɪˈnʌf/",
+        "meaning": "adv./adj. 足够，充分",
+        "mcItem": "Bread",
+        "mcItemIcon": "🍞",
+        "sampleSentence": "He is old enough to go to school.",
+        "sampleTranslation": "他到了可以上学的年龄。"
+      },
+      {
+        "word": "heavy",
+        "phonetic": "/ˈhev.i/",
+        "meaning": "adj. 沉重的",
+        "mcItem": "Obsidian",
+        "mcItemIcon": "🪨",
+        "sampleSentence": "This chest is too heavy to carry.",
+        "sampleTranslation": "这个箱子太重了搬不动。"
+      },
+      {
+        "word": "light",
+        "phonetic": "/laɪt/",
+        "meaning": "adj. 轻便的",
+        "mcItem": "Feather",
+        "mcItemIcon": "🪶",
+        "sampleSentence": "A feather is very light.",
+        "sampleTranslation": "羽毛非常轻。"
+      },
+      {
+        "word": "strong",
+        "phonetic": "/strɒŋ/",
+        "meaning": "adj. 强壮的",
+        "mcItem": "Iron Golem",
+        "mcItemIcon": "💪",
+        "sampleSentence": "He is strong enough to lift the rock.",
+        "sampleTranslation": "他足够强壮可以举起岩石。"
+      },
+      {
+        "word": "weak",
+        "phonetic": "/wiːk/",
+        "meaning": "adj. 虚弱的",
+        "mcItem": "Rotten Flesh",
+        "mcItemIcon": "🥀",
+        "sampleSentence": "He is too weak to run fast.",
+        "sampleTranslation": "他太虚弱了跑不快。"
+      }
+    ],
     "grammarNote": "too...to 表示否定含义；...enough to 表示肯定能力或条件允许。"
   },
   "105": {
@@ -923,7 +1096,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他跑得很快并赢得了比赛。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "slowly",
+        "phonetic": "/ˈsləʊ.li/",
+        "meaning": "adv. 慢慢地",
+        "mcItem": "Soul Sand",
+        "mcItemIcon": "🐢",
+        "sampleSentence": "He drove his car very slowly.",
+        "sampleTranslation": "他开车开得很慢。"
+      },
+      {
+        "word": "quickly",
+        "phonetic": "/ˈkwɪk.li/",
+        "meaning": "adv. 迅速地",
+        "mcItem": "Potion of Swiftness",
+        "mcItemIcon": "🐇",
+        "sampleSentence": "Run quickly to the safe shelter.",
+        "sampleTranslation": "迅速跑向安全避难所。"
+      },
+      {
+        "word": "carefully",
+        "phonetic": "/ˈkeə.fəl.i/",
+        "meaning": "adv. 仔细地，小心地",
+        "mcItem": "Spyglass",
+        "mcItemIcon": "🧐",
+        "sampleSentence": "Do your homework carefully.",
+        "sampleTranslation": "认真仔细地写作业。"
+      },
+      {
+        "word": "carelessly",
+        "phonetic": "/ˈkeə.ləs.li/",
+        "meaning": "adv. 粗心地，马虎地",
+        "mcItem": "Creeper Head",
+        "mcItemIcon": "⚠️",
+        "sampleSentence": "He wrote the numbers carelessly.",
+        "sampleTranslation": "他马马虎虎地写下了数字。"
+      },
+      {
+        "word": "quietly",
+        "phonetic": "/ˈkwaɪ.ət.li/",
+        "meaning": "adv. 安静地，轻轻地",
+        "mcItem": "Wool",
+        "mcItemIcon": "🤫",
+        "sampleSentence": "Open the door quietly.",
+        "sampleTranslation": "轻轻地把门打开。"
+      },
+      {
+        "word": "rudely",
+        "phonetic": "/ˈruːd.li/",
+        "meaning": "adv. 无礼地，粗暴地",
+        "mcItem": "Iron Sword",
+        "mcItemIcon": "😠",
+        "sampleSentence": "Never speak rudely to your elders.",
+        "sampleTranslation": "绝不要对长辈无礼说话。"
+      }
+    ],
     "grammarNote": "How 引导疑问句提问动作方式：How did he do it? -> He did it well/badly/slowly。"
   },
   "107": {
@@ -993,22 +1221,49 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "dress",
-        "phonetic": "/dres/",
-        "meaning": "n. 连衣裙",
-        "mcItem": "Leather Tunic",
-        "mcItemIcon": "👗",
-        "sampleSentence": "A blue dress.",
-        "sampleTranslation": "蓝色连衣裙。"
+        "word": "small",
+        "phonetic": "/smɔːl/",
+        "meaning": "形容词：小的；狭小的",
+        "mcItem": "Button",
+        "mcItemIcon": "🤏",
+        "sampleSentence": "This dress is too small for me.",
+        "sampleTranslation": "这条裙子对我来说太小了。"
       },
       {
-        "word": "fit",
-        "phonetic": "/fɪt/",
-        "meaning": "v. 合身，适合",
-        "mcItem": "Iron Chestplate",
-        "mcItemIcon": "👌",
-        "sampleSentence": "It fits well.",
-        "sampleTranslation": "它很合身。"
+        "word": "large",
+        "phonetic": "/lɑːdʒ/",
+        "meaning": "形容词：大的；巨大的",
+        "mcItem": "Giant Mushroom",
+        "mcItemIcon": "🐘",
+        "sampleSentence": "Do you have a larger size in this blue coat?",
+        "sampleTranslation": "这件蓝色外套有大一点的尺码吗？"
+      },
+      {
+        "word": "suit",
+        "phonetic": "/suːt/",
+        "meaning": "动词：适合；合身",
+        "mcItem": "Diamond Chestplate",
+        "mcItemIcon": "👔",
+        "sampleSentence": "That green hat suits Alex very well.",
+        "sampleTranslation": "那顶绿帽子非常适合亚历克斯。"
+      },
+      {
+        "word": "try on",
+        "phonetic": "/traɪ ɒn/",
+        "meaning": "词组：试穿",
+        "mcItem": "Armor Stand",
+        "mcItemIcon": "👗",
+        "sampleSentence": "May I try on this comfortable pair of shoes?",
+        "sampleTranslation": "我可以试穿这双舒适的鞋吗？"
+      },
+      {
+        "word": "size",
+        "phonetic": "/saɪz/",
+        "meaning": "名词：尺码；尺寸",
+        "mcItem": "Name Tag",
+        "mcItemIcon": "📏",
+        "sampleSentence": "What shoe size do you take, sir?",
+        "sampleTranslation": "先生，你穿几号尺码的鞋？"
       }
     ],
     "grammarNote": "多音节形容词比较级加 more：more comfortable, more expensive, more beautiful。"
@@ -1062,7 +1317,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "这张沙发比那把椅子更舒服。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "cheap",
+        "phonetic": "/tʃiːp/",
+        "meaning": "adj. 便宜的",
+        "mcItem": "Dirt",
+        "mcItemIcon": "🪙",
+        "sampleSentence": "Train tickets are cheaper than plane tickets.",
+        "sampleTranslation": "火车票比飞机票便宜。"
+      },
+      {
+        "word": "expensive",
+        "phonetic": "/ɪkˈspen.sɪv/",
+        "meaning": "adj. 昂贵的",
+        "mcItem": "Diamond",
+        "mcItemIcon": "💎",
+        "sampleSentence": "This watch is more expensive than that one.",
+        "sampleTranslation": "这块手表比那块昂贵。"
+      },
+      {
+        "word": "comfortable",
+        "phonetic": "/ˈkʌm.fə.tə.bəl/",
+        "meaning": "adj. 舒适的",
+        "mcItem": "Bed",
+        "mcItemIcon": "🛋️",
+        "sampleSentence": "A comfortable chair by the fireplace.",
+        "sampleTranslation": "壁炉旁一把舒适的椅子。"
+      },
+      {
+        "word": "modern",
+        "phonetic": "/ˈmɒd.ən/",
+        "meaning": "adj. 现代化的",
+        "mcItem": "Sea Lantern",
+        "mcItemIcon": "🏙️",
+        "sampleSentence": "This city has modern transport.",
+        "sampleTranslation": "这座城市有现代化的交通系统。"
+      },
+      {
+        "word": "exciting",
+        "phonetic": "/ɪkˈsaɪ.tɪŋ/",
+        "meaning": "adj. 令人激动的",
+        "mcItem": "Firework Rocket",
+        "mcItemIcon": "🎆",
+        "sampleSentence": "The second film was more exciting.",
+        "sampleTranslation": "第二部电影更加激动人心。"
+      },
+      {
+        "word": "fast",
+        "phonetic": "/fɑːst/",
+        "meaning": "adj. 快捷的",
+        "mcItem": "Elytra",
+        "mcItemIcon": "🏎️",
+        "sampleSentence": "Traveling by air is faster.",
+        "sampleTranslation": "坐飞机旅行更加快捷。"
+      }
+    ],
     "grammarNote": "比较级构成总结：单音节词+er (taller, faster)；多音节词+more (more expensive, more interesting)。"
   },
   "109": {
@@ -1232,7 +1542,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "我们现在开始开会吧。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "shall",
+        "phonetic": "/ʃæl/",
+        "meaning": "modal v. 我们...好吗",
+        "mcItem": "Compass",
+        "mcItemIcon": "🤝",
+        "sampleSentence": "Shall we go to the cinema tonight?",
+        "sampleTranslation": "我们今晚去电影院好吗？"
+      },
+      {
+        "word": "let's",
+        "phonetic": "/lets/",
+        "meaning": "phr. 让我们",
+        "mcItem": "Bell",
+        "mcItemIcon": "🔔",
+        "sampleSentence": "Let's go for a walk in the park.",
+        "sampleTranslation": "让我们去公园散步吧。"
+      },
+      {
+        "word": "cinema",
+        "phonetic": "/ˈsɪn.ə.mɑː/",
+        "meaning": "n. 电影院",
+        "mcItem": "Glowstone",
+        "mcItemIcon": "🎬",
+        "sampleSentence": "Watch a good movie at the cinema.",
+        "sampleTranslation": "在电影院看一部好电影。"
+      },
+      {
+        "word": "park",
+        "phonetic": "/pɑːk/",
+        "meaning": "n. 公园",
+        "mcItem": "Oak Sapling",
+        "mcItemIcon": "🌳",
+        "sampleSentence": "The flowers in the park are blooming.",
+        "sampleTranslation": "公园里的花儿正在盛开。"
+      },
+      {
+        "word": "restaurant",
+        "phonetic": "/ˈres.trɒnt/",
+        "meaning": "n. 餐馆，饭店",
+        "mcItem": "Cake",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "Shall we have dinner at a restaurant?",
+        "sampleTranslation": "我们在餐馆吃晚餐好吗？"
+      },
+      {
+        "word": "beach",
+        "phonetic": "/biːtʃ/",
+        "meaning": "n. 海滩",
+        "mcItem": "Sand",
+        "mcItemIcon": "🏖️",
+        "sampleSentence": "Let's spend Sunday at the beach.",
+        "sampleTranslation": "让我们在海滩度过周日吧。"
+      }
+    ],
     "grammarNote": "情态动词 shall 在第一人称疑问句中用于征求对方意见：Shall I / Shall we...?"
   },
   "111": {
@@ -1398,7 +1763,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "一月通常是一年中最冷的月份。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "best",
+        "phonetic": "/best/",
+        "meaning": "adj. 最好的",
+        "mcItem": "Netherite Sword",
+        "mcItemIcon": "👑",
+        "sampleSentence": "This is the best book I have ever read.",
+        "sampleTranslation": "这是我读过的最好的书。"
+      },
+      {
+        "word": "worst",
+        "phonetic": "/wɜːst/",
+        "meaning": "adj. 最差的",
+        "mcItem": "Poisonous Potato",
+        "mcItemIcon": "👎",
+        "sampleSentence": "That was the worst storm this winter.",
+        "sampleTranslation": "那是今年冬天最糟糕的一场风暴。"
+      },
+      {
+        "word": "tallest",
+        "phonetic": "/ˈtɔː.lɪst/",
+        "meaning": "adj. 最高的",
+        "mcItem": "Bamboo",
+        "mcItemIcon": "🎋",
+        "sampleSentence": "He is the tallest student in class.",
+        "sampleTranslation": "他是班上最高的学生。"
+      },
+      {
+        "word": "shortest",
+        "phonetic": "/ˈʃɔː.tɪst/",
+        "meaning": "adj. 最矮的，最短的",
+        "mcItem": "Flower",
+        "mcItemIcon": "📏",
+        "sampleSentence": "Take the shortest route home.",
+        "sampleTranslation": "走最短的路线回家。"
+      },
+      {
+        "word": "most",
+        "phonetic": "/məʊst/",
+        "meaning": "adv./adj. 最，绝大多数",
+        "mcItem": "Totem of Undying",
+        "mcItemIcon": "🌟",
+        "sampleSentence": "The most interesting museum in London.",
+        "sampleTranslation": "伦敦最有趣的博物馆。"
+      },
+      {
+        "word": "least",
+        "phonetic": "/liːst/",
+        "meaning": "adv./adj. 最少，最不",
+        "mcItem": "Stick",
+        "mcItemIcon": "📉",
+        "sampleSentence": "This is the least expensive model.",
+        "sampleTranslation": "这是最不贵的一个型号。"
+      }
+    ],
     "grammarNote": "最高级常搭配范围介词短语：in + 单数地点/集体 (in the world, in the city), of + 复数/时间范围 (of the three, of the year)。"
   },
   "113": {
@@ -1559,7 +1979,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "妈妈叫男孩去洗手。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "ask",
+        "phonetic": "/ɑːsk/",
+        "meaning": "v. 请求，要求",
+        "mcItem": "Paper",
+        "mcItemIcon": "❓",
+        "sampleSentence": "She asked me to close the window.",
+        "sampleTranslation": "她请我关上窗户。"
+      },
+      {
+        "word": "tell",
+        "phonetic": "/tel/",
+        "meaning": "v. 命令，叫某人做",
+        "mcItem": "Bell",
+        "mcItemIcon": "📢",
+        "sampleSentence": "The teacher told us to open our books.",
+        "sampleTranslation": "老师叫我们打开书本。"
+      },
+      {
+        "word": "order",
+        "phonetic": "/ˈɔː.dər/",
+        "meaning": "v. 命令，嘱咐",
+        "mcItem": "Iron Helmet",
+        "mcItemIcon": "🛡️",
+        "sampleSentence": "The doctor ordered him to stay in bed.",
+        "sampleTranslation": "医生嘱咐他要卧床休养。"
+      },
+      {
+        "word": "shut",
+        "phonetic": "/ʃʌt/",
+        "meaning": "v. 关上，合上",
+        "mcItem": "Oak Door",
+        "mcItemIcon": "🚪",
+        "sampleSentence": "He asked me to shut the front door.",
+        "sampleTranslation": "他让我关上前门。"
+      },
+      {
+        "word": "wait",
+        "phonetic": "/weɪt/",
+        "meaning": "v. 等待，等候",
+        "mcItem": "Clock",
+        "mcItemIcon": "⏳",
+        "sampleSentence": "She told me to wait in the hall.",
+        "sampleTranslation": "她叫我在大厅等候。"
+      },
+      {
+        "word": "none",
+        "phonetic": "/nʌn/",
+        "meaning": "pron. 没有任何东西/人",
+        "mcItem": "Barrier",
+        "mcItemIcon": "📭",
+        "sampleSentence": "I have got none left in my pocket.",
+        "sampleTranslation": "我兜里一点零钱也没剩了。"
+      }
+    ],
     "grammarNote": "祈使句变间接引语：动词原形变带 to 的动词不定式 (to do)；Don't do 变 not to do。"
   },
   "115": {
@@ -1732,7 +2207,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "没有人知道答案。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "everywhere",
+        "phonetic": "/ˈev.ri.weər/",
+        "meaning": "adv. 到处，处处",
+        "mcItem": "Map",
+        "mcItemIcon": "🗺️",
+        "sampleSentence": "Wildflowers grow everywhere in spring.",
+        "sampleTranslation": "春天到处都盛开着野花。"
+      },
+      {
+        "word": "nowhere",
+        "phonetic": "/ˈnəʊ.weər/",
+        "meaning": "adv. 无处，哪里都不",
+        "mcItem": "Void",
+        "mcItemIcon": "🚫",
+        "sampleSentence": "I had nowhere to shelter from heavy rain.",
+        "sampleTranslation": "我无处躲避倾盆大雨。"
+      },
+      {
+        "word": "somewhere",
+        "phonetic": "/ˈsʌm.weər/",
+        "meaning": "adv. 在某处",
+        "mcItem": "Compass",
+        "mcItemIcon": "📍",
+        "sampleSentence": "The key is somewhere in the drawer.",
+        "sampleTranslation": "钥匙在抽屉的某处。"
+      },
+      {
+        "word": "anywhere",
+        "phonetic": "/ˈen.i.weər/",
+        "meaning": "adv. 任何地方",
+        "mcItem": "Elytra",
+        "mcItemIcon": "🌐",
+        "sampleSentence": "Did you go anywhere during the weekend?",
+        "sampleTranslation": "周末你去了什么地方吗？"
+      },
+      {
+        "word": "everyone",
+        "phonetic": "/ˈev.ri.wʌn/",
+        "meaning": "pron. 每个人，大家",
+        "mcItem": "Player Head",
+        "mcItemIcon": "👥",
+        "sampleSentence": "Everyone in the room stood up.",
+        "sampleTranslation": "房间里的每个人都站了起来。"
+      },
+      {
+        "word": "nobody",
+        "phonetic": "/ˈnəʊ.bə.di/",
+        "meaning": "pron. 没有人",
+        "mcItem": "Barrier",
+        "mcItemIcon": "👤",
+        "sampleSentence": "Nobody answered when I knocked on the door.",
+        "sampleTranslation": "我敲门时没有人应声。"
+      }
+    ],
     "grammarNote": "代词与副词词根组合：-one / -body (指人), -thing (指物), -where (指地点)。"
   },
   "117": {
@@ -1740,116 +2270,252 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
     "unit": 5,
     "title": "Tommy's breakfast",
     "titleZh": "汤米的早餐",
-    "topic": "Past Perfect & Morning Routine",
-    "topicZh": "早晨起床与过去完成时",
-    "grammar": "Past Perfect: had + past participle (过去的过去)",
+    "topic": "Swallowing Coins & Humorous Narrative",
+    "topicZh": "误吞硬币与幽默叙事",
+    "grammar": "Past Continuous (was doing) & Present Perfect: hasn't had any change yet",
     "difficulty": "hard",
     "dialogue": [
       {
-        "speaker": "MOTHER",
-        "text": "Tommy! Come downstairs and eat your breakfast! It's eight o'clock!",
-        "translation": "汤米！下楼来吃早餐！已经8点了！",
+        "speaker": "Mother",
+        "text": "When my husband was going into the dining room this morning, he dropped some coins on the floor.",
+        "translation": "今天早晨我丈夫走进餐厅时，把一些硬币掉在地上了。",
         "avatar": "👩"
       },
       {
-        "speaker": "TOMMY",
-        "text": "I'm coming, Mum!",
-        "translation": "我来了，妈妈！",
-        "avatar": "👦"
-      },
-      {
-        "speaker": "MOTHER",
-        "text": "Have you washed your hands and face?",
-        "translation": "你洗过手和脸了吗？",
+        "speaker": "Mother",
+        "text": "There were coins everywhere. We looked for them, but we could not find them all.",
+        "translation": "到处都是硬币。我们到处找，但没有把它们全找出来。",
         "avatar": "👩"
       },
       {
-        "speaker": "TOMMY",
-        "text": "Yes, I had washed them before I came downstairs.",
-        "translation": "洗过了，我下楼之前就已经洗好了。",
-        "avatar": "👦"
+        "speaker": "Mother",
+        "text": "While we were having breakfast, our little boy, Tommy, found two small fifty pence coins on the floor. He put them both into his mouth.",
+        "translation": "当我们吃早饭时，我们的小儿子汤米在地板上找到了两枚小小的50便士硬币。他把两枚都放进了嘴里。",
+        "avatar": "👩"
       },
       {
-        "speaker": "MOTHER",
-        "text": "Good boy. Now drink your warm milk.",
-        "translation": "好孩子。现在把温牛奶喝了吧。",
+        "speaker": "Father",
+        "text": "'These are very small coins,' my husband said. 'Tommy might swallow them!'",
+        "translation": "“这些硬币太小了，”我丈夫说，“汤米可能会咽下去的！”",
+        "avatar": "👨"
+      },
+      {
+        "speaker": "Mother",
+        "text": "Later that morning, when I was doing the housework, my husband phoned from the office.",
+        "translation": "那天上午晚些时候，我正在做家务，丈夫从办公室打来电话。",
+        "avatar": "👩"
+      },
+      {
+        "speaker": "Father",
+        "text": "'How's Tommy?' he asked.",
+        "translation": "“汤米怎么样了？”他问。",
+        "avatar": "👨"
+      },
+      {
+        "speaker": "Mother",
+        "text": "'I don't know,' I answered, 'Tommy hasn't had any change yet!'",
+        "translation": "“我不知道，”我回答，“汤米身上还没有任何零钱（变化）呢！”",
         "avatar": "👩"
       }
     ],
     "sentences": [
       {
-        "en": "Come downstairs and eat your breakfast!",
-        "zh": "下楼来吃早餐！"
+        "en": "When my husband was going into the dining room, he dropped some coins on the floor.",
+        "zh": "当我的丈夫走进餐厅时，他把一些硬币掉在了地板上。"
       },
       {
-        "en": "I had washed them before I came downstairs.",
-        "zh": "在我下楼之前，我已经洗好了。"
+        "en": "While we were having breakfast, Tommy found two coins and put them into his mouth.",
+        "zh": "当我们正在吃早餐时，汤米找到了两枚硬币并放进了嘴里。"
       },
       {
-        "en": "The train had left when we arrived at the station.",
-        "zh": "当我们到达车站时，火车已经开走了。"
+        "en": "These are very small coins. Tommy might swallow them!",
+        "zh": "这些硬币太小了。汤米可能会咽下去！"
+      },
+      {
+        "en": "Tommy hasn't had any change yet!",
+        "zh": "汤米身上还没有任何零钱（变化）呢！"
       }
     ],
     "words": [
       {
-        "word": "downstairs",
-        "phonetic": "/ˌdaʊnˈsteəz/",
-        "meaning": "adv. 往楼下，在楼下",
-        "mcItem": "Ladder",
-        "mcItemIcon": "👇",
-        "sampleSentence": "Go downstairs.",
-        "sampleTranslation": "下楼。"
+        "word": "coin",
+        "phonetic": "/kɔɪn/",
+        "meaning": "n. 硬币",
+        "mcItem": "Gold Nugget",
+        "mcItemIcon": "🪙",
+        "sampleSentence": "He dropped two small coins on the floor.",
+        "sampleTranslation": "他把两枚小硬币掉在了地上。"
+      },
+      {
+        "word": "swallow",
+        "phonetic": "/ˈswɒl.əʊ/",
+        "meaning": "v. 吞下，咽下",
+        "mcItem": "Apple",
+        "mcItemIcon": "👄",
+        "sampleSentence": "Be careful, Tommy might swallow them!",
+        "sampleTranslation": "当心，汤米可能会把它们咽下去！"
+      },
+      {
+        "word": "later",
+        "phonetic": "/ˈleɪ.tər/",
+        "meaning": "adv. 后来，随后",
+        "mcItem": "Clock",
+        "mcItemIcon": "⏰",
+        "sampleSentence": "Later that morning, he phoned from the office.",
+        "sampleTranslation": "那天上午晚些时候，他从办公室打来电话。"
+      },
+      {
+        "word": "dining room",
+        "phonetic": "/ˈdaɪ.nɪŋ ruːm/",
+        "meaning": "n. 餐厅",
+        "mcItem": "Oak Table",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "He was going into the dining room.",
+        "sampleTranslation": "他正走进餐厅。"
+      },
+      {
+        "word": "change",
+        "phonetic": "/tʃeɪndʒ/",
+        "meaning": "n. 零钱；变化",
+        "mcItem": "Emerald",
+        "mcItemIcon": "💰",
+        "sampleSentence": "Tommy hasn't had any change yet!",
+        "sampleTranslation": "汤米身上还没有任何零钱（变化）呢！"
+      },
+      {
+        "word": "toilet",
+        "phonetic": "/ˈtɔɪ.lət/",
+        "meaning": "n. 厕所，洗手间",
+        "mcItem": "Cauldron",
+        "mcItemIcon": "🚽",
+        "sampleSentence": "Take the child to the toilet promptly.",
+        "sampleTranslation": "及时带孩子去洗手间。"
       }
     ],
-    "grammarNote": "过去完成时：had + 过去分词。表示在过去某一时间或动作之前已经发生或完成的动作（过去的过去）。"
+    "grammarNote": "过去进行时 (was/were + doing) 表示在过去某一时刻或阶段正在进行的动作，常与 when, while 连用。注意结尾关于 change (零钱/变化) 的双关幽默。"
   },
   "118": {
     "id": 118,
     "unit": 5,
-    "title": "What had happened?",
-    "titleZh": "发生了什么？",
-    "topic": "Past Perfect Situations",
-    "topicZh": "先后发生过去的动作",
-    "grammar": "When A happened, B had already done",
+    "title": "What were you doing?",
+    "titleZh": "你在做什么？",
+    "topic": "Past Continuous vs Simple Past",
+    "topicZh": "过去进行时与一般过去时对比",
+    "grammar": "What were you doing when...? / I was doing... when/while/just as",
     "difficulty": "hard",
     "dialogue": [
       {
         "speaker": "A",
-        "text": "Why was he late?",
-        "translation": "他为什么迟到了？",
+        "text": "What were you doing when the telephone rang?",
+        "translation": "电话铃响时你正在做什么？",
         "avatar": "👦"
       },
       {
         "speaker": "B",
-        "text": "Because his alarm clock hadn't gone off.",
-        "translation": "因为他的闹钟没有响。",
+        "text": "I was making a phone call in the hall.",
+        "translation": "我当时正在门厅打电话。",
         "avatar": "👧"
       },
       {
         "speaker": "A",
-        "text": "Did you see the beginning of the movie?",
-        "translation": "你看到电影开头了吗？",
+        "text": "What was he doing when you arrived?",
+        "translation": "你到达时他正在做什么？",
         "avatar": "👦"
       },
       {
         "speaker": "B",
-        "text": "No, it had already begun before we entered the cinema.",
-        "translation": "没有，我们进电影院前它就已经开始了。",
+        "text": "He was looking for the dropped coins on the floor.",
+        "translation": "他正在地板上寻找掉落的硬币。",
+        "avatar": "👧"
+      },
+      {
+        "speaker": "A",
+        "text": "Did you drop the change?",
+        "translation": "是你把零钱掉地上了吗？",
+        "avatar": "👦"
+      },
+      {
+        "speaker": "B",
+        "text": "Yes, I dropped them just as I was going into the dining room.",
+        "translation": "是的，我刚走进餐厅时就把硬币掉了。",
         "avatar": "👧"
       }
     ],
     "sentences": [
       {
-        "en": "She had already cooked dinner when her husband returned.",
-        "zh": "当她丈夫回来时，她已经做好了晚饭。"
+        "en": "What were you doing when the telephone rang? I was making a telephone call.",
+        "zh": "电话响的时候你正在做什么？我正在打电话。"
       },
       {
-        "en": "They had finished the test before the bell rang.",
-        "zh": "在铃声响之前，他们就已经做完了试卷。"
+        "en": "He dropped some coins just as he was going into the dining room.",
+        "zh": "他正要走进餐厅时，把一些硬币掉在了地上。"
+      },
+      {
+        "en": "What was she doing when he arrived? She was cooking dinner in the kitchen.",
+        "zh": "他到达时她正在做什么？她当时正在厨房做晚饭。"
+      },
+      {
+        "en": "Someone knocked on the door while I was having a bath.",
+        "zh": "我正在洗澡时有人敲了门。"
       }
     ],
-    "words": [],
-    "grammarNote": "时间对比：较早发生的动作用过去完成时 (had done)，较晚发生的动作用一般过去时 (did)。"
+    "words": [
+      {
+        "word": "ring",
+        "phonetic": "/rɪŋ/",
+        "meaning": "v. (铃、电话)响",
+        "mcItem": "Bell",
+        "mcItemIcon": "🔔",
+        "sampleSentence": "The telephone rang while I was cooking.",
+        "sampleTranslation": "我做饭时电话响了。"
+      },
+      {
+        "word": "postman",
+        "phonetic": "/ˈpəʊst.mən/",
+        "meaning": "n. 邮递员",
+        "mcItem": "Paper",
+        "mcItemIcon": "📮",
+        "sampleSentence": "What were you doing when the postman arrived?",
+        "sampleTranslation": "邮递员到达时你在做什么？"
+      },
+      {
+        "word": "arrive",
+        "phonetic": "/əˈraɪv/",
+        "meaning": "v. 到达，抵达",
+        "mcItem": "Minecart",
+        "mcItemIcon": "🏁",
+        "sampleSentence": "He arrived while we were having breakfast.",
+        "sampleTranslation": "我们在吃早饭时他到了。"
+      },
+      {
+        "word": "drop",
+        "phonetic": "/drɒp/",
+        "meaning": "v. 掉落，落下",
+        "mcItem": "Gold Nugget",
+        "mcItemIcon": "🪙",
+        "sampleSentence": "He dropped some coins on the floor.",
+        "sampleTranslation": "他把一些硬币掉在了地板上。"
+      },
+      {
+        "word": "kitchen",
+        "phonetic": "/ˈkɪtʃ.ɪn/",
+        "meaning": "n. 厨房",
+        "mcItem": "Furnace",
+        "mcItemIcon": "🍳",
+        "sampleSentence": "She was baking bread in the kitchen.",
+        "sampleTranslation": "她当时正在厨房里烤面包。"
+      },
+      {
+        "word": "garden",
+        "phonetic": "/ˈɡɑː.dən/",
+        "meaning": "n. 花园",
+        "mcItem": "Poppy",
+        "mcItemIcon": "🌸",
+        "sampleSentence": "He was working in the garden when it began to rain.",
+        "sampleTranslation": "天开始下雨时他正在花园里干活。"
+      }
+    ],
+    "grammarNote": "过去进行时与一般过去时结合：表示长动作（进行时 was/were doing）被一个短动作（过去时 did）打断，常由 when / while / just as 引导。"
   },
   "119": {
     "id": 119,
@@ -1953,11 +2619,11 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
   "120": {
     "id": 120,
     "unit": 5,
-    "title": "It had happened before ...",
-    "titleZh": "以前发生过……",
-    "topic": "Past Perfect Review",
-    "topicZh": "过去完成时综合操练",
-    "grammar": "had done before / after",
+    "title": "It had already happened",
+    "titleZh": "事情已经发生了",
+    "topic": "Past Perfect Situations",
+    "topicZh": "过去完成时情境演练",
+    "grammar": "had + past participle (动作发生在过去某一特定时间之前)",
     "difficulty": "hard",
     "dialogue": [
       {
@@ -1983,7 +2649,62 @@ export const NCE_BOOK1_UNIT5_DATA: Record<number, LessonCorpusItem> = {
         "zh": "在消防员到达之前，大火就已经摧毁了建筑。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "already",
+        "phonetic": "/ɔːlˈred.i/",
+        "meaning": "adv. 已经",
+        "mcItem": "Experience Bottle",
+        "mcItemIcon": "✨",
+        "sampleSentence": "The train had already left when I arrived at the station.",
+        "sampleTranslation": "当我到达车站时，火车已经开走了。"
+      },
+      {
+        "word": "before",
+        "phonetic": "/bɪˈfɔːr/",
+        "meaning": "prep./conj. 在...之前",
+        "mcItem": "Clock",
+        "mcItemIcon": "⏪",
+        "sampleSentence": "He had lived in London before he moved to Paris.",
+        "sampleTranslation": "在搬去巴黎之前他曾在伦敦居住。"
+      },
+      {
+        "word": "destroy",
+        "phonetic": "/dɪˈstrɔɪ/",
+        "meaning": "v. 破坏，摧毁",
+        "mcItem": "TNT",
+        "mcItemIcon": "💥",
+        "sampleSentence": "The fire had destroyed the building before firefighters arrived.",
+        "sampleTranslation": "在消防队员到达前，大火已经烧毁了建筑。"
+      },
+      {
+        "word": "burn",
+        "phonetic": "/bɜːn/",
+        "meaning": "v. 燃烧，着火",
+        "mcItem": "Campfire",
+        "mcItemIcon": "🔥",
+        "sampleSentence": "The old letters had burned to ashes.",
+        "sampleTranslation": "旧信件已经烧成灰烬。"
+      },
+      {
+        "word": "station",
+        "phonetic": "/ˈsteɪ.ʃən/",
+        "meaning": "n. 车站",
+        "mcItem": "Rail",
+        "mcItemIcon": "🚉",
+        "sampleSentence": "We hurried to the train station.",
+        "sampleTranslation": "我们赶往火车站。"
+      },
+      {
+        "word": "leave",
+        "phonetic": "/liːv/",
+        "meaning": "v. 离开，离去",
+        "mcItem": "Oak Door",
+        "mcItemIcon": "🚪",
+        "sampleSentence": "The ship had already left the harbour.",
+        "sampleTranslation": "轮船已经离开了港口。"
+      }
+    ],
     "grammarNote": "过去完成时常用时间状语：by the time + 过去时间从句, before + 过去时间点/从句。"
   }
 };

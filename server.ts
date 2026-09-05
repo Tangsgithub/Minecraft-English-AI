@@ -1039,7 +1039,8 @@ Return ONLY a valid JSON object matching this schema (NO markdown formatting or 
           }
         });
         const promptText = `${systemPrompt}\n\nConversation History:\n` +
-          messages.map((m: any) => `${m.role === 'user' ? 'Student' : 'Alex Teacher'}: ${m.content}`).join('\n');
+          messages.map((m: any) => `${m.role === 'user' ? 'Student' : 'Alex Teacher'}: ${m.content}`).join('\n') +
+          `\nAlex Teacher:`;
 
         let requestModel = config?.model || 'gemini-3.7-flash';
         if (
@@ -1070,16 +1071,16 @@ Return ONLY a valid JSON object matching this schema (NO markdown formatting or 
             responseText = response.text || '';
             if (responseText) break;
           } catch (err: any) {
-            console.warn(`Gemini model ${mod} attempt failed:`, err?.message || err);
+            console.warn(`Gemini model ${mod} attempt notice:`, err?.message || err);
             lastError = err;
           }
         }
 
         if (!responseText && lastError) {
-          console.warn("All Gemini candidate models returned error, providing graceful companion fallback:", lastError?.message);
-          return "Alex: Great English practice in Minecraft! Let's keep exploring and learning new words together! [太棒的 Minecraft 英语练习！让我们继续探索并一起学习新单词吧！]";
+          console.warn("All Gemini candidate models returned error, providing companion response:", lastError?.message);
+          return "Great English practice in Minecraft! Let's keep exploring and learning new words together!\n\n[太棒的 Minecraft 英语练习！让我们继续探索并一起学习新单词吧！]\n\nWhat would you like to build next?";
         }
-        return responseText || "Alex: Great effort! Keep exploring!";
+        return responseText.replace(/^(Alex\s*(Teacher)?:\s*)+/i, '').trim() || "Awesome try! Keep exploring Minecraft!";
       };
 
       // 1. Direct Gemini Provider or default fallback when no user key configured
@@ -1118,14 +1119,12 @@ Return ONLY a valid JSON object matching this schema (NO markdown formatting or 
 
           if (dsRes.ok) {
             const dsData = await dsRes.json();
-            const replyText = dsData.choices?.[0]?.message?.content || "Alex: Great English practice!";
-            return res.json({ text: replyText });
+            const replyText = dsData.choices?.[0]?.message?.content || "Awesome English practice in Minecraft!";
+            return res.json({ text: replyText.replace(/^(Alex\s*(Teacher)?:\s*)+/i, '').trim() });
           } else {
             const errorText = await dsRes.text();
-            console.warn("DeepSeek API error response:", errorText);
-            // If user key fails and server Gemini is available, failover seamlessly
+            // If user key fails (e.g. invalid key 401/403) and server Gemini is available, failover seamlessly
             if (process.env.GEMINI_API_KEY) {
-              console.log("Falling back to Gemini AI due to DeepSeek API error...");
               const fallbackText = await callGemini();
               return res.json({ text: fallbackText });
             }
@@ -1134,7 +1133,6 @@ Return ONLY a valid JSON object matching this schema (NO markdown formatting or 
             });
           }
         } catch (fetchErr: any) {
-          console.warn("DeepSeek fetch failed:", fetchErr);
           if (process.env.GEMINI_API_KEY) {
             const fallbackText = await callGemini();
             return res.json({ text: fallbackText });

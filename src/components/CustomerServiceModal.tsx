@@ -2,30 +2,33 @@ import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { User } from '../lib/neonAuth';
 import { sendChatMessageToAlex } from '../services/aiService';
-import { playClickSound, playEmeraldSound } from '../utils/audio';
+import { playClickSound, playEmeraldSound, speakText, stopSpeech } from '../utils/audio';
+import { StudyGuideManualContent } from './StudyGuideManualModal';
 import {
-  Headphones,
+  Compass,
   X,
-  MessageSquare,
   Send,
-  HelpCircle,
   Sparkles,
+  BookOpen,
+  Volume2,
+  VolumeX,
+  Radio,
+  Mic,
+  Hammer,
+  Award,
+  Shield,
+  HelpCircle,
+  ChevronRight,
+  Flame,
+  CheckCircle2,
+  ExternalLink,
+  MessageSquareQuote,
   Copy,
   Check,
-  Clock,
-  ShieldCheck,
-  FileText,
-  AlertCircle,
-  UserCheck,
-  Phone,
-  Mail,
-  QrCode,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  ThumbsUp,
-  Bot
+  RotateCcw
 } from 'lucide-react';
+
+export type CustomerServiceTabType = 'guide' | 'manual' | 'gameplay' | 'daily' | 'parents';
 
 interface CustomerServiceModalProps {
   isOpen: boolean;
@@ -33,54 +36,48 @@ interface CustomerServiceModalProps {
   profile: UserProfile;
   currentUser: User | null;
   onOpenAuthModal?: () => void;
+  initialTab?: CustomerServiceTabType;
 }
 
 interface ChatMsg {
   id: string;
-  sender: 'user' | 'service';
+  sender: 'user' | 'guide';
   text: string;
   timestamp: string;
 }
 
-const FAQ_ITEMS = [
+// Preset Q&As tailored specifically for kids playing the app
+const KID_PLAY_PRESETS: { question: string; icon: string; answer: string }[] = [
   {
-    question: '所有账号都能免费体验前 20 课吗？',
-    answer: '是的！Minecraft English 实行正规公开体验政策。无论您是注册新账号还是已有账号，注册登录后均可免费体验第 1 课至第 20 课的所有全量学习关卡、听说评测及 Alex AI 智能对练！',
-    category: '课程体验'
+    question: '我第一次来，应该先玩什么？',
+    icon: '🎮',
+    answer: `🎉 欢迎来到 Minecraft English 方块世界！\n\n推荐你的第一步：\n1. 🌟 从主界面【世界地图】的第一关「Lesson 1: Excuse me!」开始！\n2. 🎧 用【三遍精听法】：先不看文字听一遍，再看中文搞懂意思，最后点亮麦克风跟读！\n3. 💎 只要跟读及格，就能点亮小星星 ⭐ 并获得你的第一批绿宝石！`
   },
   {
-    question: '如何升级 VIP 尊享会员？全套课程包含哪些？',
-    answer: '升至 VIP 尊享会员后即可解锁第一册全套 1 ~ 144 课全部关卡、方块语法实验室及末地篇高级课程。在顶部或关卡弹窗点击【💎 开通VIP】，输入激活码即可一次激活，终身无锁。',
-    category: 'VIP会员'
+    question: '怎么才能赚到超多绿宝石？',
+    icon: '💎',
+    answer: `💰 哈哈，想要成为绿宝石大富翁？向导把 5 大秘籍传授给你：\n\n1. 📻 【听磨耳朵电台】：每听满 3 分钟，系统自动掉落 +2 颗绿宝石 💎！\n2. 🌟 【通关主线课】：每个句子准确朗读，拿满 3 颗星送大量绿宝石！\n3. 🎁 【收集故事词汇】：听电台时点击掉落的「核心词汇卡片」，每张奖励 +1 颗！\n4. 🗡️ 【合成台锻造】：把学过的单词方块带进合成台，合成道具得额外经验！\n5. 👨‍👩‍👧 【找爸爸妈妈要奖励】：在「家长中心」里，爸爸妈妈可以直接给你发放赞赏绿宝石红包哦！`
   },
   {
-    question: '首页怎么直接进入学习页面？',
-    answer: '系统已升级极简免登录体验，您无需繁琐注册登录，在首页点击「进入学习大厅」即可直接开始学习冒险，学习进度会自动在当前设备安全保存。',
-    category: '账号使用'
+    question: '磨耳朵电台怎么玩？有故事听吗？',
+    icon: '📻',
+    answer: `📻 电台是放松耳朵的神器！点击顶部或地图上的【📻 磨耳朵电台】：\n\n1. 🌲 【MC探险故事】：里面有《雪原迷路小白狼》、《沙漠金字塔》、《突进下界要塞》等 7 部超长探险！\n2. 🏰 【经典童话寓言】：有《方块龟兔赛跑》、《三只小猪建房记》等 6 部趣味寓言！\n3. 👥 Alex 与 Steve 会交替讲故事，一边听一边有中文双语字幕！\n4. 🌙 【睡前定时关机】：可以点 15m 或 30m，听着故事睡觉，时间到了自动停止播放！`
   },
   {
-    question: '在多台设备（手机/iPad/电脑）上可以同步进度吗？',
-    answer: '可以！只要您使用同一个注册账号（邮箱或玩家账号）登录，您的学习进度、已通关关卡和收集的绿宝石都会通过 云端服务器 云端秒级实时同步。',
-    category: '设备同步'
+    question: '怎么跟 Alex 语音连麦练习英语？',
+    icon: '🗣️',
+    answer: `🎙️ 想和 Alex 成为无话不谈的探险伙伴？超级简单：\n\n1. 点击主界面的【🗣️ Alex AI 对练】或在关卡中点击连麦；\n2. 长按麦克风 🎙️ 用英语对 Alex 说一句话（比如："Hi Alex, what are you crafting today?"）；\n3. 松开手后，Alex 会立刻用纯正美音回答你，还会夸你的发音好听哦！`
   },
   {
-    question: '遇到语音无法播放或麦克风无法录音怎么办？',
-    answer: '1. 请检查设备未处于静音模式；2. 在浏览器弹出的权限提示中允许使用“麦克风”；3. 在设置中确认 DeepSeek API Key 或声音服务连接正常。系统也提供微软 Edge 零延迟高保真发音服务。',
-    category: '技术支持'
+    question: '收集的词汇方块可以做什么？',
+    icon: '⚔️',
+    answer: `⚒️ 在方块世界里，你掌握的每一个英语单词都是一种神奇材料！\n\n点击【🛠️ 词汇合成台】：\n- 掌握名词和动词可以合成木镐、铁剑和钻石甲！\n- 掌握高级句型可以用来合成红石火把与红石中继器，用来搭建能真正运转的「红石英语密码门」！`
   },
   {
-    question: '退款及售后服务政策是什么？',
-    answer: '对于尚未激活的 VIP 激活码或 7 天内遇到技术障碍无法使用的情况，客服团队支持快速无损处理。如有疑问可随时通过在线工单或微信客服发起联系。',
-    category: '售后保障'
+    question: '睡前想听故事，怎么设置定时关机？',
+    icon: '🌙',
+    answer: `😴 睡前磨耳朵最舒服啦！\n\n1. 打开【📻 沉浸磨耳朵电台】；\n2. 挑选一个你喜欢的频道（比如 MC 探险故事）；\n3. 在唱片下方找到带有月亮 🌙 的【定时关机】控制条；\n4. 点击【15m】或【30m】，右侧就会开始倒计时；\n5. 放心躺在被窝里听，倒计时结束时电台就会轻轻自动关机，不会吵醒你哦！`
   }
-];
-
-const PRESET_QUESTIONS = [
-  '1-20课如何免费试用？',
-  'VIP激活码在哪兑换？',
-  '怎么联系人工客服？',
-  '语音评分听不到声音怎么办？',
-  '进度可以多端同步吗？'
 ];
 
 export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
@@ -88,60 +85,65 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
   onClose,
   profile,
   currentUser,
-  onOpenAuthModal
+  onOpenAuthModal,
+  initialTab = 'guide'
 }) => {
-  const [activeTab, setActiveTab] = useState<'ai' | 'faq' | 'human' | 'ticket'>('ai');
+  const [activeTab, setActiveTab] = useState<CustomerServiceTabType>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
   
-  // AI Chat state
+  // Guide messages state
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: 'welcome',
-      sender: 'service',
-      text: `👋 嗨！我是 Minecraft English 的官方 AI 智能客服小史蒂夫（Steve）。\n\n很高兴为您服务！请问您在体验 144 个探险关卡、Alex AI 语音对练或系统使用上有任何疑问吗？`,
+      sender: 'guide',
+      text: `👋 嗨！勇敢的小探险家！我是你的方块世界【玩法小向导 🧭】！\n\n不管你是不知道从哪里开始探险，还是想知道怎么赚到更多绿宝石 💎，或者怎么听好玩的睡前故事，都可以随时问我哦！\n\n👇 点击下方的快捷问题，或者直接在下面打字问我吧！`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // FAQ state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
-
-  // Copy state
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-
-  // Ticket form state
-  const [ticketType, setTicketType] = useState('VIP激活与兑换');
-  const [ticketContact, setTicketContact] = useState('');
-  const [ticketContent, setTicketContent] = useState('');
-  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
-  const [ticketSuccessId, setTicketSuccessId] = useState<string | null>(null);
-
   useEffect(() => {
-    if (activeTab === 'ai') {
+    if (activeTab === 'guide') {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, activeTab, isLoading]);
 
+  // Clean up speech on close
   useEffect(() => {
-    if (currentUser?.email) {
-      setTicketContact(currentUser.email);
-    }
-  }, [currentUser]);
+    return () => {
+      stopSpeech();
+    };
+  }, []);
 
   if (!isOpen) return null;
 
-  const handleCopy = (text: string, fieldName: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    playEmeraldSound();
-    setTimeout(() => setCopiedField(null), 2500);
+  const handleSpeak = async (msgId: string, text: string) => {
+    if (speakingMsgId === msgId) {
+      stopSpeech();
+      setSpeakingMsgId(null);
+      return;
+    }
+    stopSpeech();
+    setSpeakingMsgId(msgId);
+    // Clean text of emojis and symbols for clear TTS reading
+    const cleanSpeech = text
+      .replace(/[💎⭐📻🎮🗣️⚔️🌙🎉💰🎁👨‍👩‍👧🎙️⚒️😴👋👇]/g, '')
+      .replace(/[#*`]/g, '');
+    await speakText(cleanSpeech, { gender: 'female', lang: 'zh-CN' });
+    setSpeakingMsgId(null);
   };
 
   const handleSendMessage = async (textToSend?: string) => {
-    const text = textToSend || inputText.trim();
+    const text = (textToSend || inputText).trim();
     if (!text || isLoading) return;
 
     playClickSound();
@@ -152,24 +154,44 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages(prev => [...prev, userMsg]);
     if (!textToSend) setInputText('');
+
+    // Check if it matches preset questions for instant response
+    const matchedPreset = KID_PLAY_PRESETS.find(p => p.question === text);
+    if (matchedPreset) {
+      setTimeout(() => {
+        playEmeraldSound();
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            sender: 'guide',
+            text: matchedPreset.answer,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+      }, 400);
+      return;
+    }
+
+    // Otherwise call AI Guide
     setIsLoading(true);
-
     try {
-      const systemPrompt = `你当前是《Minecraft English 麦块英语》官方在线客服代表史蒂夫（Steve）。
-你的任务是以亲切、专业、鼓励的语气解答用户关于该应用程序的各种咨询。
-应用核心规则：
-1. 注册与登录：用户须注册/登录后即可畅享学习大厅。所有注册用户均可【免费体验 1 ~ 20 课】全量关卡及 AI 语音对练。
-2. VIP 会员：购买/获得 16 位激活码后可在系统输入解锁 21-144 全套课。
-3. 云端存储：支持 Neon PostgreSQL 云端秒级实时同步学习进度、绿宝石和已收录单词。
-4. 口语评测与音效：采用标准美式发音与精准得分系统。
-请使用中文回答，回答简明扼要、排版清晰，符合 Minecraft 风格。`;
+      const systemPrompt = `你现在是《Minecraft English 麦块英语》里的【方块世界玩法小向导】（一位热心幽默的村庄图书管理员向导，专门指导6~15岁小朋友玩这款英语学习软件）。
+核心任务：热情、亲切、简单易懂地告诉小朋友这个软件怎么玩，鼓励他们开心学英语、拿绿宝石！
+知识库参考：
+1. 主线关卡：从世界地图第1课Excuse me开始，通过“三遍精听法”（盲听、看中文、麦克风跟读打分）通关并收集星星与绿宝石。
+2. 磨耳朵电台：有MC探险故事（7篇）和经典童话寓言（6篇），Alex和Steve双人交替中英朗读，每听3分钟送2颗绿宝石，支持15/30/45分钟定时关机。
+3. Alex AI对练：随时长按麦克风跟Alex连麦聊Minecraft，练纯正美式口语。
+4. 词汇合成台与红石：掌握的单词会变成方块，在合成台合成装备，在红石工坊搭建密码门。
+5. 家长护航：右上角有家长锁（PIN码保护），单次学满20分钟会自动弹护眼远眺提醒，家长还可以在家长中心直接发放赞赏绿宝石。
+请用充满鼓励、充满Minecraft代入感的中文回答，分点清晰，语气温柔友好，字数适中。`;
 
-      const aiReplyText = await sendChatMessageToAlex(
+      const aiReply = await sendChatMessageToAlex(
         text,
         systemPrompt,
-        messages.map((m) => ({
+        messages.map(m => ({
           id: m.id,
           sender: m.sender === 'user' ? 'user' : 'alex',
           text: m.text,
@@ -177,22 +199,23 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
         }))
       );
 
-      setMessages((prev) => [
+      playEmeraldSound();
+      setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          sender: 'service',
-          text: aiReplyText || '收到您的需求！如需快速人工响应，建议直接添加客服微信: MineEnglish_Support 哦！',
+          sender: 'guide',
+          text: aiReply || '向导收到啦！带上你的木剑和指南针，先去地图第一关试试三遍精听吧！',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
-    } catch (error) {
-      setMessages((prev) => [
+    } catch (e) {
+      setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          sender: 'service',
-          text: '抱歉，我的客服通信系统遇到微小波动。您可以在【人工客服】标签页直接复制客服微信号，或在【提交工单】留下您的建议！',
+          sender: 'guide',
+          text: '哎呀，红石信号有点闪烁！不过向导随时都在哦！建议你点击上面的快捷玩法卡片，或者去世界地图第 1 关开始探险吧！',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -201,461 +224,436 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
     }
   };
 
-  const handleSubmitTicket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketContent.trim()) return;
-
-    playClickSound();
-    setIsSubmittingTicket(true);
-
-    try {
-      const fallbackId = 'TK-' + Math.floor(100000 + Math.random() * 900000);
-      setTicketSuccessId(fallbackId);
-      setTicketContent('');
-      playEmeraldSound();
-    } finally {
-      setIsSubmittingTicket(false);
-    }
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedText(text);
+    playEmeraldSound();
+    setTimeout(() => setCopiedText(null), 2000);
   };
 
-  const filteredFaqs = FAQ_ITEMS.filter(
-    (item) =>
-      item.question.includes(searchQuery) ||
-      item.answer.includes(searchQuery) ||
-      item.category.includes(searchQuery)
-  );
-
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-slate-900 border-4 border-slate-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-[12px_12px_0_0_#000] overflow-hidden text-slate-100 font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-slate-900 border-4 border-slate-950 rounded-2xl w-full max-w-4xl h-[92vh] max-h-[780px] flex flex-col shadow-[8px_8px_0_0_#000] overflow-hidden">
         
         {/* Header Bar */}
-        <div className="bg-slate-950 border-b-4 border-slate-800 p-3 sm:p-4 flex items-center justify-between shrink-0">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-3 sm:p-4 border-b-4 border-slate-950 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-emerald-500/20 border-2 border-emerald-500 rounded-xl flex items-center justify-center text-xl shrink-0 shadow-[2px_2px_0_0_#000]">
-              🎧
+            <div className="w-10 h-10 rounded-xl bg-slate-950/40 border-2 border-emerald-300 flex items-center justify-center shadow-inner">
+              <Compass className="w-6 h-6 text-amber-300 animate-spin-slow" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-base sm:text-lg font-black font-mono text-white tracking-wide">
-                  Minecraft English 服务中心
+                <h2 className="font-black text-base sm:text-lg tracking-wide text-white flex items-center gap-1.5">
+                  <span>方块世界探险向导</span>
+                  <span className="bg-amber-400 text-slate-950 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                    GUIDE
+                  </span>
                 </h2>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono font-bold">
-                  官方在线
-                </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">
-                正规会员体系 • 7×12小时客服保障 • 免费试用答疑
+              <p className="text-[11px] sm:text-xs text-emerald-100 font-mono">
+                教你如何畅玩方块世界 • 赚绿宝石 • 听故事 • 练口语 • 新手全景手册
               </p>
             </div>
           </div>
-
           <button
             onClick={() => {
               playClickSound();
+              stopSpeech();
               onClose();
             }}
-            className="w-9 h-9 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border-2 border-slate-950 flex items-center justify-center transition-transform active:scale-95"
+            className="p-1.5 bg-slate-950/40 hover:bg-slate-950/70 text-emerald-100 hover:text-white rounded-xl border border-emerald-400/40 transition-colors cursor-pointer"
+            title="关闭向导"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-slate-900 border-b-2 border-slate-800 px-3 py-2 flex items-center gap-1 sm:gap-2 overflow-x-auto shrink-0 scrollbar-none">
+        <div className="bg-slate-950/90 border-b-2 border-slate-800 p-1.5 flex items-center gap-1 sm:gap-2 shrink-0 overflow-x-auto no-scrollbar">
           <button
             onClick={() => {
               playClickSound();
-              setActiveTab('ai');
+              setActiveTab('guide');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
-              activeTab === 'ai'
-                ? 'bg-emerald-500 text-slate-950 shadow-[2px_2px_0_0_#000] border-2 border-slate-950'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`flex-1 min-w-[76px] sm:min-w-[90px] py-2 px-1.5 sm:px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1 sm:space-x-1.5 cursor-pointer border ${
+              activeTab === 'guide'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-[2px_2px_0_0_#000]'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
             }`}
           >
-            <Bot className="w-3.5 h-3.5" />
-            <span>🤖 AI 智能客服</span>
+            <Compass className="w-3.5 h-3.5" />
+            <span>向导问答</span>
           </button>
 
           <button
             onClick={() => {
               playClickSound();
-              setActiveTab('faq');
+              setActiveTab('manual');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
-              activeTab === 'faq'
-                ? 'bg-emerald-500 text-slate-950 shadow-[2px_2px_0_0_#000] border-2 border-slate-950'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`flex-1 min-w-[76px] sm:min-w-[90px] py-2 px-1.5 sm:px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1 sm:space-x-1.5 cursor-pointer border ${
+              activeTab === 'manual'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-[2px_2px_0_0_#000]'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
             }`}
           >
-            <HelpCircle className="w-3.5 h-3.5" />
-            <span>❓ 常见问题</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>学习指南</span>
           </button>
 
           <button
             onClick={() => {
               playClickSound();
-              setActiveTab('human');
+              setActiveTab('gameplay');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
-              activeTab === 'human'
-                ? 'bg-emerald-500 text-slate-950 shadow-[2px_2px_0_0_#000] border-2 border-slate-950'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`flex-1 min-w-[76px] sm:min-w-[90px] py-2 px-1.5 sm:px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1 sm:space-x-1.5 cursor-pointer border ${
+              activeTab === 'gameplay'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-[2px_2px_0_0_#000]'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
             }`}
           >
-            <Phone className="w-3.5 h-3.5" />
-            <span>💬 人工客服</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>玩法宝典</span>
           </button>
 
           <button
             onClick={() => {
               playClickSound();
-              setActiveTab('ticket');
+              setActiveTab('daily');
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
-              activeTab === 'ticket'
-                ? 'bg-emerald-500 text-slate-950 shadow-[2px_2px_0_0_#000] border-2 border-slate-950'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`flex-1 min-w-[76px] sm:min-w-[90px] py-2 px-1.5 sm:px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1 sm:space-x-1.5 cursor-pointer border ${
+              activeTab === 'daily'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-[2px_2px_0_0_#000]'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
             }`}
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>📝 提交工单</span>
+            <Award className="w-3.5 h-3.5" />
+            <span>今日任务</span>
+          </button>
+
+          <button
+            onClick={() => {
+              playClickSound();
+              setActiveTab('parents');
+            }}
+            className={`flex-1 min-w-[76px] sm:min-w-[90px] py-2 px-1.5 sm:px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1 sm:space-x-1.5 cursor-pointer border ${
+              activeTab === 'parents'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-300 shadow-[2px_2px_0_0_#000]'
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>家长/售后</span>
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
-          
-          {/* TAB 1: AI Customer Service Chat */}
-          {activeTab === 'ai' && (
-            <div className="flex flex-col h-full min-h-[380px]">
+        {/* Tab Content Area */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-slate-900/60">
+
+          {/* TAB 1: 向导问答 (Ask the Guide) */}
+          {activeTab === 'guide' && (
+            <div className="flex flex-col h-full space-y-3">
               
-              {/* Preset quick question shortcuts */}
-              <div className="mb-3 space-y-1.5">
-                <span className="text-[11px] text-slate-400 font-mono font-bold flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-400" />
-                  热门快捷提问：
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {PRESET_QUESTIONS.map((q, idx) => (
+              {/* Preset Quick Question Chips */}
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700 shrink-0">
+                <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-300 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+                  <span>点击想知道的玩法秘密：</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {KID_PLAY_PRESETS.map((preset, idx) => (
                     <button
                       key={idx}
-                      onClick={() => handleSendMessage(q)}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 rounded-lg text-xs font-mono transition-all text-left active:scale-95"
+                      onClick={() => handleSendMessage(preset.question)}
+                      className="text-left bg-slate-900/90 hover:bg-emerald-950/70 border border-slate-700 hover:border-emerald-500/80 p-2 rounded-lg transition-all text-[11px] font-bold text-slate-200 hover:text-emerald-300 flex items-center space-x-1.5 group cursor-pointer"
                     >
-                      {q}
+                      <span className="text-sm shrink-0">{preset.icon}</span>
+                      <span className="truncate">{preset.question}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Chat Message List */}
-              <div className="flex-1 bg-slate-950 border-2 border-slate-800 rounded-2xl p-3 sm:p-4 overflow-y-auto space-y-3 min-h-[220px] max-h-[320px]">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
+              {/* Chat Message Stream */}
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 min-h-[220px]">
+                {messages.map((msg) => {
+                  const isGuide = msg.sender === 'guide';
+                  const isSpeaking = speakingMsgId === msg.id;
+
+                  return (
                     <div
-                      className={`max-w-[85%] rounded-2xl p-3 text-xs sm:text-sm font-sans whitespace-pre-wrap leading-relaxed shadow-sm ${
-                        msg.sender === 'user'
-                          ? 'bg-emerald-600 text-white rounded-tr-none border border-emerald-400/30'
-                          : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none'
-                      }`}
+                      key={msg.id}
+                      className={`flex items-start space-x-2.5 ${isGuide ? 'justify-start' : 'justify-end'}`}
                     >
-                      {msg.sender === 'service' && (
-                        <div className="flex items-center space-x-1.5 mb-1.5 pb-1 border-b border-slate-800 text-[11px] text-emerald-400 font-mono font-bold">
-                          <span>🤖 史蒂夫客服 (Steve)</span>
-                          <span className="text-[9px] text-slate-500">{msg.timestamp}</span>
+                      {isGuide && (
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500 border-2 border-slate-950 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                          <Compass className="w-4 h-4 text-slate-950" />
                         </div>
                       )}
-                      <div>{msg.text}</div>
+
+                      <div
+                        className={`max-w-[85%] sm:max-w-[78%] p-3 rounded-2xl text-xs sm:text-sm font-sans leading-relaxed border shadow-md relative ${
+                          isGuide
+                            ? 'bg-slate-800 text-slate-100 border-slate-700/80 rounded-tl-sm'
+                            : 'bg-emerald-500 text-slate-950 font-medium border-emerald-600 rounded-tr-sm'
+                        }`}
+                      >
+                        <div className="whitespace-pre-line break-words">
+                          {msg.text}
+                        </div>
+
+                        {/* Speech & Timestamp Footer */}
+                        <div className="mt-2 pt-1 border-t border-slate-700/50 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                          <span>{msg.timestamp}</span>
+                          {isGuide && (
+                            <button
+                              onClick={() => handleSpeak(msg.id, msg.text)}
+                              className={`flex items-center space-x-1 px-2 py-0.5 rounded-full transition-colors cursor-pointer ${
+                                isSpeaking
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50'
+                                  : 'hover:bg-slate-700 text-slate-300'
+                              }`}
+                              title={isSpeaking ? '停止朗读' : '朗读给小朋友听'}
+                            >
+                              {isSpeaking ? (
+                                <>
+                                  <VolumeX className="w-3 h-3 text-amber-400 animate-pulse" />
+                                  <span>正在朗读...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="w-3 h-3 text-emerald-400" />
+                                  <span>听向导说</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
                 {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 text-xs text-slate-400 flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-                      <span>史蒂夫客服正在为您查找信息...</span>
-                    </div>
+                  <div className="flex items-center space-x-2 text-xs text-emerald-400 font-mono p-2">
+                    <Compass className="w-4 h-4 animate-spin text-emerald-400" />
+                    <span>小向导正在翻看方块指南书...</span>
                   </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Input Bar */}
-              <div className="mt-3 flex items-center gap-2">
+              {/* Input Area */}
+              <div className="shrink-0 flex items-center space-x-2 pt-2 border-t border-slate-800">
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="输入您的疑问（如：怎么使用前20课试用？或重置进度）..."
-                  className="flex-1 bg-slate-950 border-2 border-slate-800 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSendMessage();
+                  }}
+                  placeholder="想知道怎么玩？直接打字问小向导吧..."
+                  className="flex-1 bg-slate-950 border-2 border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none transition-colors"
                 />
                 <button
                   onClick={() => handleSendMessage()}
                   disabled={!inputText.trim() || isLoading}
-                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm border-2 border-slate-950 shadow-[2px_2px_0_0_#000] rounded-xl flex items-center space-x-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-black text-xs sm:text-sm rounded-xl border-2 border-slate-950 shadow-[2px_2px_0_0_#000] flex items-center space-x-1 transition-all active:translate-y-0.5 cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                   <span>发送</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* TAB 2: FAQs */}
-          {activeTab === 'faq' && (
+          {/* TAB: 学习指南 (Full Study Guide Manual) */}
+          {activeTab === 'manual' && (
+            <div className="h-full -m-3 sm:-m-4 overflow-hidden">
+              <StudyGuideManualContent embedded={true} onClose={onClose} />
+            </div>
+          )}
+
+          {/* TAB: 玩法宝典 (How to Play) */}
+          {activeTab === 'gameplay' && (
             <div className="space-y-4">
-              
-              {/* Search input */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="搜索常见问题关键词（VIP, 20课, 声音, 账号...）"
-                  className="w-full bg-slate-950 border-2 border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-sans"
-                />
+              <div className="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-500/30 p-3 rounded-xl flex items-center space-x-3">
+                <Sparkles className="w-6 h-6 text-amber-400 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">方块世界 4 大核心玩法指引</h3>
+                  <p className="text-xs text-slate-300">掌握这 4 大法宝，轻松成为最懂英语的 MC 小霸王！</p>
+                </div>
               </div>
 
-              {/* Accordion list */}
-              <div className="space-y-2">
-                {filteredFaqs.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-950 rounded-2xl border border-slate-800 text-slate-400 text-xs font-mono">
-                    未检索到匹配的解答，您可以直接在【🤖 AI 智能客服】处输入或在【💬 人工客服】联系官方人员。
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Gameplay 1: 主线闯关 */}
+                <div className="bg-slate-800/80 border-2 border-slate-700 p-3.5 rounded-xl space-y-2">
+                  <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm">
+                    <span className="p-1.5 bg-emerald-950 rounded-lg border border-emerald-600/40">🗡️</span>
+                    <span>1. 三遍精听 · 主线闯关</span>
                   </div>
-                ) : (
-                  filteredFaqs.map((faq, index) => {
-                    const isExpanded = expandedFaqIndex === index;
-                    return (
-                      <div
-                        key={index}
-                        className="bg-slate-950 border-2 border-slate-800 rounded-2xl overflow-hidden transition-all"
-                      >
-                        <button
-                          onClick={() => {
-                            playClickSound();
-                            setExpandedFaqIndex(isExpanded ? null : index);
-                          }}
-                          className="w-full p-3.5 text-left flex items-center justify-between gap-2 hover:bg-slate-900 transition-colors"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-mono font-bold shrink-0">
-                              {faq.category}
-                            </span>
-                            <span className="text-xs sm:text-sm font-bold text-white font-sans">
-                              {faq.question}
-                            </span>
-                          </div>
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4 text-emerald-400 shrink-0" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                          )}
-                        </button>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">第 1 遍盲听：</strong>不看文字，听标准美音猜场景；</li>
+                    <li><strong className="text-white">第 2 遍对照：</strong>看中英文对照，搞懂生词意思；</li>
+                    <li><strong className="text-white">第 3 遍跟读：</strong>长按麦克风大声朗读，系统实时打分评出 3 颗星！</li>
+                  </ul>
+                </div>
 
-                        {isExpanded && (
-                          <div className="px-4 pb-4 pt-1 text-xs text-slate-300 border-t border-slate-900 font-sans leading-relaxed bg-slate-900/50">
-                            {faq.answer}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                {/* Gameplay 2: 磨耳朵电台 */}
+                <div className="bg-slate-800/80 border-2 border-slate-700 p-3.5 rounded-xl space-y-2">
+                  <div className="flex items-center space-x-2 text-amber-400 font-bold text-sm">
+                    <span className="p-1.5 bg-amber-950 rounded-lg border border-amber-600/40">📻</span>
+                    <span>2. 沉浸磨耳朵 · 睡前听故事</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li><strong className="text-white">双大频道：</strong>包含 7 部 MC 原生冒险与 6 部伊索寓言；</li>
+                    <li><strong className="text-white">双人旁白：</strong>Alex 与 Steve 轮流带你置身探险现场；</li>
+                    <li><strong className="text-white">定时关机：</strong>支持 15/30/45 分钟倒计时自动关机！</li>
+                  </ul>
+                </div>
+
+                {/* Gameplay 3: Alex AI 连麦 */}
+                <div className="bg-slate-800/80 border-2 border-slate-700 p-3.5 rounded-xl space-y-2">
+                  <div className="flex items-center space-x-2 text-indigo-400 font-bold text-sm">
+                    <span className="p-1.5 bg-indigo-950 rounded-lg border border-indigo-600/40">🗣️</span>
+                    <span>3. Alex AI 语音连麦对练</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li>像跟游戏搭子连麦一样，按住说话；</li>
+                    <li>不用怕说错，Alex 会温柔地引导你并夸奖你的发音；</li>
+                    <li>随时练习日常英语、Minecraft 道具问答与探险任务！</li>
+                  </ul>
+                </div>
+
+                {/* Gameplay 4: 词汇合成与红石 */}
+                <div className="bg-slate-800/80 border-2 border-slate-700 p-3.5 rounded-xl space-y-2">
+                  <div className="flex items-center space-x-2 text-rose-400 font-bold text-sm">
+                    <span className="p-1.5 bg-rose-950 rounded-lg border border-rose-600/40">⚒️</span>
+                    <span>4. 词汇合成台与红石密码门</span>
+                  </div>
+                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                    <li>掌握的生词会自动转成原木、铁矿和红石材料；</li>
+                    <li>在合成台拼装单词配方，铸造高阶武器；</li>
+                    <li>在红石工坊搭建真实运转的机关密码门！</li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 3: Human Support */}
-          {activeTab === 'human' && (
+          {/* TAB 3: 今日探险任务 (Daily Quests) */}
+          {activeTab === 'daily' && (
             <div className="space-y-4">
-              
-              <div className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="space-y-0.5">
-                    <h3 className="text-sm sm:text-base font-bold font-mono text-emerald-400">
-                      官方专人人工客服团队
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      处理 VIP 激活卡兑换、退款咨询、账号关联及教学指导
-                    </p>
+              <div className="bg-emerald-950/60 border border-emerald-500/40 p-3 rounded-xl flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-emerald-300">⭐ 今日探险轻量 3 步走</h3>
+                  <p className="text-xs text-slate-400">每天只要 15 分钟，轻松积累大量绿宝石！</p>
+                </div>
+                <div className="px-2.5 py-1 bg-emerald-500/20 border border-emerald-400/40 rounded-lg text-emerald-300 font-black text-xs">
+                  💎 预计可得 +10 绿宝石
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="bg-slate-800/90 border border-slate-700 p-3 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black">
+                      1
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">通关 1 个主线课句型</h4>
+                      <p className="text-[11px] text-slate-400">在世界地图挑战关卡，完成跟读录音</p>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1 text-xs text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>09:00 - 21:00 全天在线</span>
-                  </div>
+                  <span className="text-xs font-bold text-amber-400">+5 💎</span>
                 </div>
 
-                {/* Contact Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  
-                  {/* WeChat Contact */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2 relative">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg">💬</span>
-                        <span className="text-xs font-bold text-white font-mono">官方微信客服号</span>
-                      </div>
-                      <span className="text-[9px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.5 rounded">
-                        推荐
-                      </span>
+                <div className="bg-slate-800/90 border border-slate-700 p-3 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-black">
+                      2
                     </div>
-                    <div className="text-sm font-mono font-black text-amber-300 bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                      <span>MineEnglish_Support</span>
-                      <button
-                        onClick={() => handleCopy('MineEnglish_Support', 'wechat')}
-                        className="px-2 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black rounded flex items-center space-x-1"
-                      >
-                        {copiedField === 'wechat' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                        <span>{copiedField === 'wechat' ? '已复制' : '复制微信号'}</span>
-                      </button>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">听 3 分钟磨耳朵电台</h4>
+                      <p className="text-[11px] text-slate-400">听一段《雪原迷路小白狼》或寓言故事</p>
                     </div>
-                    <p className="text-[11px] text-slate-400">
-                      搜索微信添加好友，备注【Minecraft英语客服】15分钟内快速响应
-                    </p>
                   </div>
-
-                  {/* Email Contact */}
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Mail className="w-4 h-4 text-emerald-400" />
-                      <span className="text-xs font-bold text-white font-mono">官方支持邮箱</span>
-                    </div>
-                    <div className="text-xs font-mono font-bold text-slate-200 bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
-                      <span className="truncate">support@minecraftenglish.com</span>
-                      <button
-                        onClick={() => handleCopy('support@minecraftenglish.com', 'email')}
-                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold rounded flex items-center space-x-1 shrink-0 ml-1"
-                      >
-                        {copiedField === 'email' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                        <span>{copiedField === 'email' ? '已复制' : '复制'}</span>
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      适合提交对齐较长的技术诊断与反馈建议
-                    </p>
-                  </div>
-
+                  <span className="text-xs font-bold text-amber-400">+2 💎</span>
                 </div>
 
+                <div className="bg-slate-800/90 border border-slate-700 p-3 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-black">
+                      3
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">跟 Alex 聊一句日常问候</h4>
+                      <p className="text-[11px] text-slate-400">用语音对 Alex 说声 "Hello, what's up?"</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-400">+3 💎</span>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 4: Submit Ticket Form */}
-          {activeTab === 'ticket' && (
-            <div className="space-y-4">
-              
-              {ticketSuccessId ? (
-                <div className="bg-slate-950 border-2 border-emerald-500/60 rounded-2xl p-6 text-center space-y-3 font-mono">
-                  <div className="w-12 h-12 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center text-2xl mx-auto">
-                    ✅
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-emerald-400">
-                    工单已成功提交至客服系统！
-                  </h3>
-                  <p className="text-xs text-slate-300">
-                    您的客服工单追踪单号：<strong className="text-amber-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{ticketSuccessId}</strong>
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    专员将在 12 小时内核对问题并通过您预留的联系方式直接回复您。
-                  </p>
+          {/* TAB 4: 家长中心与技术支持 (Parents & Support) */}
+          {activeTab === 'parents' && (
+            <div className="space-y-3.5">
+              <div className="bg-slate-800/90 border-2 border-slate-700 p-3.5 rounded-xl space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-400 font-bold text-sm">
+                  <Shield className="w-4 h-4" />
+                  <span>家长专属护航提示</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  家长护航中心位于主界面右上角或个人中心，受 4 位独立 PIN 码保护。您可以随时为孩子设定<strong>单次学习限时（15/20/30分钟）</strong>、<strong>护眼强制远眺中断</strong>，以及<strong>查看真实学情词汇与发放赞赏绿宝石</strong>。
+                </p>
+              </div>
+
+              <div className="bg-slate-800/90 border border-slate-700 p-3 rounded-xl space-y-2">
+                <h4 className="text-xs font-bold text-white">🔑 VIP 激活码怎么用？</h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  在主界面右上角点击【💎 开通VIP】，输入 16 位专属激活码即可永久解锁全套 1~144 课！
+                </p>
+              </div>
+
+              <div className="bg-slate-800/90 border border-slate-700 p-3 rounded-xl space-y-2">
+                <h4 className="text-xs font-bold text-white">💬 技术与售后服务联系</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                  <span className="text-xs font-mono text-slate-300">
+                    客服微信：<strong className="text-emerald-400">MineEnglish_Support</strong>
+                  </span>
                   <button
-                    onClick={() => setTicketSuccessId(null)}
-                    className="px-5 py-2 bg-emerald-500 text-slate-950 font-black text-xs rounded-xl border-2 border-slate-950 shadow-[2px_2px_0_0_#000]"
+                    onClick={() => copyToClipboard('MineEnglish_Support')}
+                    className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg flex items-center justify-center space-x-1 cursor-pointer"
                   >
-                    再提交一条工单
+                    {copiedText === 'MineEnglish_Support' ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>已复制</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>复制微信号</span>
+                      </>
+                    )}
                   </button>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmitTicket} className="bg-slate-950 border-2 border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
-                  <div className="space-y-1 border-b border-slate-800 pb-2">
-                    <h3 className="text-sm font-bold font-mono text-white">
-                      提交意见反馈与异常技术工单
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      详细描述您遇到的问题或建议，官方客服将及时予以跟进。
-                    </p>
-                  </div>
-
-                  {/* Category select */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 font-mono">
-                      问题分类：
-                    </label>
-                    <select
-                      value={ticketType}
-                      onChange={(e) => setTicketType(e.target.value)}
-                      className="w-full bg-slate-900 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 font-sans"
-                    >
-                      <option value="VIP激活与兑换">💎 VIP 激活与兑换卡号</option>
-                      <option value="账号与云端同步">☁️ 账号登录 / 关卡进度未同步</option>
-                      <option value="免费20课体验咨询">🎁 免费试用 1-20 课体验咨询</option>
-                      <option value="语音评测与设备发音">🎙️ 语音评测 / 话筒录音异常</option>
-                      <option value="课程建议与Bug提交">🐛 课程反馈与应用 Bug 建议</option>
-                      <option value="其它合作与问题">💬 其它合作与咨询</option>
-                    </select>
-                  </div>
-
-                  {/* Contact info */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 font-mono">
-                      您的联系方式 (手机号 / 微信 / 邮箱)：
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={ticketContact}
-                      onChange={(e) => setTicketContact(e.target.value)}
-                      placeholder="例如：13800138000 或 wechat_id 或 test@example.com"
-                      className="w-full bg-slate-900 border-2 border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 font-sans"
-                    />
-                  </div>
-
-                  {/* Content details */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 font-mono">
-                      详细描述：
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={ticketContent}
-                      onChange={(e) => setTicketContent(e.target.value)}
-                      placeholder="请尽可能详细地说明您遇到的现象、关卡编号或具体报错信息，便于客服专员快速跟进..."
-                      className="w-full bg-slate-900 border-2 border-slate-800 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 font-sans resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmittingTicket}
-                    className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm border-2 border-slate-950 shadow-[3px_3px_0_0_#000] rounded-xl transition-all active:translate-y-0.5"
-                  >
-                    {isSubmittingTicket ? '正在保存提交工单...' : '✉️ 确认提交客服工单'}
-                  </button>
-                </form>
-              )}
-
+              </div>
             </div>
           )}
 
         </div>
 
-        {/* Footer */}
-        <div className="bg-slate-950 border-t-2 border-slate-800 p-3 text-center text-[11px] text-slate-500 font-mono flex items-center justify-between">
-          <span className="flex items-center gap-1 text-slate-400">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>正规售后保障 • 严密隐私保护</span>
+        {/* Footer info */}
+        <div className="bg-slate-950 border-t-2 border-slate-800 p-2.5 px-4 text-[11px] text-slate-400 font-mono flex items-center justify-between shrink-0">
+          <span className="flex items-center space-x-1.5">
+            <Compass className="w-3.5 h-3.5 text-amber-400" />
+            <span>方块世界探险小向导 · 伴你快乐学英语</span>
           </span>
-          <span>服务热线：010-8888-6666</span>
+          <span className="text-emerald-400 font-bold">
+            💎 当前绿宝石：{profile.emeralds || 0}
+          </span>
         </div>
 
       </div>
@@ -663,7 +661,7 @@ export const CustomerServiceModal: React.FC<CustomerServiceModalProps> = ({
   );
 };
 
-/* Floating Customer Service Button Component to embed anywhere */
+/* Floating Game Guide Button Component to replace old customer service button */
 export const CustomerServiceFloatingButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   return (
     <button
@@ -671,16 +669,16 @@ export const CustomerServiceFloatingButton: React.FC<{ onClick: () => void }> = 
         playClickSound();
         onClick();
       }}
-      className="fixed bottom-5 right-5 z-40 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 p-3 sm:px-4 sm:py-3 rounded-2xl border-4 border-slate-950 shadow-[4px_4px_0_0_#000] flex items-center space-x-2 transition-all active:translate-y-0.5 group"
-      title="联系 Minecraft English 官方在线客服"
+      className="fixed bottom-5 right-5 z-40 bg-gradient-to-r from-amber-500 via-emerald-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-slate-950 p-3 sm:px-4 sm:py-3 rounded-2xl border-4 border-slate-950 shadow-[4px_4px_0_0_#000] flex items-center space-x-2 transition-all active:translate-y-0.5 group cursor-pointer"
+      title="🧭 不知道怎么玩？点击让向导教你！"
     >
       <div className="relative">
-        <Headphones className="w-5 h-5 text-slate-950 group-hover:rotate-12 transition-transform" />
-        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
+        <Compass className="w-5 h-5 text-slate-950 group-hover:rotate-45 transition-transform duration-300" />
+        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-300 rounded-full animate-ping" />
         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full border border-slate-950" />
       </div>
       <span className="hidden sm:inline font-black font-mono text-xs text-slate-950">
-        在线客服
+        玩法向导 🧭
       </span>
     </button>
   );

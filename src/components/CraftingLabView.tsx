@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, VocabItem, Lesson } from '../types';
 import { MINECRAFT_VOCABULARY } from '../data/minecraftVocabData';
 import { LESSONS_DATA } from '../data/lessonsData';
-import { EXTRA_CRAFTING_RECIPES, CraftingRecipe } from '../data/craftingRecipesData';
+import {
+  EXTRA_CRAFTING_RECIPES,
+  CraftingRecipe,
+  NCE_WORD_PARTS_MAP,
+  NCE_WORD_CRAFTING_RECIPES,
+  MC_EQUIPMENT_RECIPES
+} from '../data/craftingRecipesData';
 import {
   Hammer, Sparkles, Volume2, Trophy, Shield, Flame, CheckCircle, RefreshCw,
   Zap, ArrowRight, Sword, Lock, Unlock, Star, ChevronRight, Play, Heart, Award,
   AlertCircle, Crown, MapPin, BookOpen, Layers, Target, Compass, Sparkle,
-  Check, Info, HelpCircle
+  Check, Info, HelpCircle, X, Search, Lightbulb, GraduationCap, Keyboard, Type, RotateCcw
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound, playBlockBreakSound, speakText, playLevelUpSound } from '../utils/audio';
 import { unlockMobileAudio } from '../services/edgeTtsService';
@@ -20,6 +26,7 @@ interface CraftingLabViewProps {
   onMasterWord?: (word: string) => void;
   onOpenVipModal?: () => void;
   onNavigateToLesson?: (lessonId: number) => void;
+  onNavigateToVocab?: () => void;
   onUpdateProfile?: (updatedProfile: UserProfile) => void;
 }
 
@@ -29,43 +36,55 @@ interface PaletteItem {
   name: string;
   nameEn: string;
   icon: string;
-  category: 'wood_stone' | 'minerals' | 'mobs' | 'food_farm';
+  category: string;
+  type: 'nce_word' | 'mc_material';
 }
 
-const PALETTE_MATERIALS: PaletteItem[] = [
+// 原版 MC 材料调色板
+const MC_PALETTE_MATERIALS: PaletteItem[] = [
   // 基础木石
-  { id: 'log', name: '橡木原木', nameEn: 'Oak Log', icon: '🪵', category: 'wood_stone' },
-  { id: 'plank', name: '橡木木板', nameEn: 'Oak Plank', icon: '🪵', category: 'wood_stone' },
-  { id: 'stick', name: '木棍', nameEn: 'Stick', icon: '🥢', category: 'wood_stone' },
-  { id: 'cobblestone', name: '圆石', nameEn: 'Cobblestone', icon: '🪨', category: 'wood_stone' },
-  { id: 'sand', name: '沙子', nameEn: 'Sand', icon: '⏳', category: 'wood_stone' },
-  { id: 'glass', name: '玻璃', nameEn: 'Glass', icon: '🔲', category: 'wood_stone' },
+  { id: 'log', name: '橡木原木', nameEn: 'Oak Log', icon: '🪵', category: 'wood_stone', type: 'mc_material' },
+  { id: 'plank', name: '橡木木板', nameEn: 'Oak Plank', icon: '🪵', category: 'wood_stone', type: 'mc_material' },
+  { id: 'stick', name: '木棍', nameEn: 'Stick', icon: '🥢', category: 'wood_stone', type: 'mc_material' },
+  { id: 'cobblestone', name: '圆石', nameEn: 'Cobblestone', icon: '🪨', category: 'wood_stone', type: 'mc_material' },
+  { id: 'sand', name: '沙子', nameEn: 'Sand', icon: '⏳', category: 'wood_stone', type: 'mc_material' },
+  { id: 'glass', name: '玻璃', nameEn: 'Glass', icon: '🔲', category: 'wood_stone', type: 'mc_material' },
   
   // 矿物金属
-  { id: 'coal', name: '煤炭', nameEn: 'Coal', icon: '⬛', category: 'minerals' },
-  { id: 'iron_ingot', name: '铁锭', nameEn: 'Iron Ingot', icon: '🪙', category: 'minerals' },
-  { id: 'gold_ingot', name: '金锭', nameEn: 'Gold Ingot', icon: '🌟', category: 'minerals' },
-  { id: 'diamond', name: '钻石', nameEn: 'Diamond', icon: '💎', category: 'minerals' },
-  { id: 'redstone', name: '红石粉', nameEn: 'Redstone', icon: '🔴', category: 'minerals' },
-  { id: 'obsidian', name: '黑曜石', nameEn: 'Obsidian', icon: '⬛', category: 'minerals' },
+  { id: 'coal', name: '煤炭', nameEn: 'Coal', icon: '⬛', category: 'minerals', type: 'mc_material' },
+  { id: 'iron_ingot', name: '铁锭', nameEn: 'Iron Ingot', icon: '🪙', category: 'minerals', type: 'mc_material' },
+  { id: 'gold_ingot', name: '金锭', nameEn: 'Gold Ingot', icon: '🌟', category: 'minerals', type: 'mc_material' },
+  { id: 'diamond', name: '钻石', nameEn: 'Diamond', icon: '💎', category: 'minerals', type: 'mc_material' },
+  { id: 'redstone', name: '红石粉', nameEn: 'Redstone', icon: '🔴', category: 'minerals', type: 'mc_material' },
+  { id: 'obsidian', name: '黑曜石', nameEn: 'Obsidian', icon: '⬛', category: 'minerals', type: 'mc_material' },
   
   // 怪物与稀有掉落
-  { id: 'string', name: '蜘蛛丝', nameEn: 'String', icon: '🧵', category: 'mobs' },
-  { id: 'feather', name: '羽毛', nameEn: 'Feather', icon: '🪶', category: 'mobs' },
-  { id: 'gunpowder', name: '火药', nameEn: 'Gunpowder', icon: '💥', category: 'mobs' },
-  { id: 'slimeball', name: '粘液球', nameEn: 'Slimeball', icon: '🟢', category: 'mobs' },
-  { id: 'blaze_rod', name: '烈焰棒', nameEn: 'Blaze Rod', icon: '🔥', category: 'mobs' },
-  { id: 'nether_star', name: '下界之星', nameEn: 'Nether Star', icon: '⭐', category: 'mobs' },
+  { id: 'string', name: '蜘蛛丝', nameEn: 'String', icon: '🧵', category: 'mobs', type: 'mc_material' },
+  { id: 'feather', name: '羽毛', nameEn: 'Feather', icon: '🪶', category: 'mobs', type: 'mc_material' },
+  { id: 'gunpowder', name: '火药', nameEn: 'Gunpowder', icon: '💥', category: 'mobs', type: 'mc_material' },
+  { id: 'slimeball', name: '粘液球', nameEn: 'Slimeball', icon: '🟢', category: 'mobs', type: 'mc_material' },
+  { id: 'blaze_rod', name: '烈焰棒', nameEn: 'Blaze Rod', icon: '🔥', category: 'mobs', type: 'mc_material' },
+  { id: 'nether_star', name: '下界之星', nameEn: 'Nether Star', icon: '⭐', category: 'mobs', type: 'mc_material' },
 
   // 农牧与生活食材
-  { id: 'wool', name: '羊毛', nameEn: 'Wool', icon: '🧶', category: 'food_farm' },
-  { id: 'wheat', name: '小麦', nameEn: 'Wheat', icon: '🌾', category: 'food_farm' },
-  { id: 'sugar', name: '白糖', nameEn: 'Sugar', icon: '🍬', category: 'food_farm' },
-  { id: 'egg', name: '鸡蛋', nameEn: 'Egg', icon: '🥚', category: 'food_farm' },
-  { id: 'milk_bucket', name: '牛奶桶', nameEn: 'Milk Bucket', icon: '🥛', category: 'food_farm' },
-  { id: 'apple', name: '苹果', nameEn: 'Apple', icon: '🍎', category: 'food_farm' },
-  { id: 'book', name: '书本', nameEn: 'Book', icon: '📖', category: 'food_farm' },
+  { id: 'wool', name: '羊毛', nameEn: 'Wool', icon: '🧶', category: 'food_farm', type: 'mc_material' },
+  { id: 'wheat', name: '小麦', nameEn: 'Wheat', icon: '🌾', category: 'food_farm', type: 'mc_material' },
+  { id: 'sugar', name: '白糖', nameEn: 'Sugar', icon: '🍬', category: 'food_farm', type: 'mc_material' },
+  { id: 'egg', name: '鸡蛋', nameEn: 'Egg', icon: '🥚', category: 'food_farm', type: 'mc_material' },
+  { id: 'milk_bucket', name: '牛奶桶', nameEn: 'Milk Bucket', icon: '🥛', category: 'food_farm', type: 'mc_material' },
+  { id: 'apple', name: '苹果', nameEn: 'Apple', icon: '🍎', category: 'food_farm', type: 'mc_material' },
+  { id: 'book', name: '书本', nameEn: 'Book', icon: '📖', category: 'food_farm', type: 'mc_material' },
 ];
+
+// 新概念英语构词部件材料调色板
+const NCE_PALETTE_MATERIALS: PaletteItem[] = Object.entries(NCE_WORD_PARTS_MAP).map(([word, info]) => ({
+  id: `nce_part_${word}`,
+  name: info.zh,
+  nameEn: word,
+  icon: info.icon,
+  category: info.category,
+  type: 'nce_word'
+}));
 
 const RECIPES: CraftingRecipe[] = EXTRA_CRAFTING_RECIPES;
 
@@ -386,19 +405,40 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   onMasterWord,
   onOpenVipModal,
   onNavigateToLesson,
+  onNavigateToVocab,
   onUpdateProfile
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'bench' | 'sentences' | 'boss'>('bench');
 
+  // 词汇库与配方库同步统计
+  const masteredNceRecipesCount = useMemo(() => {
+    const set = new Set((profile.masteredWords || []).map(w => w.toLowerCase()));
+    return NCE_WORD_CRAFTING_RECIPES.filter(r => set.has(r.nameEn.toLowerCase())).length;
+  }, [profile.masteredWords]);
+
+  const craftedNceRecipesCount = useMemo(() => {
+    const set = new Set(profile.unlockedCraftingIds || []);
+    return NCE_WORD_CRAFTING_RECIPES.filter(r => set.has(r.id)).length;
+  }, [profile.unlockedCraftingIds]);
+
   // ========== 1. 合成台 (Bench) 状态 ==========
+  // 模式：'nce_words' (新概念生词构词合成) | 'mc_gear' (MC 原版装备合成)
+  const [benchMode, setBenchMode] = useState<'nce_words' | 'mc_gear'>('nce_words');
+  const [recipeTypeFilter, setRecipeTypeFilter] = useState<'nce_words' | 'mc_gear' | 'all'>('nce_words');
   const [gridSlots, setGridSlots] = useState<(string | null)[]>(Array(9).fill(null));
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(0);
-  const [paletteCategory, setPaletteCategory] = useState<'all' | 'wood_stone' | 'minerals' | 'mobs' | 'food_farm'>('all');
+  const [paletteCategory, setPaletteCategory] = useState<string>('all');
   const [recipeCategoryFilter, setRecipeCategoryFilter] = useState<string>('all');
   const [recipeSearch, setRecipeSearch] = useState<string>('');
   const [matchedRecipe, setMatchedRecipe] = useState<CraftingRecipe | null>(null);
   const [craftSuccessEffect, setCraftSuccessEffect] = useState<boolean>(false);
-  const [selectedInspectRecipe, setSelectedInspectRecipe] = useState<CraftingRecipe | null>(RECIPES[0]);
+  const [selectedInspectRecipe, setSelectedInspectRecipe] = useState<CraftingRecipe | null>(NCE_WORD_CRAFTING_RECIPES[0] || RECIPES[0]);
+  
+  // 新手向导与配方手册速查弹窗
+  const [showGuideBanner, setShowGuideBanner] = useState<boolean>(true);
+  const [showHandbookModal, setShowHandbookModal] = useState<boolean>(false);
+  const [handbookSearch, setHandbookSearch] = useState<string>('');
+  const [handbookTab, setHandbookTab] = useState<'nce_words' | 'mc_gear' | 'all'>('nce_words');
 
   // ========== 2. 句子工坊 (Sentence Synthesizer) 状态 ==========
   const dynamicSentencePatterns = React.useMemo(() => {
@@ -409,6 +449,24 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   const [userSentenceSlots, setUserSentenceSlots] = useState<{ text: string; role: string }[]>([]);
   const [sentenceCandidatePool, setSentenceCandidatePool] = useState<{ id: string; text: string; role: string; used: boolean }[]>([]);
   const [sentenceCheckedState, setSentenceCheckedState] = useState<'idle' | 'correct' | 'wrong'>('idle');
+
+  // 单词键入拼写模式状态 (Spelling & Typing Practice)
+  const [sentencePracticeMode, setSentencePracticeMode] = useState<'blocks' | 'typing'>('blocks');
+  const [typingModeType, setTypingModeType] = useState<'slots' | 'full'>('slots'); // 'slots': 逐词填空拼写, 'full': 整句键盘默写
+  const [typedWordInputs, setTypedWordInputs] = useState<string[]>([]);
+  const [activeTypingWordIndex, setActiveTypingWordIndex] = useState<number>(0);
+  const [fullTypedSentence, setFullTypedSentence] = useState<string>('');
+  const [revealedHints, setRevealedHints] = useState<Record<number, boolean>>({});
+  const [typingCheckedState, setTypingCheckedState] = useState<'idle' | 'correct' | 'wrong'>('idle');
+
+  const currentSentencePattern = dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length];
+  const targetWords = useMemo(() => {
+    if (!currentSentencePattern) return [];
+    return currentSentencePattern.targetSentence
+      .replace(/[^a-zA-Z0-9\s'-]/g, '')
+      .split(/\s+/)
+      .filter(Boolean);
+  }, [currentSentencePattern]);
 
   // 初始化当前句子工坊题目
   useEffect(() => {
@@ -423,6 +481,17 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
         ];
         // 随机打乱
         setSentenceCandidatePool(rawPool.sort(() => Math.random() - 0.5));
+
+        // 单词键盘拼写初始化
+        const words = currentPattern.targetSentence
+          .replace(/[^a-zA-Z0-9\s'-]/g, '')
+          .split(/\s+/)
+          .filter(Boolean);
+        setTypedWordInputs(new Array(words.length).fill(''));
+        setActiveTypingWordIndex(0);
+        setFullTypedSentence('');
+        setRevealedHints({});
+        setTypingCheckedState('idle');
       }
     }
   }, [currentSentenceIndex, dynamicSentencePatterns]);
@@ -435,18 +504,36 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
   const [battleFeedback, setBattleFeedback] = useState<{ isCorrect: boolean; show: boolean; msg: string } | null>(null);
   const [isBossDefeated, setIsBossDefeated] = useState<boolean>(false);
   const [attackAnimation, setAttackAnimation] = useState<boolean>(false);
+  const [shuffledOptions, setShuffledOptions] = useState<{ text: string; isCorrect: boolean }[]>([]);
 
   // 实时检测 3x3 物品网格是否匹配任何配方
   useEffect(() => {
     let match: CraftingRecipe | null = null;
     for (const r of RECIPES) {
-      const isMatch = r.gridPattern.every((item, idx) => {
+      // 1. 严格全网格 3x3 匹配
+      const isExactMatch = r.gridPattern.every((item, idx) => {
         if (item === null) return gridSlots[idx] === null;
         return gridSlots[idx] === item;
       });
-      if (isMatch) {
+      if (isExactMatch) {
         match = r;
         break;
+      }
+
+      // 2. 针对 2 部件新概念复合词的横向相邻灵活匹配 (允许放置在任意一行的相邻两格)
+      if (r.recipeType === 'nce_word') {
+        const reqParts = r.gridPattern.filter(Boolean);
+        const gridPlaced = gridSlots.map((val, idx) => ({ val, idx })).filter(item => item.val !== null);
+        if (reqParts.length === 2 && gridPlaced.length === 2) {
+          const [p1, p2] = reqParts;
+          const isOrdered = gridPlaced[0].val === p1 && gridPlaced[1].val === p2;
+          const adjacentPairs = [[0, 1], [1, 2], [3, 4], [4, 5], [6, 7], [7, 8]];
+          const isAdjacent = adjacentPairs.some(([a, b]) => gridPlaced[0].idx === a && gridPlaced[1].idx === b);
+          if (isOrdered && isAdjacent) {
+            match = r;
+            break;
+          }
+        }
       }
     }
     setMatchedRecipe(match);
@@ -479,7 +566,8 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     }
 
     const newGrid = [...gridSlots];
-    newGrid[targetIdx] = item.icon;
+    // 新概念生词使用词根单词 (如 'hand', 'bag')，MC材料使用图标
+    newGrid[targetIdx] = item.type === 'nce_word' ? item.nameEn : item.icon;
     setGridSlots(newGrid);
 
     // 自动移到下一个槽位
@@ -514,6 +602,12 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     unlockMobileAudio();
     setGridSlots([...recipe.gridPattern]);
     setSelectedInspectRecipe(recipe);
+    // 自动同步当前材料板模式
+    if (recipe.recipeType === 'nce_word') {
+      setBenchMode('nce_words');
+    } else {
+      setBenchMode('mc_gear');
+    }
   };
 
   // 执行合成操作
@@ -533,7 +627,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     playEmeraldSound();
     playLevelUpSound();
     setCraftSuccessEffect(true);
-    setTimeout(() => setCraftSuccessEffect(false), 2000);
+    setTimeout(() => setCraftSuccessEffect(false), 2500);
 
     // 朗读英文
     speakText(matchedRecipe.nameEn, { lang: 'en-US' });
@@ -546,6 +640,11 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
 
     // 奖励绿宝石与经验
     onAwardEmeralds(8, 20);
+
+    // 若为新概念词汇且有掌握回调，自动收录进已掌握单词
+    if (onMasterWord && matchedRecipe.recipeType === 'nce_word') {
+      onMasterWord(matchedRecipe.nameEn);
+    }
 
     // 自动记录解锁历史与个人档案
     const newCraftedIds = Array.from(new Set([...(profile.unlockedCraftingIds || []), matchedRecipe.id]));
@@ -565,19 +664,37 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     speakText(text, { lang: 'en-US' });
   };
 
-  // 过滤后的调色板物品
-  const filteredPalette = PALETTE_MATERIALS.filter(m => {
+  // 过滤后的调色板物品 (根据 benchMode 自动切换生词部件与MC材料)
+  const currentPaletteList = benchMode === 'nce_words' ? NCE_PALETTE_MATERIALS : MC_PALETTE_MATERIALS;
+
+  const filteredPalette = currentPaletteList.filter(m => {
     if (paletteCategory === 'all') return true;
     return m.category === paletteCategory;
   });
 
-  // 过滤后的配方本
+  // 过滤后的配方本 (支持新概念单词与MC装备分类筛选)
   const filteredRecipes = RECIPES.filter(r => {
+    if (recipeTypeFilter === 'nce_words' && r.recipeType !== 'nce_word') return false;
+    if (recipeTypeFilter === 'mc_gear' && r.recipeType === 'nce_word') return false;
+
     const matchCategory = recipeCategoryFilter === 'all' || r.category === recipeCategoryFilter;
     const matchQuery = recipeSearch.trim() === '' ||
       r.nameEn.toLowerCase().includes(recipeSearch.toLowerCase()) ||
       r.nameZh.includes(recipeSearch);
     return matchCategory && matchQuery;
+  });
+
+  // 配方手册弹窗内的配方筛选
+  const filteredHandbookRecipes = RECIPES.filter(r => {
+    if (handbookTab === 'nce_words' && r.recipeType !== 'nce_word') return false;
+    if (handbookTab === 'mc_gear' && r.recipeType === 'nce_word') return false;
+
+    const q = handbookSearch.trim().toLowerCase();
+    if (!q) return true;
+    const matchName = r.nameEn.toLowerCase().includes(q) || r.nameZh.includes(q);
+    const matchLesson = `第${r.requiredLessonId || 1}课`.includes(q) || `l${r.requiredLessonId || 1}` === q;
+    const matchIngredients = r.requiredIngredients.some(i => i.name.toLowerCase().includes(q));
+    return matchName || matchLesson || matchIngredients;
   });
 
   // ========== 句子工坊交互 ==========
@@ -637,16 +754,155 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     setCurrentSentenceIndex((prev) => (prev + 1) % dynamicSentencePatterns.length);
   };
 
+  // ========== 键盘拼写模式交互 (Spelling & Typing Handlers) ==========
+  const handleTypedWordChange = (index: number, value: string) => {
+    unlockMobileAudio();
+    const cleanVal = value.replace(/[^a-zA-Z0-9'-]/g, '');
+    const newInputs = [...typedWordInputs];
+    newInputs[index] = cleanVal;
+    setTypedWordInputs(newInputs);
+    setTypingCheckedState('idle');
+
+    // 智能步进：如果当前词拼写正确且不是最后一个词，自动跳到下一个输入槽
+    const targetWord = targetWords[index] || '';
+    if (cleanVal.toLowerCase() === targetWord.toLowerCase() && index < targetWords.length - 1) {
+      playClickSound();
+      setActiveTypingWordIndex(index + 1);
+    }
+  };
+
+  const handleWordKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (index < targetWords.length - 1) {
+        playClickSound();
+        setActiveTypingWordIndex(index + 1);
+      } else {
+        handleCheckTyping();
+      }
+    } else if (e.key === 'Backspace' && (typedWordInputs[index] === '' || !typedWordInputs[index]) && index > 0) {
+      setActiveTypingWordIndex(index - 1);
+    }
+  };
+
+  const handleVirtualKeyPress = (key: string) => {
+    playClickSound();
+    unlockMobileAudio();
+
+    if (typingModeType === 'slots') {
+      const curInput = typedWordInputs[activeTypingWordIndex] || '';
+      if (key === 'BACKSPACE') {
+        if (curInput.length > 0) {
+          handleTypedWordChange(activeTypingWordIndex, curInput.slice(0, -1));
+        } else if (activeTypingWordIndex > 0) {
+          setActiveTypingWordIndex(activeTypingWordIndex - 1);
+        }
+      } else if (key === 'SPACE' || key === 'NEXT') {
+        if (activeTypingWordIndex < targetWords.length - 1) {
+          setActiveTypingWordIndex(activeTypingWordIndex + 1);
+        } else {
+          handleCheckTyping();
+        }
+      } else if (key === 'CLEAR') {
+        const newInputs = [...typedWordInputs];
+        newInputs[activeTypingWordIndex] = '';
+        setTypedWordInputs(newInputs);
+      } else {
+        // 普通字母
+        handleTypedWordChange(activeTypingWordIndex, curInput + key.toLowerCase());
+      }
+    } else {
+      // 整句输入模式
+      if (key === 'BACKSPACE') {
+        setFullTypedSentence(prev => prev.slice(0, -1));
+      } else if (key === 'SPACE') {
+        setFullTypedSentence(prev => prev + ' ');
+      } else if (key === 'CLEAR') {
+        setFullTypedSentence('');
+      } else {
+        setFullTypedSentence(prev => prev + key);
+      }
+      setTypingCheckedState('idle');
+    }
+  };
+
+  const handleRevealWordHint = (index: number) => {
+    playClickSound();
+    unlockMobileAudio();
+    setRevealedHints(prev => ({ ...prev, [index]: true }));
+    const word = targetWords[index];
+    if (word) {
+      speakText(word, { lang: 'en-US' });
+    }
+  };
+
+  const handleCheckTyping = () => {
+    if (!currentSentencePattern) return;
+    unlockMobileAudio();
+
+    let isAllCorrect = false;
+    if (typingModeType === 'slots') {
+      const userWords = typedWordInputs.map(w => (w || '').trim().toLowerCase());
+      const targetCleanWords = targetWords.map(w => w.trim().toLowerCase());
+      isAllCorrect = userWords.length === targetCleanWords.length &&
+        userWords.every((w, i) => w === targetCleanWords[i]);
+    } else {
+      const cleanUser = fullTypedSentence.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cleanTarget = currentSentencePattern.targetSentence.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      isAllCorrect = cleanUser === cleanTarget;
+    }
+
+    if (isAllCorrect) {
+      setTypingCheckedState('correct');
+      playEmeraldSound();
+      playLevelUpSound();
+      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+      onAwardEmeralds(15, 35, '3x3句子工坊键盘拼写通关');
+      speakText(currentSentencePattern.targetSentence, { lang: 'en-US' });
+    } else {
+      setTypingCheckedState('wrong');
+      playBlockBreakSound();
+    }
+  };
+
+  const handleResetTyping = () => {
+    playBlockBreakSound();
+    setTypedWordInputs(new Array(targetWords.length).fill(''));
+    setActiveTypingWordIndex(0);
+    setFullTypedSentence('');
+    setRevealedHints({});
+    setTypingCheckedState('idle');
+  };
+
   // ========== 怪物擂台交互 ==========
   const currentBoss = bossList[activeBossIndex];
   const currentQuestion = currentBoss?.questions[currentQuestionIndex];
 
+  // 动态乱序选项，防止答案固定为 A
+  useEffect(() => {
+    if (currentQuestion && currentQuestion.options) {
+      const originalOptions = currentQuestion.options.map((opt, idx) => ({
+        text: opt,
+        isCorrect: idx === currentQuestion.correctIndex
+      }));
+      // 随机乱序 (Fisher-Yates)
+      const shuffled = [...originalOptions].sort(() => Math.random() - 0.5);
+      setShuffledOptions(shuffled);
+      setSelectedOption(null);
+      setBattleFeedback(null);
+    }
+  }, [activeBossIndex, currentQuestionIndex, bossList]);
+
   const handleAnswerBossQuestion = (optionIndex: number) => {
-    if (selectedOption !== null || !currentQuestion || isBossDefeated) return;
+    if (selectedOption !== null || !currentQuestion || isBossDefeated || !shuffledOptions[optionIndex]) return;
 
     unlockMobileAudio();
     setSelectedOption(optionIndex);
-    const isCorrect = optionIndex === currentQuestion.correctIndex;
+    const chosenOption = shuffledOptions[optionIndex];
+    const isCorrect = chosenOption.isCorrect;
+
+    const correctIndexInShuffled = shuffledOptions.findIndex(o => o.isCorrect);
+    const correctLetter = correctIndexInShuffled >= 0 ? String.fromCharCode(65 + correctIndexInShuffled) : 'A';
 
     if (isCorrect) {
       playEmeraldSound();
@@ -669,14 +925,14 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
         setIsBossDefeated(true);
         playLevelUpSound();
         confetti({ particleCount: 120, spread: 90, origin: { y: 0.5 } });
-        onAwardEmeralds(currentBoss.rewardEmeralds, currentBoss.rewardXp);
+        onAwardEmeralds(currentBoss.rewardEmeralds, currentBoss.rewardXp, `击败擂台怪物: ${currentBoss.name}`);
       }
     } else {
       playBlockBreakSound();
       setBattleFeedback({
         isCorrect: false,
         show: true,
-        msg: `🛡️ 格挡！怪物发起了反击！正确答案是选项 ${String.fromCharCode(65 + currentQuestion.correctIndex)}。${currentQuestion.explanation}`
+        msg: `🛡️ 格挡！怪物发起了反击！正确答案是选项 ${correctLetter} (${currentQuestion.options[currentQuestion.correctIndex]})。${currentQuestion.explanation}`
       });
     }
   };
@@ -775,355 +1031,782 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
 
       {/* ======================= 子板块 1: 3x3 物品合成台 ======================= */}
       {activeSubTab === 'bench' && (
-        <div id="subtab_bench_content" className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* 左侧：3x3 网格与操作台 */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-amber-400 font-bold text-base font-mono">
-                  <Layers className="w-5 h-5" />
-                  <span>3×3 原版合成网格 (Crafting Grid)</span>
-                </div>
+        <div id="subtab_bench_content" className="space-y-6">
+          {/* 模式选择与配方速查快捷栏 */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 shadow-md">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-slate-400 font-mono px-2 py-1 bg-slate-950 rounded-lg border border-slate-800">
+                合成模式:
+              </span>
+              <button
+                id="mode_nce_words_btn"
+                onClick={() => {
+                  playClickSound();
+                  setBenchMode('nce_words');
+                  setRecipeTypeFilter('nce_words');
+                  setPaletteCategory('all');
+                  if (selectedInspectRecipe?.recipeType !== 'nce_word') {
+                    setSelectedInspectRecipe(NCE_WORD_CRAFTING_RECIPES[0] || null);
+                  }
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  benchMode === 'nce_words'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 scale-105'
+                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                📘 新概念单词构词合成 ({NCE_WORD_CRAFTING_RECIPES.length})
+              </button>
+              <button
+                id="mode_mc_gear_btn"
+                onClick={() => {
+                  playClickSound();
+                  setBenchMode('mc_gear');
+                  setRecipeTypeFilter('mc_gear');
+                  setPaletteCategory('all');
+                  if (selectedInspectRecipe?.recipeType === 'nce_word') {
+                    setSelectedInspectRecipe(MC_EQUIPMENT_RECIPES[0] || null);
+                  }
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  benchMode === 'mc_gear'
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-900/40 scale-105'
+                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <Sword className="w-3.5 h-3.5" />
+                ⚔️ MC 原版装备合成 ({MC_EQUIPMENT_RECIPES.length})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                id="open_handbook_btn"
+                onClick={() => {
+                  playClickSound();
+                  setShowHandbookModal(true);
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                📖 确定的合成配方速查手册 ({RECIPES.length})
+              </button>
+            </div>
+          </div>
+
+          {/* 🔄 词汇库与配方库联动状态条 */}
+          <div className="p-3 bg-slate-900/80 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30 shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </span>
+              <div>
                 <div className="flex items-center gap-2">
-                  <button
-                    id="clear_bench_btn"
-                    onClick={handleClearGrid}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    清空网格
-                  </button>
+                  <span className="font-bold text-white">配方宝典与词汇库实时打通：</span>
+                  <span className="text-emerald-400 font-mono font-bold">
+                    词汇库已掌握 {masteredNceRecipesCount}/40 词
+                  </span>
+                  <span className="text-slate-500">|</span>
+                  <span className="text-amber-400 font-mono font-bold">
+                    工作台已合成 {craftedNceRecipesCount}/40 词
+                  </span>
+                </div>
+                <p className="text-slate-400 text-[11px] mt-0.5">
+                  配方宝典收录新概念全册支持「3×3 复合构词拆解」的核心生词，合成成功自动同步点亮词汇库掌握勋章！
+                </p>
+              </div>
+            </div>
+            {onNavigateToVocab && (
+              <button
+                onClick={() => {
+                  playClickSound();
+                  onNavigateToVocab();
+                }}
+                className="shrink-0 px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 border border-emerald-500/40 rounded-xl font-bold text-xs flex items-center gap-1 transition-all"
+              >
+                <span>查阅全量词汇库 (900+词)</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 💡 3步新手合成向导 (帮助用户彻底搞懂怎么合成) */}
+          {showGuideBanner && (
+            <div className="p-4 bg-gradient-to-r from-amber-950/40 via-slate-900 to-emerald-950/40 border border-amber-500/30 rounded-2xl relative shadow-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+                  <Lightbulb className="w-4 h-4 text-amber-400" />
+                  <span>💡 3 步教你怎么合成？（每个单词均有 100% 确定的合成配方公式！）</span>
+                </div>
+                <button
+                  onClick={() => setShowGuideBanner(false)}
+                  className="text-slate-500 hover:text-slate-300 text-xs p-1"
+                  title="暂时隐藏"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[11px] shrink-0">
+                    1
+                  </span>
+                  <div>
+                    <p className="font-bold text-slate-200">第一步：选择目标生词或装备</p>
+                    <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                      在右侧【配方宝典库】中点击你想合成的单词（如 <span className="text-amber-300 font-mono">handbag</span> 手提包）。
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-[11px] shrink-0">
+                    2
+                  </span>
+                  <div>
+                    <p className="font-bold text-slate-200">第二步：参照【虚影】放入材料</p>
+                    <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                      工作台内会显示<span className="text-emerald-300 font-bold">虚影辅助线</span>，从下方点击材料填入，或直接点【⚡ 一键装填】！
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800/80 flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[11px] shrink-0">
+                    3
+                  </span>
+                  <div>
+                    <p className="font-bold text-slate-200">第三步：产物点亮，立即合成！</p>
+                    <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
+                      材料齐全后产物格即刻点亮，点击【立即合成并收录】，纯正音标朗读并获得 <span className="text-emerald-400 font-bold">+8 绿宝石</span>！
+                    </p>
+                  </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* 3x3 与合成输出区 */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-6 bg-slate-950/60 rounded-xl border border-slate-800/80 p-4">
-                {/* 3x3 网格 */}
-                <div className="grid grid-cols-3 gap-2.5 p-3 bg-stone-900 rounded-xl border-4 border-stone-700 shadow-inner">
-                  {gridSlots.map((slot, index) => (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* 左侧：3x3 网格与操作台 */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold text-base font-mono">
+                    <Layers className="w-5 h-5" />
+                    <span>3×3 原版合成网格 (Crafting Grid)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedInspectRecipe && (
+                      <button
+                        id="grid_quick_fill_btn"
+                        onClick={() => handleQuickFillRecipe(selectedInspectRecipe)}
+                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-amber-500/30"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-400" />
+                        一键装填当前配方
+                      </button>
+                    )}
                     <button
-                      key={`slot_${index}`}
-                      id={`grid_slot_${index}`}
-                      onClick={() => handleGridSlotClick(index)}
-                      className={`w-16 h-16 sm:w-18 sm:h-18 rounded-lg flex items-center justify-center text-3xl font-bold transition-all relative select-none ${
-                        selectedSlotIndex === index
-                          ? 'bg-stone-800 ring-2 ring-amber-400 shadow-lg scale-105 z-10'
-                          : slot
-                          ? 'bg-stone-800 hover:bg-stone-700'
-                          : 'bg-stone-950/80 hover:bg-stone-900 border border-stone-800'
+                      id="clear_bench_btn"
+                      onClick={handleClearGrid}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      清空网格
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3x3 与合成输出区 */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-6 bg-slate-950/60 rounded-xl border border-slate-800/80 p-4">
+                  {/* 3x3 网格 */}
+                  <div className="grid grid-cols-3 gap-2.5 p-3 bg-stone-900 rounded-xl border-4 border-stone-700 shadow-inner">
+                    {gridSlots.map((slot, index) => {
+                      const ghostItem = selectedInspectRecipe?.gridPattern[index];
+                      const isSlotActive = selectedSlotIndex === index;
+
+                      return (
+                        <button
+                          key={`slot_${index}`}
+                          id={`grid_slot_${index}`}
+                          onClick={() => handleGridSlotClick(index)}
+                          className={`w-18 h-18 sm:w-20 sm:h-20 rounded-lg flex items-center justify-center transition-all relative select-none ${
+                            isSlotActive
+                              ? 'bg-stone-800 ring-2 ring-amber-400 shadow-lg scale-105 z-10'
+                              : slot
+                              ? 'bg-stone-800 hover:bg-stone-700'
+                              : 'bg-stone-950/80 hover:bg-stone-900 border border-stone-800'
+                          }`}
+                        >
+                          {slot ? (
+                            NCE_WORD_PARTS_MAP[slot] ? (
+                              <div className="flex flex-col items-center justify-center p-1 leading-none select-none text-center">
+                                <span className="text-xl sm:text-2xl mb-1">{NCE_WORD_PARTS_MAP[slot].icon}</span>
+                                <span className="text-xs sm:text-sm font-black font-mono text-amber-300 tracking-tight">{slot}</span>
+                                <span className="text-[10px] text-slate-300 font-sans mt-0.5">{NCE_WORD_PARTS_MAP[slot].zh}</span>
+                              </div>
+                            ) : (
+                              <span className="text-3xl transform hover:scale-110 transition-transform">{slot}</span>
+                            )
+                          ) : ghostItem ? (
+                            /* 虚影引导线 (告诉用户该槽位应该填入什么材料) */
+                            <div className="flex flex-col items-center justify-center p-1 text-center opacity-70 hover:opacity-100 transition-opacity">
+                              {NCE_WORD_PARTS_MAP[ghostItem] ? (
+                                <>
+                                  <span className="text-xs font-mono font-bold border border-dashed border-amber-500/60 px-1 py-0.5 rounded text-amber-300 bg-amber-950/40">
+                                    {ghostItem}
+                                  </span>
+                                  <span className="text-[9px] text-amber-400/90 mt-0.5 font-sans">
+                                    {NCE_WORD_PARTS_MAP[ghostItem].zh}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-2xl opacity-40 filter grayscale">{ghostItem}</span>
+                              )}
+                              <span className="text-[8px] text-slate-500 mt-0.5 font-mono">虚影引导</span>
+                            </div>
+                          ) : (
+                            <span className="text-stone-700 text-xs font-mono select-none">{index + 1}</span>
+                          )}
+
+                          {isSlotActive && (
+                            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-400 rounded-full border-2 border-stone-900" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 箭头指示 */}
+                  <div className="flex flex-col items-center justify-center text-slate-500">
+                    <ArrowRight className="w-8 h-8 hidden sm:block text-amber-500 animate-pulse" />
+                    <span className="text-xs font-mono font-bold mt-1 text-slate-400">CRAFT</span>
+                  </div>
+
+                  {/* 合成输出口 */}
+                  <div className="flex flex-col items-center gap-3">
+                    <div
+                      id="craft_output_slot"
+                      className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-4 transition-all relative ${
+                        matchedRecipe
+                          ? 'bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border-amber-400 shadow-lg shadow-amber-500/20 scale-105 animate-bounce-subtle'
+                          : 'bg-slate-950 border-slate-800 text-slate-600'
                       }`}
                     >
-                      {slot ? (
-                        <span className="transform hover:scale-110 transition-transform">{slot}</span>
+                      {matchedRecipe ? (
+                        <div className="flex flex-col items-center text-center px-1">
+                          <span className="text-3xl">{matchedRecipe.mcIcon}</span>
+                          <span className="text-[11px] font-black text-amber-300 mt-1 max-w-[84px] truncate">
+                            {matchedRecipe.nameEn}
+                          </span>
+                          <span className="text-[9px] text-slate-300 max-w-[84px] truncate">
+                            {matchedRecipe.nameZh}
+                          </span>
+                        </div>
                       ) : (
-                        <span className="text-stone-700 text-xs font-mono select-none">{index + 1}</span>
+                        <div className="text-center text-slate-600 text-xs font-mono">
+                          <span>EMPTY</span>
+                        </div>
                       )}
-                      {selectedSlotIndex === index && (
-                        <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-400 rounded-full border-2 border-stone-900" />
-                      )}
+                    </div>
+
+                    <button
+                      id="execute_craft_btn"
+                      disabled={!matchedRecipe}
+                      onClick={handleCraftItem}
+                      className={`w-full px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+                        matchedRecipe
+                          ? 'bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white cursor-pointer hover:scale-105 active:scale-95 shadow-emerald-900/40'
+                          : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                      }`}
+                    >
+                      <Hammer className="w-4 h-4" />
+                      {matchedRecipe ? '立即合成并收录 (+8 💎)' : '等待摆齐配方材料'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 当前配方确定公式提示栏 */}
+                {selectedInspectRecipe && (
+                  <div className="mt-4 p-3 bg-slate-950/90 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-amber-400 flex items-center gap-1 font-mono">
+                        <Check className="w-3.5 h-3.5" />
+                        当前目标配方公式:
+                      </span>
+                      <div className="flex items-center gap-1 font-mono">
+                        {selectedInspectRecipe.requiredIngredients.map((ing, idx) => (
+                          <React.Fragment key={idx}>
+                            <span className="px-2 py-0.5 bg-slate-900 text-slate-200 rounded border border-slate-700">
+                              {ing.icon} {ing.name}
+                            </span>
+                            {idx < selectedInspectRecipe.requiredIngredients.length - 1 && (
+                              <span className="text-slate-500 font-bold">+</span>
+                            )}
+                          </React.Fragment>
+                        ))}
+                        <span className="text-amber-400 font-bold">➔</span>
+                        <span className="px-2 py-0.5 bg-amber-950/40 text-amber-300 font-bold rounded border border-amber-500/40">
+                          {selectedInspectRecipe.mcIcon} {selectedInspectRecipe.nameEn} ({selectedInspectRecipe.nameZh})
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleQuickFillRecipe(selectedInspectRecipe)}
+                      className="text-amber-400 hover:text-amber-300 font-bold text-xs flex items-center gap-1 self-end sm:self-auto underline decoration-dotted"
+                    >
+                      <Zap className="w-3 h-3" />
+                      填入网格
+                    </button>
+                  </div>
+                )}
+
+                {/* 成功合成特效 */}
+                {craftSuccessEffect && matchedRecipe && (
+                  <div className="mt-4 p-3 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-between animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      <span>✨ 合成成功！获得 {matchedRecipe.nameEn} · {matchedRecipe.nameZh}！(+8 绿宝石, +20 经验)</span>
+                    </div>
+                    <button
+                      onClick={() => handlePlayVoice(matchedRecipe.nameEn)}
+                      className="p-1 hover:bg-emerald-500/30 rounded-lg text-emerald-200"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 下方：材料选择调色板 */}
+              <div id="materials_palette_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
+                    <Sparkle className="w-4 h-4 text-amber-400" />
+                    <span>
+                      材料调色板 ({benchMode === 'nce_words' ? '新概念英语构词部件库' : 'Minecraft 原版材料库'})
+                    </span>
+                  </div>
+                  {/* 分类过滤器 */}
+                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs flex-wrap">
+                    {benchMode === 'nce_words' ? (
+                      <>
+                        <button
+                          onClick={() => setPaletteCategory('all')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'all' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          全部部件 ({NCE_PALETTE_MATERIALS.length})
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('items')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'items' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          日常服饰
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('places')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'places' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          场所建筑
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('people')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'people' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          身份人物
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('health')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'health' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          健康饮食
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('time')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'time' ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          时间方位
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setPaletteCategory('all')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'all' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          全部材料
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('wood_stone')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'wood_stone' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          木石
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('minerals')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'minerals' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          矿物
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('mobs')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'mobs' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          掉落物
+                        </button>
+                        <button
+                          onClick={() => setPaletteCategory('food_farm')}
+                          className={`px-2.5 py-1 rounded-md transition-colors ${
+                            paletteCategory === 'food_farm' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          食材
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-7 gap-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                  {filteredPalette.map((mat) => (
+                    <button
+                      key={mat.id}
+                      id={`palette_item_${mat.id}`}
+                      onClick={() => handleSelectPaletteItem(mat)}
+                      className="p-2.5 bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 rounded-xl flex flex-col items-center gap-1 transition-all group active:scale-95 text-center"
+                      title={`${mat.nameEn} (${mat.name})`}
+                    >
+                      <span className="text-2xl group-hover:scale-125 transition-transform">{mat.icon}</span>
+                      <span className="text-[11px] font-bold text-slate-200 max-w-[70px] truncate font-mono">{mat.nameEn}</span>
+                      <span className="text-[10px] text-slate-400 max-w-[70px] truncate">{mat.name}</span>
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
 
-                {/* 箭头指示 */}
-                <div className="flex flex-col items-center justify-center text-slate-500">
-                  <ArrowRight className="w-8 h-8 hidden sm:block text-amber-500 animate-pulse" />
-                  <span className="text-xs font-mono font-bold mt-1 text-slate-400">CRAFT</span>
-                </div>
-
-                {/* 合成输出口 */}
-                <div className="flex flex-col items-center gap-3">
-                  <div
-                    id="craft_output_slot"
-                    className={`w-24 h-24 rounded-2xl flex flex-col items-center justify-center border-4 transition-all relative ${
-                      matchedRecipe
-                        ? 'bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border-amber-400 shadow-lg shadow-amber-500/20 scale-105 animate-bounce-subtle'
-                        : 'bg-slate-950 border-slate-800 text-slate-600'
-                    }`}
-                  >
-                    {matchedRecipe ? (
-                      <div className="flex flex-col items-center">
-                        <span className="text-4xl">{matchedRecipe.mcIcon}</span>
-                        <span className="text-[10px] font-bold text-amber-300 mt-1 max-w-[80px] truncate text-center">
-                          {matchedRecipe.nameEn}
-                        </span>
+            {/* 右侧：深度认知词卡与配方图鉴 */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* 深度词汇与构词法解析卡片 */}
+              {selectedInspectRecipe && (
+                <div id="recipe_inspect_card" className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl p-6 border border-amber-500/30 shadow-xl relative overflow-hidden">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-4xl p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
+                        {selectedInspectRecipe.mcIcon}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-xl font-bold text-white font-mono">{selectedInspectRecipe.nameEn}</h2>
+                          <button
+                            id="play_inspect_voice_btn"
+                            onClick={() => handlePlayVoice(selectedInspectRecipe.nameEn)}
+                            className="p-1.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 rounded-lg transition-colors"
+                            title="听发音"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <p className="text-sm font-medium text-amber-400 font-mono mt-0.5">{selectedInspectRecipe.phonetic}</p>
+                        <p className="text-xs text-slate-300 mt-0.5">{selectedInspectRecipe.nameZh}</p>
                       </div>
-                    ) : (
-                      <div className="text-center text-slate-600 text-xs font-mono">
-                        <span>EMPTY</span>
+                    </div>
+
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] px-2.5 py-1 bg-emerald-500/20 text-emerald-300 rounded-full border border-emerald-500/30 font-bold font-mono">
+                        {selectedInspectRecipe.recipeType === 'nce_word'
+                          ? `新概念第 ${selectedInspectRecipe.requiredLessonId || 1} 课核心词`
+                          : `MC原版装备 · L${selectedInspectRecipe.requiredLessonId || 1}`}
+                      </span>
+                      {selectedInspectRecipe.recipeType === 'nce_word' && onMasterWord && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          {(() => {
+                            const isMasteredInVocab = (profile.masteredWords || []).some(
+                              w => w.toLowerCase() === selectedInspectRecipe.nameEn.toLowerCase()
+                            );
+                            return (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    playClickSound();
+                                    onMasterWord(selectedInspectRecipe.nameEn);
+                                  }}
+                                  className={`text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 border transition-all ${
+                                    isMasteredInVocab
+                                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 hover:bg-emerald-900/60'
+                                      : 'bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold border-amber-400 shadow'
+                                  }`}
+                                  title="标记已掌握并同步收录至核心词汇宝库"
+                                >
+                                  <Star className={`w-3 h-3 ${isMasteredInVocab ? 'text-emerald-400 fill-emerald-400' : 'text-stone-950'}`} />
+                                  {isMasteredInVocab ? '词库已掌握 ✔️' : '收录至词汇库'}
+                                </button>
+                                {onNavigateToVocab && (
+                                  <button
+                                    onClick={() => {
+                                      playClickSound();
+                                      onNavigateToVocab();
+                                    }}
+                                    className="text-[11px] px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg flex items-center gap-1 border border-slate-700 transition-colors"
+                                    title="前往核心词汇宝库查看全量单词与练习口语"
+                                  >
+                                    <BookOpen className="w-3 h-3 text-cyan-400" />
+                                    <span>去词库</span>
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 确定的合成公式展示 */}
+                  <div className="p-3 bg-slate-950/90 rounded-xl border border-slate-800 mb-3">
+                    <span className="text-[11px] text-amber-400 font-bold block mb-1 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      确定的合成配方公式:
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap font-mono text-xs">
+                      {selectedInspectRecipe.requiredIngredients.map((ing, idx) => (
+                        <React.Fragment key={idx}>
+                          <span className="px-2 py-0.5 bg-slate-900 border border-slate-700 text-slate-200 rounded flex items-center gap-1">
+                            <span>{ing.icon}</span>
+                            <span>{ing.name}</span>
+                          </span>
+                          {idx < selectedInspectRecipe.requiredIngredients.length - 1 && (
+                            <span className="text-slate-500 font-bold">+</span>
+                          )}
+                        </React.Fragment>
+                      ))}
+                      <span className="text-amber-400 font-bold">➔</span>
+                      <span className="px-2 py-0.5 bg-amber-950/40 border border-amber-500/40 text-amber-300 font-bold rounded">
+                        {selectedInspectRecipe.mcIcon} {selectedInspectRecipe.nameEn} ({selectedInspectRecipe.nameZh})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 构词法与语法解析 */}
+                  <div className="space-y-3 pt-2 border-t border-slate-800 text-xs">
+                    {selectedInspectRecipe.wordBreakdown && (
+                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80">
+                        <span className="font-bold text-amber-400 block mb-1 flex items-center gap-1">
+                          <BookOpen className="w-3.5 h-3.5" />
+                          构词法拆解与词根记忆
+                        </span>
+                        <p className="text-slate-300 leading-relaxed font-sans">
+                          {selectedInspectRecipe.wordBreakdown}
+                        </p>
                       </div>
                     )}
+
+                    {selectedInspectRecipe.grammarTip && (
+                      <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80">
+                        <span className="font-bold text-emerald-400 block mb-1 flex items-center gap-1">
+                          <Info className="w-3.5 h-3.5" />
+                          语法搭配与实用句型
+                        </span>
+                        <p className="text-slate-300 leading-relaxed font-sans">
+                          {selectedInspectRecipe.grammarTip}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-amber-300">游戏实战例句</span>
+                        <button
+                          onClick={() => handlePlayVoice(selectedInspectRecipe.sampleSentence)}
+                          className="text-amber-400 hover:text-amber-300 flex items-center gap-1 text-[10px]"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                          朗读例句
+                        </button>
+                      </div>
+                      <p className="text-slate-200 font-mono italic">{selectedInspectRecipe.sampleSentence}</p>
+                      <p className="text-slate-400 mt-1">{selectedInspectRecipe.sampleTranslation}</p>
+                    </div>
                   </div>
 
+                  {/* 一键装填到 3x3 */}
                   <button
-                    id="execute_craft_btn"
-                    disabled={!matchedRecipe}
-                    onClick={handleCraftItem}
-                    className={`w-full px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
-                      matchedRecipe
-                        ? 'bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white cursor-pointer hover:scale-105 active:scale-95 shadow-emerald-900/40'
-                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                    }`}
+                    id="quick_fill_bench_btn"
+                    onClick={() => handleQuickFillRecipe(selectedInspectRecipe)}
+                    className="w-full mt-4 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
                   >
-                    <Hammer className="w-4 h-4" />
-                    {matchedRecipe ? '合成并收录 (+8 💎)' : '放入有效配方'}
-                  </button>
-                </div>
-              </div>
-
-              {/* 成功合成特效 */}
-              {craftSuccessEffect && matchedRecipe && (
-                <div className="mt-4 p-3 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center justify-between animate-fade-in">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>✨ 合成成功！获得 {matchedRecipe.nameEn} · {matchedRecipe.nameZh}！(+8 绿宝石, +20 经验)</span>
-                  </div>
-                  <button
-                    onClick={() => handlePlayVoice(matchedRecipe.nameEn)}
-                    className="p-1 hover:bg-emerald-500/30 rounded-lg text-emerald-200"
-                  >
-                    <Volume2 className="w-4 h-4" />
+                    <Zap className="w-4 h-4" />
+                    ⚡ 一键将本配方材料填入 3×3 工作台
                   </button>
                 </div>
               )}
-            </div>
 
-            {/* 下方：材料选择调色板 */}
-            <div id="materials_palette_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
-                  <Sparkle className="w-4 h-4 text-amber-400" />
-                  <span>材料调色板 (点击物品自动装填入选中网格)</span>
+              {/* 配方图鉴库 */}
+              <div id="recipe_book_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg space-y-4">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
+                    <BookOpen className="w-4 h-4 text-emerald-400" />
+                    <span>配方宝典库 ({filteredRecipes.length})</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="搜索配方/单词..."
+                    value={recipeSearch}
+                    onChange={(e) => setRecipeSearch(e.target.value)}
+                    className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-32 sm:w-40"
+                  />
                 </div>
-                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+
+                {/* 筛选标签 */}
+                <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
                   <button
-                    onClick={() => setPaletteCategory('all')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      paletteCategory === 'all' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    onClick={() => setRecipeTypeFilter('nce_words')}
+                    className={`flex-1 py-1 rounded-md transition-colors font-bold ${
+                      recipeTypeFilter === 'nce_words' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    📘 新概念生词 ({NCE_WORD_CRAFTING_RECIPES.length})
+                  </button>
+                  <button
+                    onClick={() => setRecipeTypeFilter('mc_gear')}
+                    className={`flex-1 py-1 rounded-md transition-colors font-bold ${
+                      recipeTypeFilter === 'mc_gear' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    ⚔️ MC装备 ({MC_EQUIPMENT_RECIPES.length})
+                  </button>
+                  <button
+                    onClick={() => setRecipeTypeFilter('all')}
+                    className={`px-3 py-1 rounded-md transition-colors font-bold ${
+                      recipeTypeFilter === 'all' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     全部
                   </button>
-                  <button
-                    onClick={() => setPaletteCategory('wood_stone')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      paletteCategory === 'wood_stone' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    木石
-                  </button>
-                  <button
-                    onClick={() => setPaletteCategory('minerals')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      paletteCategory === 'minerals' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    矿物
-                  </button>
-                  <button
-                    onClick={() => setPaletteCategory('mobs')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      paletteCategory === 'mobs' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    掉落物
-                  </button>
-                  <button
-                    onClick={() => setPaletteCategory('food_farm')}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      paletteCategory === 'food_farm' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    食材
-                  </button>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2.5">
-                {filteredPalette.map((mat) => (
-                  <button
-                    key={mat.id}
-                    id={`palette_item_${mat.id}`}
-                    onClick={() => handleSelectPaletteItem(mat)}
-                    className="p-2.5 bg-slate-950/70 hover:bg-slate-800/80 border border-slate-800 hover:border-amber-500/50 rounded-xl flex flex-col items-center gap-1 transition-all group active:scale-95 text-center"
-                    title={`${mat.nameEn} (${mat.name})`}
-                  >
-                    <span className="text-2xl group-hover:scale-125 transition-transform">{mat.icon}</span>
-                    <span className="text-[11px] font-medium text-slate-300 max-w-[70px] truncate">{mat.name}</span>
-                    <span className="text-[9px] text-slate-500 font-mono max-w-[70px] truncate">{mat.nameEn}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 右侧：深度认知词卡与配方图鉴 */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* 深度词汇与构词法解析卡片 */}
-            {selectedInspectRecipe && (
-              <div id="recipe_inspect_card" className="bg-gradient-to-br from-slate-900 to-slate-950 rounded-2xl p-6 border border-amber-500/30 shadow-xl relative overflow-hidden">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-4xl p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                      {selectedInspectRecipe.mcIcon}
+                {recipeTypeFilter === 'nce_words' && (
+                  <div className="flex items-center justify-between text-[11px] bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      词库同步: 已掌握 <strong className="text-emerald-300 font-mono font-bold">{masteredNceRecipesCount}</strong> / 40
                     </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-white font-mono">{selectedInspectRecipe.nameEn}</h2>
-                        <button
-                          id="play_inspect_voice_btn"
-                          onClick={() => handlePlayVoice(selectedInspectRecipe.nameEn)}
-                          className="p-1.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 rounded-lg transition-colors"
-                          title="听发音"
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <p className="text-sm font-medium text-amber-400 font-mono mt-0.5">{selectedInspectRecipe.phonetic}</p>
-                      <p className="text-xs text-slate-300 mt-0.5">{selectedInspectRecipe.nameZh}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end">
-                    <span className="text-[10px] px-2.5 py-1 bg-amber-500/10 text-amber-300 rounded-full border border-amber-500/30 font-medium">
-                      第 {selectedInspectRecipe.requiredLessonId || 1} 课协同
-                    </span>
-                    {onMasterWord && (
+                    {onNavigateToVocab && (
                       <button
                         onClick={() => {
                           playClickSound();
-                          onMasterWord(selectedInspectRecipe.nameEn);
+                          onNavigateToVocab();
                         }}
-                        className="mt-2 text-[11px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg flex items-center gap-1 border border-slate-700 transition-colors"
+                        className="text-amber-400 hover:text-amber-300 flex items-center gap-0.5 font-bold transition-colors"
                       >
-                        <Star className="w-3 h-3 text-amber-400" />
-                        收录进宝典
+                        <span>全量词库 (900+)</span>
+                        <ChevronRight className="w-3 h-3" />
                       </button>
                     )}
                   </div>
-                </div>
+                )}
 
-                {/* 构词法与语法解析 */}
-                <div className="space-y-3 pt-3 border-t border-slate-800 text-xs">
-                  {selectedInspectRecipe.wordBreakdown && (
-                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80">
-                      <span className="font-bold text-amber-400 block mb-1 flex items-center gap-1">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        构词法拆解与词根记忆
-                      </span>
-                      <p className="text-slate-300 leading-relaxed font-sans">
-                        {selectedInspectRecipe.wordBreakdown}
-                      </p>
-                    </div>
-                  )}
+                <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {filteredRecipes.map((recipe) => {
+                    const unlocked = isRecipeUnlocked(recipe);
+                    const paywalled = isRecipePaywall(recipe);
+                    const isCrafted = (profile.unlockedCraftingIds || []).includes(recipe.id);
+                    const isNce = recipe.recipeType === 'nce_word';
+                    const isMasteredInVocab = isNce && (profile.masteredWords || []).some(
+                      w => w.toLowerCase() === recipe.nameEn.toLowerCase()
+                    );
 
-                  {selectedInspectRecipe.grammarTip && (
-                    <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80">
-                      <span className="font-bold text-emerald-400 block mb-1 flex items-center gap-1">
-                        <Info className="w-3.5 h-3.5" />
-                        语法搭配与实用句型
-                      </span>
-                      <p className="text-slate-300 leading-relaxed font-sans">
-                        {selectedInspectRecipe.grammarTip}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-amber-300">游戏实战例句</span>
-                      <button
-                        onClick={() => handlePlayVoice(selectedInspectRecipe.sampleSentence)}
-                        className="text-amber-400 hover:text-amber-300 flex items-center gap-1 text-[10px]"
+                    return (
+                      <div
+                        key={recipe.id}
+                        onClick={() => {
+                          playClickSound();
+                          setSelectedInspectRecipe(recipe);
+                          if (isNce && benchMode !== 'nce_words') {
+                            setBenchMode('nce_words');
+                          } else if (!isNce && benchMode !== 'mc_gear') {
+                            setBenchMode('mc_gear');
+                          }
+                        }}
+                        className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                          selectedInspectRecipe?.id === recipe.id
+                            ? 'bg-amber-950/40 border-amber-500/60 shadow-md'
+                            : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/50'
+                        }`}
                       >
-                        <Volume2 className="w-3 h-3" />
-                        朗读例句
-                      </button>
-                    </div>
-                    <p className="text-slate-200 font-mono italic">{selectedInspectRecipe.sampleSentence}</p>
-                    <p className="text-slate-400 mt-1">{selectedInspectRecipe.sampleTranslation}</p>
-                  </div>
-                </div>
-
-                {/* 一键装填到 3x3 */}
-                <button
-                  id="quick_fill_bench_btn"
-                  onClick={() => handleQuickFillRecipe(selectedInspectRecipe)}
-                  className="w-full mt-4 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-colors"
-                >
-                  <Hammer className="w-3.5 h-3.5" />
-                  一键将本配方材料填入 3×3 工作台
-                </button>
-              </div>
-            )}
-
-            {/* 配方图鉴库 */}
-            <div id="recipe_book_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
-                  <BookOpen className="w-4 h-4 text-emerald-400" />
-                  <span>配方宝典库 ({filteredRecipes.length})</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="搜索配方/单词..."
-                  value={recipeSearch}
-                  onChange={(e) => setRecipeSearch(e.target.value)}
-                  className="px-3 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-32 sm:w-40"
-                />
-              </div>
-
-              <div className="max-h-72 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {filteredRecipes.map((recipe) => {
-                  const unlocked = isRecipeUnlocked(recipe);
-                  const paywalled = isRecipePaywall(recipe);
-                  const isCrafted = (profile.unlockedCraftingIds || []).includes(recipe.id);
-
-                  return (
-                    <div
-                      key={recipe.id}
-                      onClick={() => {
-                        playClickSound();
-                        setSelectedInspectRecipe(recipe);
-                      }}
-                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                        selectedInspectRecipe?.id === recipe.id
-                          ? 'bg-amber-950/40 border-amber-500/60 shadow-md'
-                          : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{recipe.mcIcon}</span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-white font-mono">{recipe.nameEn}</span>
-                            {isCrafted && (
-                              <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded border border-emerald-500/30">
-                                已合成
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{recipe.mcIcon}</span>
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-sm text-white font-mono">{recipe.nameEn}</span>
+                              {isCrafted && (
+                                <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded border border-emerald-500/30">
+                                  已合成
+                                </span>
+                              )}
+                              {isNce && (
+                                <span
+                                  className={`text-[9px] px-1.5 py-0.2 rounded font-mono ${
+                                    isMasteredInVocab
+                                      ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                                      : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                  }`}
+                                  title={isMasteredInVocab ? '已在词汇宝库标记为已掌握' : '尚未在词汇宝库掌握'}
+                                >
+                                  {isMasteredInVocab ? '🌟 词库已掌握' : '📖 待掌握'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-xs text-slate-400">{recipe.nameZh}</p>
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                ({recipe.requiredIngredients.map(i => i.name.split(' ')[0]).join('+')})
                               </span>
-                            )}
+                            </div>
                           </div>
-                          <p className="text-xs text-slate-400">{recipe.nameZh}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {isNce ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                              L{recipe.requiredLessonId || 1}
+                            </span>
+                          ) : unlocked ? (
+                            <span className="text-xs text-slate-400 font-mono font-medium">MC</span>
+                          ) : paywalled ? (
+                            <span className="text-xs text-amber-400 flex items-center gap-1 font-mono">
+                              <Crown className="w-3 h-3" /> VIP
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
+                              <Lock className="w-3 h-3" /> L{recipe.requiredLessonId}
+                            </span>
+                          )}
+                          <ChevronRight className="w-4 h-4 text-slate-600" />
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        {unlocked ? (
-                          <span className="text-xs text-emerald-400 font-mono font-medium">L{recipe.requiredLessonId || 1}</span>
-                        ) : paywalled ? (
-                          <span className="text-xs text-amber-400 flex items-center gap-1 font-mono">
-                            <Crown className="w-3 h-3" /> VIP
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
-                            <Lock className="w-3 h-3" /> L{recipe.requiredLessonId}
-                          </span>
-                        )}
-                        <ChevronRight className="w-4 h-4 text-slate-600" />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -1134,34 +1817,71 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
       {activeSubTab === 'sentences' && (
         <div id="subtab_sentences_content" className="space-y-6">
           <div className="bg-slate-900/90 rounded-2xl p-6 border border-slate-800 shadow-xl space-y-6">
-            {/* 顶部标题与进度 */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            {/* 顶部标题与模式切换 */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-mono font-bold">
                     {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length]?.title || '第 1 课'}
                   </span>
-                  <h2 className="text-lg font-bold text-white font-mono">
-                    3×3 语法拼装机 · 组句实训
+                  <h2 className="text-lg font-bold text-white font-mono flex items-center gap-2">
+                    <span>3×3 语法拼装机 · 句子工坊</span>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      句法 & 拼写训练
+                    </span>
                   </h2>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  将下方的句法积木拖入或点击放入网格，构建符合英语句法规则的完整句子！
+                  支持积木语序组装与键盘拼写双模式，全方位锻炼语感与单词拼写能力！
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-mono">
-                  {((currentSentenceIndex % dynamicSentencePatterns.length) + 1)} / {dynamicSentencePatterns.length}
-                </span>
-                <button
-                  id="sentence_next_btn"
-                  onClick={handleNextSentence}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-700 transition-colors"
-                >
-                  换一题
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+              {/* 模式选择 Pill Bar 与换题 */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      setSentencePracticeMode('blocks');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono flex items-center gap-1.5 transition-all ${
+                      sentencePracticeMode === 'blocks'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>🧩 积木拼装</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      setSentencePracticeMode('typing');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono flex items-center gap-1.5 transition-all ${
+                      sentencePracticeMode === 'typing'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md font-black'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Keyboard className="w-3.5 h-3.5" />
+                    <span>⌨️ 键盘拼写</span>
+                    <span className="text-[9px] bg-amber-400/30 px-1 rounded">拼写</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400 font-mono">
+                    {((currentSentenceIndex % dynamicSentencePatterns.length) + 1)} / {dynamicSentencePatterns.length}
+                  </span>
+                  <button
+                    id="sentence_next_btn"
+                    onClick={handleNextSentence}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-700 transition-colors"
+                  >
+                    换一题
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1190,117 +1910,408 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
               </div>
             )}
 
-            {/* 用户句子装配槽区 */}
-            <div className="p-6 bg-stone-900/90 rounded-2xl border-2 border-dashed border-stone-700 min-h-[120px] flex flex-wrap items-center justify-center gap-3 relative">
-              {userSentenceSlots.length === 0 ? (
-                <div className="text-center text-stone-500 text-sm font-medium">
-                  点击下方词块按正确语序放入这里...
+            {/* ---------------- 模式 A: 积木拼装模式 (Block Crafting) ---------------- */}
+            {sentencePracticeMode === 'blocks' && (
+              <div className="space-y-6">
+                {/* 用户句子装配槽区 */}
+                <div className="p-6 bg-stone-900/90 rounded-2xl border-2 border-dashed border-stone-700 min-h-[120px] flex flex-wrap items-center justify-center gap-3 relative">
+                  {userSentenceSlots.length === 0 ? (
+                    <div className="text-center text-stone-500 text-sm font-medium">
+                      点击下方词块按正确语序放入这里...
+                    </div>
+                  ) : (
+                    userSentenceSlots.map((slot, idx) => (
+                      <button
+                        key={`slot_${idx}`}
+                        onClick={() => handleRemoveSentenceSlot(idx)}
+                        className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-xl font-bold font-mono text-sm shadow-md hover:bg-amber-800 transition-all flex items-center gap-2 group active:scale-95"
+                        title="点击取回"
+                      >
+                        <span>{slot.text}</span>
+                        <span className="text-xs text-amber-200/60 group-hover:text-amber-100">✕</span>
+                      </button>
+                    ))
+                  )}
                 </div>
-              ) : (
-                userSentenceSlots.map((slot, idx) => (
-                  <button
-                    key={`slot_${idx}`}
-                    onClick={() => handleRemoveSentenceSlot(idx)}
-                    className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-xl font-bold font-mono text-sm shadow-md hover:bg-amber-800 transition-all flex items-center gap-2 group active:scale-95"
-                    title="点击取回"
-                  >
-                    <span>{slot.text}</span>
-                    <span className="text-xs text-amber-200/60 group-hover:text-amber-100">✕</span>
-                  </button>
-                ))
-              )}
-            </div>
 
-            {/* 校验反馈与解析 */}
-            {sentenceCheckedState === 'correct' && (
-              <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold">🎉 完美合成！语序与句法完全正确！(+10 💎, +25 XP)</p>
-                    <p className="text-xs text-emerald-400/80 mt-0.5">
-                      {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length]?.explanation}
-                    </p>
+                {/* 校验反馈与解析 */}
+                {sentenceCheckedState === 'correct' && (
+                  <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold">🎉 完美合成！语序与句法完全正确！(+10 💎, +25 XP)</p>
+                        <p className="text-xs text-emerald-400/80 mt-0.5">
+                          {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length]?.explanation}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleNextSentence}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shrink-0 shadow-md transition-colors"
+                    >
+                      挑战下一句
+                    </button>
+                  </div>
+                )}
+
+                {sentenceCheckedState === 'wrong' && (
+                  <div className="p-4 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                      <p className="text-xs font-medium">
+                        语序有误，请注意主谓宾结构与连系动词位置，再试一次吧！
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        playBlockBreakSound();
+                        setUserSentenceSlots([]);
+                        setSentenceCandidatePool(prev => prev.map(c => ({ ...c, used: false })));
+                        setSentenceCheckedState('idle');
+                      }}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold shrink-0 transition-colors"
+                    >
+                      重置清空
+                    </button>
+                  </div>
+                )}
+
+                {/* 词块候选池 */}
+                <div className="space-y-3">
+                  <span className="text-xs font-bold text-slate-300 block">可用语法积木池：</span>
+                  <div className="flex flex-wrap gap-3">
+                    {sentenceCandidatePool.map((candidate) => (
+                      <button
+                        key={candidate.id}
+                        disabled={candidate.used}
+                        onClick={() => handleAddSentenceBlock(candidate)}
+                        className={`px-4 py-2.5 rounded-xl font-bold font-mono text-sm transition-all shadow-sm ${
+                          candidate.used
+                            ? 'bg-slate-950 text-slate-600 border border-slate-900 cursor-not-allowed opacity-40'
+                            : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/60 active:scale-95'
+                        }`}
+                      >
+                        {candidate.text}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <button
-                  onClick={handleNextSentence}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shrink-0 shadow-md transition-colors"
-                >
-                  挑战下一句
-                </button>
-              </div>
-            )}
 
-            {sentenceCheckedState === 'wrong' && (
-              <div className="p-4 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between gap-3 animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-                  <p className="text-xs font-medium">
-                    语序有误，请注意主谓宾结构与连系动词位置，再试一次吧！
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    playBlockBreakSound();
-                    setUserSentenceSlots([]);
-                    setSentenceCandidatePool(prev => prev.map(c => ({ ...c, used: false })));
-                    setSentenceCheckedState('idle');
-                  }}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold shrink-0 transition-colors"
-                >
-                  重置清空
-                </button>
-              </div>
-            )}
-
-            {/* 词块候选池 */}
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-300 block">可用语法积木池：</span>
-              <div className="flex flex-wrap gap-3">
-                {sentenceCandidatePool.map((candidate) => (
+                {/* 底部按钮 */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
                   <button
-                    key={candidate.id}
-                    disabled={candidate.used}
-                    onClick={() => handleAddSentenceBlock(candidate)}
-                    className={`px-4 py-2.5 rounded-xl font-bold font-mono text-sm transition-all shadow-sm ${
-                      candidate.used
-                        ? 'bg-slate-950 text-slate-600 border border-slate-900 cursor-not-allowed opacity-40'
-                        : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 hover:border-emerald-500/60 active:scale-95'
+                    onClick={() => {
+                      playBlockBreakSound();
+                      setUserSentenceSlots([]);
+                      setSentenceCandidatePool(prev => prev.map(c => ({ ...c, used: false })));
+                      setSentenceCheckedState('idle');
+                    }}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    清空重来
+                  </button>
+                  <button
+                    disabled={userSentenceSlots.length === 0}
+                    onClick={handleCheckSentence}
+                    className={`px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
+                      userSentenceSlots.length > 0
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/40 cursor-pointer active:scale-95'
+                        : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                     }`}
                   >
-                    {candidate.text}
+                    <Check className="w-4 h-4" />
+                    校验句子合成
                   </button>
-                ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 底部按钮 */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
-              <button
-                onClick={() => {
-                  playBlockBreakSound();
-                  setUserSentenceSlots([]);
-                  setSentenceCandidatePool(prev => prev.map(c => ({ ...c, used: false })));
-                  setSentenceCheckedState('idle');
-                }}
-                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
-              >
-                清空重来
-              </button>
-              <button
-                disabled={userSentenceSlots.length === 0}
-                onClick={handleCheckSentence}
-                className={`px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg transition-all ${
-                  userSentenceSlots.length > 0
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-900/40 cursor-pointer active:scale-95'
-                    : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
-                }`}
-              >
-                <Check className="w-4 h-4" />
-                校验句子合成
-              </button>
-            </div>
+            {/* ---------------- 模式 B: 单词键盘拼写模式 (Spelling & Typing Mode) ---------------- */}
+            {sentencePracticeMode === 'typing' && (
+              <div className="space-y-6">
+                {/* 拼写子模式选择 */}
+                <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 font-bold">拼写方式：</span>
+                    <button
+                      onClick={() => {
+                        playClickSound();
+                        setTypingModeType('slots');
+                      }}
+                      className={`px-3 py-1 rounded-lg font-bold border transition-all ${
+                        typingModeType === 'slots'
+                          ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-xs'
+                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
+                      }`}
+                    >
+                      🅰️ 逐词填空拼写 (推荐小朋友)
+                    </button>
+                    <button
+                      onClick={() => {
+                        playClickSound();
+                        setTypingModeType('full');
+                      }}
+                      className={`px-3 py-1 rounded-lg font-bold border transition-all ${
+                        typingModeType === 'full'
+                          ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-xs'
+                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
+                      }`}
+                    >
+                      🅱️ 整句键盘默写
+                    </button>
+                  </div>
+
+                  <span className="text-[11px] text-amber-300 hidden sm:inline-block">
+                    💡 提示：按空格键或回车可自动跳转下一词
+                  </span>
+                </div>
+
+                {/* 逐词填空槽渲染 */}
+                {typingModeType === 'slots' && (
+                  <div className="space-y-4">
+                    <div className="p-5 bg-stone-900/90 rounded-2xl border-2 border-dashed border-amber-600/40 min-h-[140px] flex flex-wrap items-center justify-center gap-3">
+                      {targetWords.map((targetWord, idx) => {
+                        const currentInput = typedWordInputs[idx] || '';
+                        const isMatch = currentInput.toLowerCase() === targetWord.toLowerCase();
+                        const isRevealed = revealedHints[idx];
+                        const isActive = activeTypingWordIndex === idx;
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setActiveTypingWordIndex(idx)}
+                            className={`p-2.5 rounded-xl border-2 transition-all flex flex-col items-center gap-1.5 cursor-pointer relative ${
+                              isMatch
+                                ? 'bg-emerald-950/60 border-emerald-500/80 ring-1 ring-emerald-400'
+                                : isActive
+                                ? 'bg-amber-950/50 border-amber-400 shadow-lg ring-2 ring-amber-400/60 scale-105'
+                                : 'bg-slate-950 border-slate-800 hover:border-slate-700'
+                            }`}
+                          >
+                            {/* 序号与状态 */}
+                            <div className="flex items-center justify-between w-full gap-2 text-[10px] font-mono text-slate-400">
+                              <span className="font-bold">#{idx + 1}</span>
+                              {isMatch ? (
+                                <span className="text-emerald-400 font-bold flex items-center gap-0.5">
+                                  <Check className="w-3 h-3" />
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">{targetWord.length} 字母</span>
+                              )}
+                            </div>
+
+                            {/* 交互输入框 */}
+                            <input
+                              type="text"
+                              value={currentInput}
+                              onChange={(e) => handleTypedWordChange(idx, e.target.value)}
+                              onKeyDown={(e) => handleWordKeyDown(e, idx)}
+                              onFocus={() => setActiveTypingWordIndex(idx)}
+                              placeholder={`${targetWord[0]}${'_'.repeat(Math.max(1, targetWord.length - 1))}`}
+                              className={`w-28 sm:w-32 py-1.5 px-2 rounded-lg font-mono font-black text-center text-sm border transition-all outline-none ${
+                                isMatch
+                                  ? 'bg-emerald-900/80 text-emerald-200 border-emerald-500'
+                                  : isActive
+                                  ? 'bg-slate-900 text-white border-amber-400'
+                                  : 'bg-slate-900/80 text-slate-300 border-slate-700'
+                              }`}
+                            />
+
+                            {/* 提示与发音辅助 */}
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRevealWordHint(idx);
+                                }}
+                                className="px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] rounded font-mono font-bold flex items-center gap-0.5 transition-colors"
+                                title="点击提示该词并朗读"
+                              >
+                                <Lightbulb className="w-2.5 h-2.5" />
+                                <span>{isRevealed ? targetWord : '提示'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  speakText(targetWord, { lang: 'en-US' });
+                                }}
+                                className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] transition-colors"
+                                title="听单个单词发音"
+                              >
+                                <Volume2 className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 整句默写框 */}
+                {typingModeType === 'full' && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-stone-900/90 rounded-2xl border-2 border-stone-700 space-y-3">
+                      <div className="flex items-center justify-between text-xs font-mono text-slate-400">
+                        <span>⌨️ 请在下方键入完整的英文句子：</span>
+                        <button
+                          onClick={() => handlePlayVoice(dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length].targetSentence)}
+                          className="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-bold"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>示范朗读</span>
+                        </button>
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        value={fullTypedSentence}
+                        onChange={(e) => {
+                          setFullTypedSentence(e.target.value);
+                          setTypingCheckedState('idle');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCheckTyping();
+                          }
+                        }}
+                        placeholder="在此处敲击键盘拼写出完整的句子..."
+                        className="w-full p-3 bg-slate-950 rounded-xl border border-slate-700 text-white font-mono text-base font-bold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 虚拟触控小键盘 (方便 iPad/平板触屏与低龄小朋友快速点按) */}
+                <div className="p-3 bg-slate-950/90 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-1">
+                    <span className="flex items-center gap-1 text-amber-300 font-bold">
+                      <Keyboard className="w-3.5 h-3.5" />
+                      <span>触控字母小键盘 (支持电脑物理键盘直接打字)：</span>
+                    </span>
+                    <span>当前输入词: #{activeTypingWordIndex + 1} ({targetWords[activeTypingWordIndex] || ''})</span>
+                  </div>
+
+                  {/* 第一排 Q-P */}
+                  <div className="flex justify-center gap-1 sm:gap-1.5 flex-wrap">
+                    {['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'].map(k => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => handleVirtualKeyPress(k)}
+                        className="w-7 h-9 sm:w-9 sm:h-10 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-white font-mono font-black text-sm rounded-lg border border-slate-700 active:scale-95 transition-all shadow-xs"
+                      >
+                        {k}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 第二排 A-L */}
+                  <div className="flex justify-center gap-1 sm:gap-1.5 flex-wrap">
+                    {['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'].map(k => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => handleVirtualKeyPress(k)}
+                        className="w-7 h-9 sm:w-9 sm:h-10 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-white font-mono font-black text-sm rounded-lg border border-slate-700 active:scale-95 transition-all shadow-xs"
+                      >
+                        {k}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 第三排 Z-M & 辅助功能 */}
+                  <div className="flex justify-center gap-1 sm:gap-1.5 flex-wrap">
+                    {['Z', 'X', 'C', 'V', 'B', 'N', 'M', "'"].map(k => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => handleVirtualKeyPress(k)}
+                        className="w-7 h-9 sm:w-9 sm:h-10 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-white font-mono font-black text-sm rounded-lg border border-slate-700 active:scale-95 transition-all shadow-xs"
+                      >
+                        {k}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handleVirtualKeyPress('BACKSPACE')}
+                      className="px-2.5 h-9 sm:h-10 bg-rose-900/70 hover:bg-rose-800 text-rose-200 font-mono font-bold text-xs rounded-lg border border-rose-700 active:scale-95 transition-all flex items-center gap-1"
+                      title="删除一个字母"
+                    >
+                      <span>⌫ 退格</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVirtualKeyPress('NEXT')}
+                      className="px-2.5 h-9 sm:h-10 bg-emerald-900/70 hover:bg-emerald-800 text-emerald-200 font-mono font-bold text-xs rounded-lg border border-emerald-700 active:scale-95 transition-all"
+                      title="空格或跳到下一个单词"
+                    >
+                      <span>␣ 下一词</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 拼写校验反馈 */}
+                {typingCheckedState === 'correct' && (
+                  <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold">🏆 拼写大师！所有单词与语序完全正确！(+15 💎, +35 XP)</p>
+                        <p className="text-xs text-emerald-400/80 mt-0.5">
+                          {dynamicSentencePatterns[currentSentenceIndex % dynamicSentencePatterns.length]?.explanation}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleNextSentence}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shrink-0 shadow-md transition-colors"
+                    >
+                      挑战下一句
+                    </button>
+                  </div>
+                )}
+
+                {typingCheckedState === 'wrong' && (
+                  <div className="p-4 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+                      <p className="text-xs font-medium">
+                        拼写有少许误差，请检查高亮红框或点击「💡 提示」查看正确拼写！
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleResetTyping}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold shrink-0 transition-colors"
+                    >
+                      重置重来
+                    </button>
+                  </div>
+                )}
+
+                {/* 底部按钮 */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button
+                    onClick={handleResetTyping}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    清空重填
+                  </button>
+                  <button
+                    onClick={handleCheckTyping}
+                    className="px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-lg shadow-orange-900/30 cursor-pointer active:scale-95 transition-all"
+                  >
+                    <Check className="w-4 h-4" />
+                    提交拼写校验
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1444,9 +2455,9 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
 
                     {/* 选项 */}
                     <div className="grid grid-cols-1 gap-2.5">
-                      {currentQuestion.options.map((option, optIdx) => {
+                      {(shuffledOptions.length > 0 ? shuffledOptions : currentQuestion.options.map(opt => ({ text: opt, isCorrect: false }))).map((optObj, optIdx) => {
                         const isChosen = selectedOption === optIdx;
-                        const isCorrectOpt = optIdx === currentQuestion.correctIndex;
+                        const isCorrectOpt = optObj.isCorrect;
                         let optStyle = 'bg-slate-950/80 hover:bg-slate-800/80 border-slate-800 text-slate-200';
 
                         if (selectedOption !== null) {
@@ -1470,7 +2481,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                               <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-mono text-xs font-bold">
                                 {String.fromCharCode(65 + optIdx)}
                               </span>
-                              <span>{option}</span>
+                              <span>{optObj.text}</span>
                             </div>
                             {selectedOption !== null && isCorrectOpt && (
                               <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -1543,6 +2554,210 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* ======================= 确定的合成配方速查大辞典弹窗 ======================= */}
+      {showHandbookModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-4xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* 弹窗头部 */}
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                    <span>确定的合成配方速查大辞典</span>
+                    <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full font-mono font-bold">
+                      共 {RECIPES.length} 款确定配方
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    涵盖《新概念英语》全册核心生词构词配方与 Minecraft 原版生存装备图鉴，点击任意配方直接填入工作台！
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHandbookModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 过滤器与搜索 */}
+            <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setHandbookTab('nce_words')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    handbookTab === 'nce_words'
+                      ? 'bg-emerald-600 text-white shadow'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  📘 新概念生词 ({NCE_WORD_CRAFTING_RECIPES.length})
+                </button>
+                <button
+                  onClick={() => setHandbookTab('mc_gear')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    handbookTab === 'mc_gear'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  <Sword className="w-3.5 h-3.5" />
+                  ⚔️ MC装备 ({MC_EQUIPMENT_RECIPES.length})
+                </button>
+                <button
+                  onClick={() => setHandbookTab('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    handbookTab === 'all'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  🌟 全部 ({RECIPES.length})
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="搜索单词 / 中文 / 材料 / 课文..."
+                  value={handbookSearch}
+                  onChange={(e) => setHandbookSearch(e.target.value)}
+                  className="w-full sm:w-64 pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                />
+                <BookOpen className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
+              </div>
+            </div>
+
+            {/* 词库同步说明条 */}
+            <div className="mx-4 mt-3 px-3 py-2 bg-slate-950/80 rounded-xl border border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 text-slate-300">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  <strong>词库同步状态：</strong>当前 40 个生词中已在词汇库掌握 <strong className="text-emerald-400 font-mono">{masteredNceRecipesCount}</strong> 个。全书 900+ 词汇已完整收录于「核心词汇宝库」。
+                </span>
+              </div>
+              {onNavigateToVocab && (
+                <button
+                  onClick={() => {
+                    setShowHandbookModal(false);
+                    onNavigateToVocab();
+                  }}
+                  className="shrink-0 text-emerald-400 hover:text-emerald-300 text-[11px] font-bold flex items-center gap-0.5"
+                >
+                  <span>去词库学习</span>
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* 配方列表 */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar">
+              {filteredHandbookRecipes.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-sm">
+                  未检索到匹配的合成配方
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {filteredHandbookRecipes.map((r) => {
+                    const isNce = r.recipeType === 'nce_word';
+                    const isMasteredInVocab = isNce && (profile.masteredWords || []).some(
+                      w => w.toLowerCase() === r.nameEn.toLowerCase()
+                    );
+
+                    return (
+                      <div
+                        key={`handbook_${r.id}`}
+                        className="p-3.5 bg-slate-950/70 border border-slate-800/90 hover:border-amber-500/40 rounded-xl flex flex-col justify-between gap-2.5 transition-all group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl p-2 bg-slate-900 rounded-lg border border-slate-800">
+                              {r.mcIcon}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-white font-mono">{r.nameEn}</span>
+                                <span className="text-xs text-amber-400 font-mono">{r.phonetic}</span>
+                              </div>
+                              <p className="text-xs text-slate-300 mt-0.5">{r.nameZh}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 flex-wrap justify-end">
+                            {isNce && (
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                                  isMasteredInVocab
+                                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                                    : 'bg-slate-800 text-slate-400 border border-slate-700'
+                                }`}
+                              >
+                                {isMasteredInVocab ? '🌟 词库已掌握' : '📖 待掌握'}
+                              </span>
+                            )}
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                                isNce
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              }`}
+                            >
+                              {isNce ? `第 ${r.requiredLessonId || 1} 课` : 'MC 原版'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 确定的配方公式 */}
+                        <div className="p-2 bg-slate-900/90 rounded-lg border border-slate-800 flex items-center justify-between gap-2 text-xs font-mono">
+                          <div className="flex items-center gap-1 flex-wrap text-[11px]">
+                            <span className="text-slate-500 text-[10px] font-sans">配方:</span>
+                            {r.requiredIngredients.map((ing, idx) => (
+                              <React.Fragment key={idx}>
+                                <span className="px-1.5 py-0.5 bg-slate-950 text-slate-200 rounded border border-slate-800">
+                                  {ing.icon} {ing.name}
+                                </span>
+                                {idx < r.requiredIngredients.length - 1 && (
+                                  <span className="text-slate-500 font-bold">+</span>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => {
+                              handleQuickFillRecipe(r);
+                              setShowHandbookModal(false);
+                              setActiveSubTab('bench');
+                            }}
+                            className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-[11px] rounded-md shrink-0 flex items-center gap-1 transition-colors shadow"
+                          >
+                            <Zap className="w-3 h-3" />
+                            填入合成
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 弹窗底部 */}
+            <div className="p-4 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <span>💡 提示：点击任意配方的【填入合成】，系统将自动把所需词根与材料摆放到 3×3 工作台！</span>
+              <button
+                onClick={() => setShowHandbookModal(false)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition-colors"
+              >
+                关闭手册
+              </button>
+            </div>
           </div>
         </div>
       )}

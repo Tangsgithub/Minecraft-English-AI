@@ -209,6 +209,8 @@ export function playMissionCompleteSound() {
   }
 }
 
+export const playSuccessSound = playMissionCompleteSound;
+
 export function playBlockBreakSound() {
   unlockAudio();
   if (!getSoundEnabled()) return;
@@ -362,12 +364,28 @@ export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'fema
   if (speaker) {
     const s = speaker.toLowerCase().trim();
 
-    // Child character voices (Ana, etc.)
-    const isChild = s.includes('ana') || s.includes('kid') || s.includes('child') || s.includes('peter') || s.includes('ruby');
+    // Child character voices (Sally, Ana, etc.)
+    const isChild = 
+      s.includes('sally') || 
+      s.includes('ana') || 
+      s.includes('kid') || 
+      s.includes('child') || 
+      s.includes('peter') || 
+      s.includes('ruby');
     if (isChild) {
       if (isBritish) return 'en-GB-SoniaNeural';
       if (isAustralian) return 'en-AU-NatashaNeural';
       return 'en-US-AnaNeural';
+    }
+
+    // Explicit Speaker A (Default Male / Youth Adventurer) vs Speaker B (Default Female / Gentle Guide)
+    if (s === 'a' || s === 'speaker a' || s === 'person a' || s === 'questioner' || s === 'student a') {
+      if (isBritish) return 'en-GB-RyanNeural';
+      return 'en-US-GuyNeural';
+    }
+    if (s === 'b' || s === 'speaker b' || s === 'person b' || s === 'answerer' || s === 'student b') {
+      if (isBritish) return 'en-GB-SoniaNeural';
+      return 'en-US-JennyNeural';
     }
 
     // Male character voices (Steve, Dave, Tom, Mr., etc.)
@@ -376,12 +394,22 @@ export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'fema
       s.includes('dave') ||
       s.includes('tom') ||
       s.includes('hans') ||
+      s.includes('chang-woo') ||
+      s.includes('luming') ||
+      s.includes('steven') ||
+      s.includes('tony') ||
       s.includes('sam') ||
       s.includes('paul') ||
       s.includes('robert') ||
       s.includes('george') ||
       s.includes('john') ||
       s.includes('jack') ||
+      s.includes('jim') ||
+      s.includes('dimitri') ||
+      s.includes('gary') ||
+      s.includes('hugh') ||
+      s.includes('scott') ||
+      s.includes('terry') ||
       s.includes('mr.') ||
       s.includes('mr ') ||
       s.includes('sir') ||
@@ -391,9 +419,24 @@ export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'fema
       s.includes('brother') ||
       s.includes('uncle') ||
       s.includes('man') ||
+      s.includes('husband') ||
+      s.includes('doctor') ||
+      s.includes('dentist') ||
+      s.includes('butcher') ||
+      s.includes('grocer') ||
+      s.includes('policeman') ||
+      s.includes('driver') ||
+      s.includes('pilot') ||
+      s.includes('postman') ||
+      s.includes('boss') ||
+      s.includes('mechanic') ||
       s.includes('blacksmith') ||
       s.includes('villager') ||
-      s.includes('golem');
+      s.includes('golem') ||
+      s.includes('reporter') ||
+      s.includes('newscaster') ||
+      s.includes('anchor') ||
+      s === 'you';
 
     if (isMale) {
       if (isBritish) return 'en-GB-RyanNeural';
@@ -411,15 +454,36 @@ export function resolveVoiceForSpeaker(speaker?: string, gender?: 'male' | 'fema
       s.includes('stella') ||
       s.includes('linda') ||
       s.includes('sarah') ||
+      s.includes('sophie') ||
+      s.includes('naoko') ||
+      s.includes('xiaohui') ||
+      s.includes('helen') ||
+      s.includes('emma') ||
+      s.includes('amy') ||
+      s.includes('jean') ||
+      s.includes('susan') ||
+      s.includes('carol') ||
+      s.includes('julie') ||
+      s.includes('kate') ||
+      s.includes('caroline') ||
       s.includes('mrs.') ||
       s.includes('mrs ') ||
       s.includes('ms.') ||
       s.includes('ms ') ||
+      s.includes('miss') ||
       s.includes('lady') ||
       s.includes('mother') ||
       s.includes('mom') ||
+      s.includes('wife') ||
       s.includes('girl') ||
       s.includes('sister') ||
+      s.includes('daughter') ||
+      s.includes('attendant') ||
+      s.includes('receptionist') ||
+      s.includes('waitress') ||
+      s.includes('hostess') ||
+      s.includes('nurse') ||
+      s.includes('policewoman') ||
       s.includes('witch') ||
       s.includes('queen') ||
       s.includes('teacher');
@@ -547,15 +611,18 @@ export async function speakText(
   utterance.pitch = options?.pitch ?? 1.0;
 
   if (cachedVoices.length > 0) {
-    const isMale = (options?.speaker && resolveVoiceForSpeaker(options.speaker, options.gender).includes('Guy')) || options?.gender === 'male';
-    const isFemale = (options?.speaker && resolveVoiceForSpeaker(options.speaker, options.gender).includes('Jenny')) || options?.gender === 'female';
+    const resolvedV = options?.speaker ? resolveVoiceForSpeaker(options.speaker, options.gender) : '';
+    const isChild = resolvedV.includes('Ana') || (options?.speaker && options.speaker.toLowerCase().includes('sally'));
+    const isMale = resolvedV.includes('Guy') || resolvedV.includes('Ryan') || options?.gender === 'male';
+    const isFemale = resolvedV.includes('Jenny') || resolvedV.includes('Sonia') || resolvedV.includes('Ava') || options?.gender === 'female';
 
     let bestVoice = cachedVoices.find(v => {
       const matchLang = v.lang.startsWith(targetLang.slice(0, 2));
       const name = v.name.toLowerCase();
       if (!matchLang) return false;
-      if (isMale) return name.includes('david') || name.includes('guy') || name.includes('mark') || name.includes('george') || name.includes('male');
-      if (isFemale) return name.includes('zira') || name.includes('jenny') || name.includes('samantha') || name.includes('victoria') || name.includes('female');
+      if (isChild) return name.includes('child') || name.includes('ana') || name.includes('girl') || name.includes('samantha');
+      if (isMale) return name.includes('david') || name.includes('guy') || name.includes('mark') || name.includes('george') || name.includes('male') || name.includes('daniel');
+      if (isFemale) return name.includes('zira') || name.includes('jenny') || name.includes('samantha') || name.includes('victoria') || name.includes('female') || name.includes('karen');
       return name.includes('natural') || name.includes('online') || name.includes('google');
     });
 
@@ -567,10 +634,15 @@ export async function speakText(
       utterance.voice = bestVoice;
     }
 
-    if (isMale) {
-      utterance.pitch = options?.pitch ?? 0.88;
+    if (isChild) {
+      utterance.pitch = options?.pitch ?? 1.25;
+      utterance.rate = (options?.rate ?? 0.95) * 1.02;
+    } else if (isMale) {
+      utterance.pitch = options?.pitch ?? 0.85;
+      utterance.rate = (options?.rate ?? 0.95) * 0.98;
     } else if (isFemale) {
-      utterance.pitch = options?.pitch ?? 1.12;
+      utterance.pitch = options?.pitch ?? 1.15;
+      utterance.rate = options?.rate ?? 0.95;
     }
   }
 

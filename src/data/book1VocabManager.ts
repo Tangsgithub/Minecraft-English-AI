@@ -1,7 +1,9 @@
 import { VocabItem } from '../types';
 import { AUTHENTIC_LESSON_VOCAB } from './authenticLessonVocab';
 import { NCE_BOOK1_FULL_VOCAB } from './nceBook1FullVocab';
+import { NCE_BOOK1_FULL_LESSONS } from './nceBook1FullCurriculum';
 import { MINECRAFT_VOCABULARY } from './minecraftVocabData';
+import { NCE_WORD_CRAFTING_RECIPES } from './craftingRecipesData';
 
 // 常用词库智能润色表（提供生动准确的 Minecraft 探险场景例句、音标与释义）
 const VOCAB_ENHANCER_MAP: Record<string, Partial<VocabItem>> = {
@@ -27,8 +29,7 @@ let cachedBook1VocabList: VocabItem[] | null = null;
 /**
  * 获取《新概念英语》第一册（Volume 1）全册 144 课标准词汇全集（共 900+ 词）
  * - 确保词汇总数真实完整（900+ 词，覆盖 144 课）
- * - 每课词汇按标准课标平均分布（每课约 6~7 词）
- * - 当学生学完前 20 课时，准确解锁对应前 20 课的词汇，其余词汇随关卡稳步解锁
+ * - 每一课词汇直接取自新概念原版教研数据
  */
 export function getFullBook1VocabList(): VocabItem[] {
   if (cachedBook1VocabList) {
@@ -42,32 +43,53 @@ export function getFullBook1VocabList(): VocabItem[] {
 
   const registeredWords = new Set<string>();
 
-  // 1. 优先注入 1~21 课高精度原版课文词汇
-  for (let l = 1; l <= 21; l++) {
-    const authenticList = AUTHENTIC_LESSON_VOCAB[l];
-    if (authenticList && authenticList.length > 0) {
-      authenticList.forEach((item, idx) => {
+  // 1. 优先注入 1~144 课高精度原版课文词汇（来自于严格审校的 NCE_BOOK1_FULL_LESSONS）
+  for (let l = 1; l <= 144; l++) {
+    const fullLesson = NCE_BOOK1_FULL_LESSONS[l];
+    if (fullLesson && fullLesson.words && fullLesson.words.length > 0) {
+      fullLesson.words.forEach((item, idx) => {
         const key = item.word.toLowerCase();
         if (!registeredWords.has(key)) {
           registeredWords.add(key);
           lessonBuckets.get(l)!.push({
-            id: `vol1_l${l}_${idx + 1}`,
-            ...item,
+            id: `nce1_l${l}_${idx + 1}`,
+            word: item.word,
+            phonetic: item.phonetic,
+            meaning: item.meaning,
+            mcItem: item.mcItem || 'Book',
+            mcItemIcon: item.mcItemIcon || '📖',
+            sampleSentence: item.sampleSentence || (fullLesson.sentences[0]?.en || item.word),
+            sampleTranslation: item.sampleTranslation || (fullLesson.sentences[0]?.zh || item.meaning),
             category: 'Course',
             requiredLessonId: l
           });
         }
       });
+    } else {
+      const authenticList = AUTHENTIC_LESSON_VOCAB[l];
+      if (authenticList && authenticList.length > 0) {
+        authenticList.forEach((item, idx) => {
+          const key = item.word.toLowerCase();
+          if (!registeredWords.has(key)) {
+            registeredWords.add(key);
+            lessonBuckets.get(l)!.push({
+              id: `vol1_l${l}_${idx + 1}`,
+              ...item,
+              category: 'Course',
+              requiredLessonId: l
+            });
+          }
+        });
+      }
     }
   }
 
-  // 2. 依次注入 Minecraft 特色联动物品词（均匀分配在前 44 课，每课附带 1 个 MC 方块/道具词）
+  // 2. 依次注入 Minecraft 特色联动物品词（前 44 课，每课附带 1 个 MC 方块/道具词）
   MINECRAFT_VOCABULARY.forEach((mv, idx) => {
     const key = mv.word.toLowerCase();
     const targetLesson = Math.min(144, idx + 1);
 
     if (registeredWords.has(key)) {
-      // 若已存在，则融合 MC 道具属性
       for (const [_, list] of lessonBuckets.entries()) {
         const existing = list.find(v => v.word.toLowerCase() === key);
         if (existing) {
@@ -87,7 +109,7 @@ export function getFullBook1VocabList(): VocabItem[] {
     }
   });
 
-  // 3. 注入新概念第一册全量生词（按真实课次 entry.lessonId 分配）
+  // 3. 补充新概念第一册词汇表中的扩展词汇
   NCE_BOOK1_FULL_VOCAB.forEach((entry, idx) => {
     const targetLesson = Math.max(1, Math.min(144, entry.lessonId || 1));
     const key = entry.word.toLowerCase();
@@ -99,12 +121,12 @@ export function getFullBook1VocabList(): VocabItem[] {
       const finalPhonetic = enhanced.phonetic || entry.phonetic || `/${entry.word}/`;
       const finalMeaning = enhanced.meaning || (entry.meaning.startsWith('新概念词汇：') ? `核心词汇：${entry.word}` : entry.meaning);
       
-      let finalSentence = enhanced.sampleSentence || entry.sampleSentence;
-      let finalTranslation = enhanced.sampleTranslation || entry.sampleTranslation;
-      if (!finalSentence || finalSentence.includes('Practice writing')) {
-        finalSentence = `Steve learns the key word '${entry.word}' in his lesson.`;
-        finalTranslation = `史蒂夫在课程中认真学习核心词汇 '${entry.word}'。`;
-      }
+      const fullLesson = NCE_BOOK1_FULL_LESSONS[targetLesson];
+      const lessonSent = fullLesson?.sentences[0]?.en || `Use ${entry.word} in conversation.`;
+      const lessonTrans = fullLesson?.sentences[0]?.zh || `在对话中使用 ${entry.word}。`;
+
+      const finalSentence = enhanced.sampleSentence || (entry.sampleSentence && !entry.sampleSentence.includes('Practice writing') ? entry.sampleSentence : lessonSent);
+      const finalTranslation = enhanced.sampleTranslation || (entry.sampleTranslation ? entry.sampleTranslation : lessonTrans);
 
       bucket.push({
         id: `nce_book1_${targetLesson}_${idx}`,
@@ -119,6 +141,38 @@ export function getFullBook1VocabList(): VocabItem[] {
         requiredLessonId: targetLesson
       });
       lessonBuckets.set(targetLesson, bucket);
+    }
+  });
+
+  // 4. 确保配方宝典库中的所有新概念 3×3 构词生词 100% 完整收录并同步至词汇宝库
+  NCE_WORD_CRAFTING_RECIPES.forEach((recipe, idx) => {
+    const key = recipe.nameEn.toLowerCase();
+    const targetLesson = Math.max(1, Math.min(144, recipe.requiredLessonId || 1));
+    const bucket = lessonBuckets.get(targetLesson) || [];
+    const existing = bucket.find(v => v.word.toLowerCase() === key);
+
+    if (!existing) {
+      registeredWords.add(key);
+      bucket.push({
+        id: `craft_nce_${idx + 1}`,
+        word: recipe.nameEn,
+        phonetic: recipe.phonetic || `/${recipe.nameEn}/`,
+        meaning: recipe.nameZh,
+        category: 'Crafting',
+        mcItem: recipe.nameEn,
+        mcItemIcon: recipe.mcIcon || '🔨',
+        sampleSentence: recipe.sampleSentence,
+        sampleTranslation: recipe.sampleTranslation,
+        requiredLessonId: targetLesson
+      });
+      lessonBuckets.set(targetLesson, bucket);
+    } else {
+      // 若词汇已存在，强化其 Minecraft 构词合成道具图标与丰富例句
+      if (recipe.mcIcon) existing.mcItemIcon = recipe.mcIcon;
+      if (recipe.sampleSentence && (!existing.sampleSentence || existing.sampleSentence.startsWith('Use '))) {
+        existing.sampleSentence = recipe.sampleSentence;
+        existing.sampleTranslation = recipe.sampleTranslation;
+      }
     }
   });
 
@@ -140,3 +194,4 @@ export function getVocabForLessonFromManager(lessonId: number): VocabItem[] {
   const full = getFullBook1VocabList();
   return full.filter(v => (v.requiredLessonId || 1) === lessonId);
 }
+

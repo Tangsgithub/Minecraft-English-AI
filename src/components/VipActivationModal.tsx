@@ -207,7 +207,7 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
               <div>
                 <div className="text-sm font-black text-emerald-300">🎉 您已激活课程特权</div>
                 <div className="text-xs text-emerald-400/90 mt-0.5">
-                  已解锁: {profile.isVip ? '全套四册所有关卡' : profile.activatedVolumes?.map(v => v.replace('vol', '册')).join(', ')}
+                  已解锁: {profile.isVip ? '新概念第1册全部144关' : '新概念第1册关卡'}
                 </div>
               </div>
             </div>
@@ -215,10 +215,10 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
             <div className="bg-stone-800/80 border border-stone-700 p-4 rounded-2xl space-y-2">
               <div className="flex items-center space-x-2 text-amber-400 font-bold text-xs">
                 <Sparkles className="w-4 h-4" />
-                <span>购小红书资料（短视频+PPT+练习册）免费赠送 APP VIP 激活码</span>
+                <span>购小红书资料免费赠送 APP VIP 激活码</span>
               </div>
               <ul className="text-xs text-stone-300 space-y-1 list-disc list-inside font-medium">
-                <li>支持激活单册或全套《新概念英语》1 ~ 4 册所有关卡</li>
+                <li>一键解锁《新概念英语》第1册全部 144 关卡与双语练习</li>
                 <li>无限制与 Alex 导师进行自然口语实时对话与纠错</li>
                 <li><span className="text-amber-300 font-bold">激活说明：</span>每个激活码仅可激活 1 个账号，同一个账号支持绑定最多 <span className="underline font-bold">3 台设备</span>。</li>
               </ul>
@@ -302,7 +302,7 @@ export const VipActivationModal: React.FC<VipActivationModalProps> = ({
                 }}
                 className="text-amber-400 hover:text-amber-300 font-bold flex items-center space-x-1"
               >
-                <span>遇到问题？联系小红书在线客服</span>
+                <span>遇到问题？查看玩法向导与支持</span>
                 <ExternalLink className="w-3 h-3" />
               </button>
             )}

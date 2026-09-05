@@ -30,11 +30,8 @@ export const NCE_BOOK2_UNIT1_DATA: Record<number, Book2LessonData> = {
       { word: 'private', phonetic: '/ˈpraɪvət/', meaning: '形容词：私人的；私密的', mcItem: 'Locked Chest', mcItemIcon: '🔒', sampleSentence: 'This is a private redstone vault.', sampleTranslation: '这是一座私人红石金库。' },
       { word: 'conversation', phonetic: '/ˌkɒnvəˈseɪʃn/', meaning: '名词：谈话；交谈', mcItem: 'Lectern', mcItemIcon: '💬', sampleSentence: 'They had a loud conversation during the play.', sampleTranslation: '他们在演出期间大声交谈。' },
       { word: 'theatre', phonetic: '/ˈθɪətə(r)/', meaning: '名词：剧院；戏院', mcItem: 'Stage Light', mcItemIcon: '🎭', sampleSentence: 'We went to the village theatre last night.', sampleTranslation: '我们昨晚去了村庄剧院。' },
-      { word: 'seat', phonetic: '/siːt/', meaning: '名词：座位', mcItem: 'Stairs Chair', mcItemIcon: '🪑', sampleSentence: 'I had a very good seat near the front.', sampleTranslation: '我的座位很好，靠在前面。' },
-      { word: 'loudly', phonetic: '/ˈlaʊdli/', meaning: '副词：大声地', mcItem: 'Noteblock', mcItemIcon: '📢', sampleSentence: 'The two players were talking loudly behind me.', sampleTranslation: '两位玩家在我身后大声说话。' },
       { word: 'angry', phonetic: '/ˈæŋɡri/', meaning: '形容词：生气的；愤怒的', mcItem: 'Angry Villager', mcItemIcon: '😡', sampleSentence: 'I got very angry and turned around.', sampleTranslation: '我变得非常生气并转过身去。' },
       { word: 'attention', phonetic: '/əˈtenʃn/', meaning: '名词：注意力；专心', mcItem: 'Compass', mcItemIcon: '🎯', sampleSentence: 'They did not pay any attention to me.', sampleTranslation: '他们丝毫没有理会我。' },
-      { word: 'bear', phonetic: '/beə(r)/', meaning: '动词：忍受；容忍', mcItem: 'Shield', mcItemIcon: '🛡️', sampleSentence: 'In the end, I could not bear it.', sampleTranslation: '最后，我再也无法忍受了。' },
       { word: 'business', phonetic: '/ˈbɪznəs/', meaning: '名词：事情；生意', mcItem: 'Emerald', mcItemIcon: '💼', sampleSentence: 'It is none of your business!', sampleTranslation: '这不关你的事！' }
     ],
     sentences: [
@@ -111,7 +108,6 @@ export const NCE_BOOK2_UNIT1_DATA: Record<number, Book2LessonData> = {
       { word: 'postcard', phonetic: '/ˈpəʊstkɑːd/', meaning: '名词：明信片', mcItem: 'Paper', mcItemIcon: '✉️', sampleSentence: 'Postcards always spoil my holidays.', sampleTranslation: '明信片总会破坏我的假期。' },
       { word: 'spoil', phonetic: '/spɔɪl/', meaning: '动词：损坏；破坏', mcItem: 'Tnt', mcItemIcon: '💥', sampleSentence: 'Rain spoiled our outdoor adventure.', sampleTranslation: '大雨破坏了我们的户外探险。' },
       { word: 'museum', phonetic: '/mjuˈziːəm/', meaning: '名词：博物馆', mcItem: 'Armor Stand', mcItemIcon: '🏛️', sampleSentence: 'I visited museums and sat in public gardens.', sampleTranslation: '我参观了博物馆并在公园里静坐。' },
-      { word: 'public', phonetic: '/ˈpʌblɪk/', meaning: '形容词：公共的；大众的', mcItem: 'Beacon', mcItemIcon: '🌐', sampleSentence: 'Public gardens are peaceful in summer.', sampleTranslation: '公共花园在夏天非常宁静。' },
       { word: 'friendly', phonetic: '/ˈfrendli/', meaning: '形容词：友好的', mcItem: 'Iron Golem', mcItemIcon: '😊', sampleSentence: 'A friendly waiter taught me a few words of Italian.', sampleTranslation: '一位友好的服务员教了我几句意大利语。' },
       { word: 'decision', phonetic: '/dɪˈsɪʒn/', meaning: '名词：决定；决心', mcItem: 'Enchanted Book', mcItemIcon: '⚖️', sampleSentence: 'I made a big decision on the last day.', sampleTranslation: '我在最后一天做出了一个重大决定。' }
     ],
@@ -247,7 +243,6 @@ export const NCE_BOOK2_UNIT1_DATA: Record<number, Book2LessonData> = {
     vocab: [
       { word: 'detective', phonetic: '/dɪˈtektɪv/', meaning: '名词：侦探', mcItem: 'Spyglass', mcItemIcon: '🕵️', sampleSentence: 'Detectives were waiting at the airport all morning.', sampleTranslation: '侦探们整个上午都在机场守候。' },
       { word: 'airport', phonetic: '/ˈeəpɔːt/', meaning: '名词：机场；航空港', mcItem: 'Runway Rail', mcItemIcon: '🛫', sampleSentence: 'The plane arrived at the airport on time.', sampleTranslation: '飞机准时到达了机场。' },
-      { word: 'expect', phonetic: '/ɪkˈspekt/', meaning: '动词：期待；预料', mcItem: 'Clock', mcItemIcon: '⏳', sampleSentence: 'They were expecting a valuable parcel of diamonds.', sampleTranslation: '他们正在等待一包昂贵的钻石。' },
       { word: 'valuable', phonetic: '/ˈvæljuəbl/', meaning: '形容词：贵重的；有价值的', mcItem: 'Diamond Block', mcItemIcon: '💎', sampleSentence: 'Diamonds are extremely valuable in Minecraft.', sampleTranslation: '钻石在我的世界里极其珍贵。' },
       { word: 'parcel', phonetic: '/ˈpɑːsl/', meaning: '名词：包裹', mcItem: 'Shulker Box', mcItemIcon: '📦', sampleSentence: 'Someone had stolen the diamonds from the parcel.', sampleTranslation: '有人已经从包裹里盗走了钻石。' },
       { word: 'diamond', phonetic: '/ˈdaɪəmənd/', meaning: '名词：钻石', mcItem: 'Diamond', mcItemIcon: '💠', sampleSentence: 'The precious diamonds were missing from the case.', sampleTranslation: '箱子里的珍贵钻石不翼而飞了。' },

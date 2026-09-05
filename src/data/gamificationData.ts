@@ -92,6 +92,165 @@ export function getXpProgressForCurrentLevel(xp: number, level: number): XpProgr
   };
 }
 
+export interface BadgeProgressInfo {
+  current: number;
+  target: number;
+  percent: number;
+  isUnlocked: boolean;
+  statusText: string;
+  hintText: string;
+}
+
+/**
+ * Evaluates all achievement badges against user profile state.
+ * Returns the list of all unlocked badge IDs and detailed progress for each badge.
+ */
+export function evaluateBadgesForProfile(profile: Partial<UserProfile>): {
+  unlockedBadgeIds: string[];
+  badgeProgress: Record<string, BadgeProgressInfo>;
+} {
+  const existingUnlocked = new Set(profile.unlockedBadgeIds || []);
+  const masteredCount = (profile.masteredWords || []).length;
+  const completedLessons = profile.completedLessonIds || [];
+  const completedLessonCount = completedLessons.length;
+  const effectiveLevel = Math.max(profile.level || 1, getLevelFromXp(profile.xp || 0));
+  const emeralds = profile.emeralds || 0;
+  const streak = Math.max(profile.streakDays || 1, profile.totalStudyDays || 1);
+  const oralCount = Math.max(profile.oralEvaluationCount || 0, completedLessonCount * 3);
+  const unlockedCraftingCount = (profile.unlockedCraftingIds || []).length;
+
+  const newlyUnlockedSet = new Set<string>(existingUnlocked);
+  const badgeProgress: Record<string, BadgeProgressInfo> = {};
+
+  BADGES_DATA.forEach(badge => {
+    let current = 0;
+    let target = badge.requiredValue || 1;
+    let isUnlocked = existingUnlocked.has(badge.id) || badge.isUnlocked;
+    let statusText = '';
+    let hintText = '';
+
+    switch (badge.id) {
+      case 'badge_first_words':
+        // Village First Greeting: 100% unlocked as welcome badge or after 1 interaction
+        target = 1;
+        current = 1;
+        isUnlocked = true;
+        statusText = '已达成 · 开启冒险';
+        hintText = '成功与 Alex 老师完成第 1 次 AI 英语互动对话';
+        break;
+
+      case 'badge_mc_builder':
+        // Master 10 Minecraft World Exclusive Vocabularies
+        target = 10;
+        current = Math.min(10, masteredCount);
+        if (masteredCount >= 10) isUnlocked = true;
+        statusText = isUnlocked ? '已掌握 10+ 核心词汇 · 荣誉解锁' : `已掌握 ${current}/10 词汇`;
+        hintText = isUnlocked ? '已成功掌握 10 个核心英语单词！' : `还需掌握 ${10 - current} 个词汇即可解锁此勋章！`;
+        break;
+
+      case 'badge_oral_scholar':
+        // Oral Reading Scholar: 5 oral readings
+        target = 5;
+        current = Math.min(5, oralCount);
+        if (oralCount >= 5) isUnlocked = true;
+        statusText = isUnlocked ? '已完成 5+ 次录音测评 · 荣誉解锁' : `已完成 ${current}/5 次跟读测评`;
+        hintText = isUnlocked ? '口语发音清晰纯正！' : `还需完成 ${5 - current} 次口语测评跟读即可解锁！`;
+        break;
+
+      case 'badge_level_10':
+        // Level 10 Stone Age Explorer
+        target = 10;
+        current = Math.min(10, effectiveLevel);
+        if (effectiveLevel >= 10) isUnlocked = true;
+        statusText = isUnlocked ? '已晋升 Lv.10 石器时代 · 荣誉解锁' : `当前等级 Lv.${effectiveLevel}/10`;
+        hintText = isUnlocked ? '成功踏入石器时代！' : `还需提升 ${10 - current} 级即可踏入石器时代！`;
+        break;
+
+      case 'badge_diamond_speaker':
+        // 100 Emeralds Accumulated
+        target = 100;
+        current = Math.min(100, emeralds);
+        if (emeralds >= 100) isUnlocked = true;
+        statusText = isUnlocked ? '已积累 100+ 绿宝石 · 荣誉解锁' : `已积累 ${current}/100 ❇️`;
+        hintText = isUnlocked ? '绿宝石矿产丰盈！' : `还差 ${100 - current} 绿宝石即可成为钻石富豪！`;
+        break;
+
+      case 'badge_streak_7':
+        // 7-day Login Streak
+        target = 7;
+        current = Math.min(7, streak);
+        if (streak >= 7) isUnlocked = true;
+        statusText = isUnlocked ? '连续 7+ 天探险 · 荣誉解锁' : `连续打卡 ${current}/7 天`;
+        hintText = isUnlocked ? '坚毅卓越的探险家！' : `还需坚持 ${7 - current} 天登录探险！`;
+        break;
+
+      case 'badge_level_25':
+        // Level 25 Golden Architect
+        target = 25;
+        current = Math.min(25, effectiveLevel);
+        if (effectiveLevel >= 25) isUnlocked = true;
+        statusText = isUnlocked ? '已晋升 Lv.25 金辉宫殿 · 荣誉解锁' : `当前等级 Lv.${effectiveLevel}/25`;
+        hintText = isUnlocked ? '金辉闪耀的宫殿建筑宗师！' : `还需提升 ${25 - current} 级解锁金辉殿堂！`;
+        break;
+
+      case 'badge_master_50':
+        // Level 50 & 30 words
+        target = 50;
+        current = Math.min(50, effectiveLevel);
+        if (effectiveLevel >= 50 && masteredCount >= 30) isUnlocked = true;
+        statusText = isUnlocked
+          ? '已晋升 Lv.50 附魔大导师 · 荣誉解锁'
+          : `等级 Lv.${effectiveLevel}/50 · 词汇 ${Math.min(30, masteredCount)}/30`;
+        hintText = isUnlocked ? '魔导之力贯通英语世界！' : '提升至 Lv.50 并掌握 30 个核心单词即可解锁！';
+        break;
+
+      case 'badge_dragon_slayer':
+        // Clear 24 core adventure map lessons
+        target = 24;
+        current = Math.min(24, completedLessonCount);
+        if (completedLessonCount >= 24 || completedLessons.includes(24)) isUnlocked = true;
+        statusText = isUnlocked ? '已通关 24 课核心探险 · 斩杀末影龙' : `已通关 ${current}/24 关`;
+        hintText = isUnlocked ? '末影龙已臣服在你的剑下！' : `通关全部 24 课探险即可斩杀末影龙！`;
+        break;
+
+      case 'badge_mythic_100':
+        // Level 100 Mythic Creator
+        target = 100;
+        current = Math.min(100, effectiveLevel);
+        if (effectiveLevel >= 100) isUnlocked = true;
+        statusText = isUnlocked ? '登顶 Lv.100 创世神殿 · 至高荣耀' : `当前等级 Lv.${effectiveLevel}/100`;
+        hintText = isUnlocked ? '宇宙创世神宗师！' : '向 Lv.100 创世神殿继续进发！';
+        break;
+
+      default:
+        current = Math.min(target, masteredCount);
+        if (current >= target) isUnlocked = true;
+        statusText = isUnlocked ? '已达成 · 荣誉解锁' : `进度 ${current}/${target}`;
+        hintText = badge.description;
+        break;
+    }
+
+    if (isUnlocked) {
+      newlyUnlockedSet.add(badge.id);
+    }
+
+    const percent = Math.min(100, Math.round((current / Math.max(1, target)) * 100));
+    badgeProgress[badge.id] = {
+      current,
+      target,
+      percent: isUnlocked ? 100 : percent,
+      isUnlocked,
+      statusText,
+      hintText
+    };
+  });
+
+  return {
+    unlockedBadgeIds: Array.from(newlyUnlockedSet),
+    badgeProgress
+  };
+}
+
 export const BADGES_DATA: Badge[] = [
   {
     id: 'badge_first_words',
@@ -332,15 +491,15 @@ export const INITIAL_MISSIONS: Mission[] = [
   },
   {
     id: 'adv_007',
-    title: '体验课大满贯 (通关 20 关)',
-    titleZh: '体验课大满贯',
-    description: '通关前 20 课免费试学全量内容，迈入进阶英语探险世界！',
-    mcChallenge: 'Clear 20 Lessons & Complete Trial Campaign',
-    englishChallenge: 'Master 20 Lessons Foundation',
-    xpReward: 120,
-    emeraldReward: 40,
+    title: '体验课进阶学者 (通关 10 关)',
+    titleZh: '体验课进阶学者',
+    description: '在地图中累计完成 10 个关卡，夯实语法与词汇基础！',
+    mcChallenge: 'Clear Any 10 Map Lessons',
+    englishChallenge: 'Master 10 Lessons Foundation',
+    xpReward: 90,
+    emeraldReward: 30,
     category: 'adventure',
-    requiredLessonId: 20,
+    requiredLessonId: 10,
     isCompleted: false
   },
   {
@@ -558,10 +717,12 @@ export function evaluateMissionsForProfile(profile: Partial<UserProfile>): strin
         isMet = masteredWordsCount >= 50;
         break;
       case 'chal_004':
-        isMet = unlockedCraftingCount >= 1;
+        // Master of sentence crafting / crafting workshop
+        isMet = unlockedCraftingCount >= 1 || completedCount >= 1;
         break;
       case 'chal_005':
-        isMet = completedCount >= 3;
+        // Spoken English Explorer: completed 3 scene oral reading assessments or 3 lessons
+        isMet = completedCount >= 3 || (profile.oralEvaluationCount || 0) >= 3 || completedCount * 3 >= 3;
         break;
       default:
         if (mission.requiredLessonId && completedLessonIds.includes(mission.requiredLessonId)) {
@@ -585,6 +746,7 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
   const completedLessonIds = profile.completedLessonIds || [];
   const completedCount = completedLessonIds.length;
   const masteredWordsCount = (profile.masteredWords || []).length;
+  const unlockedCraftingCount = (profile.unlockedCraftingIds || []).length;
   
   const completedDailySet = new Set(profile.completedDailyMissionIds || []);
   const permanentClaimedSet = new Set(profile.completedMissionIds || []);
@@ -679,11 +841,11 @@ export function getMissionProgress(mission: Mission, profile: Partial<UserProfil
       break;
     case 'chal_004':
       target = 1;
-      current = (profile.unlockedCraftingIds || []).length >= 1 ? 1 : 0;
+      current = (unlockedCraftingCount >= 1 || completedCount >= 1) ? 1 : 0;
       break;
     case 'chal_005':
       target = 3;
-      current = Math.min(3, completedCount);
+      current = Math.min(3, Math.max(completedCount, profile.oralEvaluationCount || 0));
       break;
     default:
       target = 1;

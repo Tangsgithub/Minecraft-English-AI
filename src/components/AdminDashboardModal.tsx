@@ -886,11 +886,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           onChange={e => setBatchTargetVolume(e.target.value)}
                           className="bg-stone-950 border border-stone-700 text-xs text-amber-300 px-3 py-1.5 rounded-xl outline-none"
                         >
-                          <option value="all">全套四册</option>
-                          <option value="vol1">仅第一册</option>
-                          <option value="vol2">仅第二册</option>
-                          <option value="vol3">仅第三册</option>
-                          <option value="vol4">仅第四册</option>
+                          <option value="vol1">新概念第一册 (144关全量)</option>
                         </select>
                       </div>
 

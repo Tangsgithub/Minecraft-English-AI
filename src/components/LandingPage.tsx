@@ -10,17 +10,18 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  Headphones,
+  Compass,
   ArrowRight
 } from 'lucide-react';
 import { playClickSound, playEmeraldSound } from '../utils/audio';
 import { UserProfile } from '../types';
+import { DailyProgressCard } from './DailyProgressBar';
 
 interface LandingPageProps {
   currentUser: User | null;
   isAuthenticated?: boolean;
   profile?: UserProfile;
-  onEnterApp: (targetTab?: 'map' | 'radio' | 'vocab' | 'missions') => void;
+  onEnterApp: (targetTab?: 'map' | 'chat' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements') => void;
   onOpenAuth: () => void;
   onOpenParentDashboard: () => void;
   onOpenCustomerService?: () => void;
@@ -29,6 +30,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   currentUser,
+  profile,
   onEnterApp,
   onOpenAuth,
   onOpenParentDashboard,
@@ -119,9 +121,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onOpenCustomerService();
                 }}
                 className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white text-xs font-medium transition-colors"
+                title="方块玩法向导 · 随时教你怎么玩"
               >
-                <Headphones className="w-3.5 h-3.5 text-emerald-400" />
-                <span>客服</span>
+                <Compass className="w-3.5 h-3.5 text-amber-400" />
+                <span>玩法向导</span>
               </button>
             )}
 
@@ -174,6 +177,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <ArrowRight className="w-4 h-4 ml-1" />
             </button>
           </div>
+
+          {/* 今日学习进度条卡片 (直观展示当天目标与动画) */}
+          {profile && (
+            <div className="pt-5 max-w-2xl mx-auto text-left">
+              <DailyProgressCard
+                profile={profile}
+                onEnterStudyHall={() => handleEnterClick('map')}
+                onOpenParentDashboard={onOpenParentDashboard}
+              />
+            </div>
+          )}
         </section>
 
         {/* ===== 极简三大亮点 Grid ===== */}
@@ -258,8 +272,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               学习大厅
             </button>
             {onOpenCustomerService && (
-              <button onClick={onOpenCustomerService} className="hover:text-emerald-400 transition-colors">
-                联系客服
+              <button onClick={onOpenCustomerService} className="hover:text-amber-400 transition-colors">
+                玩法向导
               </button>
             )}
             <button onClick={onOpenParentDashboard} className="hover:text-emerald-400 transition-colors">

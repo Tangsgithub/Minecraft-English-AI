@@ -4,13 +4,14 @@ import {
   Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Repeat, Shuffle, 
   Clock, Sparkles, Disc, List, Eye, EyeOff, Award, ChevronDown, CheckCircle2, Moon, X,
   Filter, Layers, BookOpen, Mic, Music, HelpCircle, Brain, ArrowRight, BookMarked,
-  Sparkle, Volume1, ChevronRight, Bookmark, Plus, Wand2
+  Sparkle, Volume1, ChevronRight, Bookmark, Plus, Wand2, MessageSquare
 } from 'lucide-react';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound } from '../utils/audio';
 import { LESSONS_DATA, getLessonById } from '../data/lessonsData';
 import { RADIO_STORIES, RadioStory, StoryParagraph, StoryVocab } from '../data/radioStoriesData';
 import { fetchCustomStories } from '../services/customStoriesService';
 import { CustomStoryImporterModal } from './CustomStoryImporterModal';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface AudioImmersionRadioModalProps {
   isOpen?: boolean;
@@ -32,6 +33,7 @@ interface PlaylistItem {
   lessonId: number;
   lessonTitle: string;
   speaker: string;
+  avatar?: string;
   english: string;
   chinese: string;
   type: 'dialogue' | 'target_sentence' | 'vocab';
@@ -133,12 +135,10 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
 }) => {
   if (isOpen === false) return null;
 
-  // 1. Resolve effective lessons securely
+  // 1. Resolve effective lessons securely (Book 1 144 Lessons)
   const effectiveLessons: Lesson[] = lessons && lessons.length > 0
     ? lessons
-    : (selectedVolumeId === 'vol2'
-        ? Array.from({ length: 96 }, (_, i) => getLessonById(i + 1, 'vol2'))
-        : LESSONS_DATA);
+    : LESSONS_DATA;
 
   // Custom Stories state & dynamic loading from Cloud DB
   const [customStories, setCustomStories] = useState<RadioStory[]>([]);
@@ -218,8 +218,9 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
   }, [currentChannel, allStories]);
 
   const currentStory = useMemo<RadioStory>(() => {
-    const found = allStories.find(s => s.id === selectedStoryId);
-    return found || activeStories[0] || allStories[0] || RADIO_STORIES[0];
+    const foundInActive = activeStories.find(s => s.id === selectedStoryId);
+    if (foundInActive) return foundInActive;
+    return activeStories[0] || allStories[0] || RADIO_STORIES[0];
   }, [selectedStoryId, activeStories, allStories]);
 
   // Lesson Playlist with Scope Filter & Robust Fallbacks
@@ -290,7 +291,8 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
             id: `l${lesson.id}_turn_${tIdx}`,
             lessonId: lesson.id,
             lessonTitle: `L${lesson.id}: ${lesson.title}`,
-            speaker: turn.speaker || 'Alex',
+            speaker: turn.speaker || (tIdx % 2 === 0 ? 'Steve' : 'Alex'),
+            avatar: turn.avatar,
             english: turn.text,
             chinese: turn.translation || '课文情境对话',
             type: 'dialogue',
@@ -298,15 +300,15 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
             discColor: discInfo.color
           });
         });
-      }
-      
-      if (lesson.targetSentences && lesson.targetSentences.length > 0) {
+      } else if (lesson.targetSentences && lesson.targetSentences.length > 0) {
         lesson.targetSentences.forEach((sentence, sIdx) => {
+          const spk = sIdx % 2 === 0 ? 'Steve' : 'Alex';
           items.push({
             id: `l${lesson.id}_sent_${sIdx}`,
             lessonId: lesson.id,
             lessonTitle: `L${lesson.id}: ${lesson.title}`,
-            speaker: sIdx % 2 === 0 ? 'Alex' : 'Steve',
+            speaker: spk,
+            avatar: spk === 'Steve' ? '👦' : '👩‍🦰',
             english: sentence,
             chinese: lesson.targetSentenceTranslations?.[sIdx] || lesson.grammarNote || '核心重点句型',
             type: 'target_sentence',
@@ -389,21 +391,25 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
   }, [isPlaying]);
 
   // Sleep Timer Countdown
+  const hasActiveSleepTimer = sleepRemainingSeconds !== null && sleepRemainingSeconds > 0;
   useEffect(() => {
     let timer: any;
-    if (sleepRemainingSeconds !== null && sleepRemainingSeconds > 0 && isPlaying) {
+    if (hasActiveSleepTimer && isPlaying) {
       timer = setInterval(() => {
         setSleepRemainingSeconds(prev => {
           if (prev === null || prev <= 1) {
             stopPlayback();
+            setSleepTimerMinutes(null);
             return null;
           }
           return prev - 1;
         });
       }, 1000);
     }
-    return () => clearInterval(timer);
-  }, [sleepRemainingSeconds, isPlaying]);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [hasActiveSleepTimer, isPlaying]);
 
   // Track listening minutes for emerald rewards
   useEffect(() => {
@@ -1051,8 +1057,42 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
 
             </div>
 
-            {/* Subtitles Box with Prosodic Visual Cues */}
-            <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-3.5 sm:p-4 my-2.5 sm:my-3 text-center space-y-1.5 min-h-[90px] sm:min-h-[100px] flex flex-col justify-center shadow-sm relative">
+            {/* Subtitles Box with Character Dialogue Bubble Presentation */}
+            <div className={`rounded-xl p-3.5 sm:p-4 my-2.5 sm:my-3 text-center space-y-2 min-h-[90px] sm:min-h-[100px] flex flex-col justify-center shadow-md relative transition-all border-2 ${
+              currentChannel === 'lessons'
+                ? currentSpeaker === 'Steve' 
+                  ? 'bg-slate-900/95 border-emerald-500/70 shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
+                  : 'bg-slate-900/95 border-amber-500/70 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                : 'bg-slate-900/90 border-slate-700'
+            }`}>
+              {/* Character Dialogue Header for Lesson Listening */}
+              {currentChannel === 'lessons' && currentLessonItem && (
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs font-mono">
+                  <div className="flex items-center space-x-2">
+                    <div className="rounded-lg overflow-hidden ring-1 ring-white/20">
+                      <MinecraftAvatar speaker={currentLessonItem.speaker} avatar={currentLessonItem.avatar} size={24} />
+                    </div>
+                    <span className={`font-black ${currentSpeaker === 'Steve' ? 'text-emerald-300' : 'text-amber-300'}`}>
+                      {currentLessonItem.speaker}
+                    </span>
+                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded border border-slate-700">
+                      课文对话
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      playClickSound();
+                      speakText(currentEnglishText, { speaker: currentLessonItem.speaker, rate: speechRate });
+                    }}
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-2 py-0.5 rounded flex items-center space-x-1 cursor-pointer transition-colors"
+                    title="重听本句"
+                  >
+                    <Volume2 className="w-3 h-3 text-amber-400" />
+                    <span>角色朗读</span>
+                  </button>
+                </div>
+              )}
               
               {subtitleMode !== 'blind_listening' && (
                 <div className="font-mono text-sm sm:text-base md:text-lg font-black text-white leading-relaxed">
@@ -1069,7 +1109,7 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
               {subtitleMode === 'blind_listening' && (
                 <div className="flex flex-col items-center justify-center py-2 text-slate-400 space-y-1">
                   <EyeOff className="w-5 h-5 text-amber-400" />
-                  <span className="text-xs font-mono font-bold">盲听磨耳朵模式中 · 专注听觉反射</span>
+                  <span className="text-xs font-mono font-bold">盲听磨耳朵模式中 · 专注听辨 {currentLessonItem?.speaker || '角色'} 发音</span>
                 </div>
               )}
             </div>
@@ -1479,21 +1519,31 @@ export const AudioImmersionRadioModal: React.FC<AudioImmersionRadioModalProps> =
                       setShowPlaylistDrawer(false);
                       playCurrentLessonTrack(idx, 1);
                     }}
-                    className={`w-full text-left p-2.5 rounded-xl border text-xs font-mono flex items-center justify-between transition-all ${
+                    className={`w-full text-left p-2 rounded-xl border text-xs font-mono flex items-center justify-between transition-all cursor-pointer ${
                       idx === safeCurrentIndex
                         ? 'bg-blue-600/30 border-blue-400 text-white font-bold'
                         : 'bg-slate-800/60 hover:bg-slate-800 border-slate-700/60 text-slate-300'
                     }`}
                   >
-                    <div className="flex items-center space-x-2 overflow-hidden mr-2">
-                      <span className="text-slate-500 w-6 text-right shrink-0">{idx + 1}.</span>
+                    <div className="flex items-center space-x-2.5 overflow-hidden mr-2">
+                      <div className="shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10">
+                        <MinecraftAvatar speaker={item.speaker} avatar={item.avatar} size={28} />
+                      </div>
                       <div className="truncate">
+                        <div className="flex items-center space-x-1.5 mb-0.5">
+                          <span className={`text-[9px] font-mono px-1 rounded font-bold ${
+                            item.speaker === 'Steve' ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'
+                          }`}>
+                            {item.speaker}
+                          </span>
+                          <span className="text-[10px] text-slate-400 truncate">{item.lessonTitle}</span>
+                        </div>
                         <p className="truncate font-semibold text-slate-200">{item.english}</p>
-                        <p className="text-[10px] text-slate-400 truncate">{item.lessonTitle} • {item.chinese}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{item.chinese}</p>
                       </div>
                     </div>
                     {idx === safeCurrentIndex && (
-                      <span className="shrink-0 text-blue-400 animate-pulse">▶ 播放中</span>
+                      <span className="shrink-0 text-blue-400 font-bold animate-pulse text-[11px] ml-1">▶ 播放中</span>
                     )}
                   </button>
                 ))}

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mission, UserProfile } from '../types';
-import { INITIAL_MISSIONS, getMissionProgress } from '../data/gamificationData';
+import { INITIAL_MISSIONS, getMissionProgress, evaluateMissionsForProfile } from '../data/gamificationData';
 import { Scroll, Award, CheckCircle2, Sparkles, Compass, Swords, ShieldCheck, Gift, ArrowRight, Zap, Check } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playMissionCompleteSound, playEmeraldSound, playLevelUpSound, playClickSound } from '../utils/audio';
@@ -43,8 +43,22 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   };
 
   const isMissionReady = (mission: Mission) => {
-    return readyToClaimMissionIds.includes(mission.id) && !isMissionCompleted(mission);
+    if (isMissionCompleted(mission)) return false;
+    const progress = getMissionProgress(mission, profile);
+    return readyToClaimMissionIds.includes(mission.id) || progress.isReady || progress.percent >= 100;
   };
+
+  // Keep readyToClaimMissionIds synced with real-time profile achievements
+  useEffect(() => {
+    const newlyReady = evaluateMissionsForProfile(profile);
+    const hasUnrecorded = newlyReady.some(id => !readyToClaimMissionIds.includes(id));
+    if (hasUnrecorded) {
+      const merged = Array.from(new Set([...readyToClaimMissionIds, ...newlyReady]));
+      onUpdateProfile({
+        readyToClaimMissionIds: merged
+      });
+    }
+  }, [profile.masteredWords, profile.completedLessonIds, profile.todayCompletedLessonsCount, profile.unlockedCraftingIds, profile.oralEvaluationCount]);
 
   const completedCount = INITIAL_MISSIONS.filter(m => isMissionCompleted(m)).length;
   const readyCount = INITIAL_MISSIONS.filter(m => isMissionReady(m)).length;

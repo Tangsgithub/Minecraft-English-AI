@@ -172,15 +172,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "这羊肉很嫩。"
       },
       {
-        "word": "husband",
-        "phonetic": "/ˈhʌzbənd/",
-        "meaning": "n. 丈夫",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👨",
-        "sampleSentence": "Her husband is at home.",
-        "sampleTranslation": "她丈夫在家。"
-      },
-      {
         "word": "steak",
         "phonetic": "/steɪk/",
         "meaning": "n. 牛排",
@@ -190,33 +181,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "我们晚餐吃了牛排。"
       },
       {
-        "word": "mince",
-        "phonetic": "/mɪns/",
-        "meaning": "n. 肉馅，绞肉",
-        "mcItem": "Beef",
-        "mcItemIcon": "🥩",
-        "sampleSentence": "A pound of mince.",
-        "sampleTranslation": "一磅肉馅。"
-      },
-      {
-        "word": "chicken",
-        "phonetic": "/ˈtʃɪkɪn/",
-        "meaning": "n. 鸡肉",
-        "mcItem": "Cooked Chicken",
-        "mcItemIcon": "🍗",
-        "sampleSentence": "He doesn't like chicken.",
-        "sampleTranslation": "他不吃鸡肉。"
-      },
-      {
-        "word": "tell",
-        "phonetic": "/tel/",
-        "meaning": "v. 告诉",
-        "mcItem": "Book",
-        "mcItemIcon": "🗣️",
-        "sampleSentence": "To tell you the truth.",
-        "sampleTranslation": "说实话。"
-      },
-      {
         "word": "truth",
         "phonetic": "/truːθ/",
         "meaning": "n. 真相，实话",
@@ -224,15 +188,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "✨",
         "sampleSentence": "Tell the truth.",
         "sampleTranslation": "说实话。"
-      },
-      {
-        "word": "either",
-        "phonetic": "/ˈaɪðə/",
-        "meaning": "adv. 也(用于否定句)",
-        "mcItem": "Repeater",
-        "mcItemIcon": "⚖️",
-        "sampleSentence": "I don't like it either.",
-        "sampleTranslation": "我也不喜欢。"
       }
     ],
     "grammarNote": "一般现在时第三人称单数：likes / doesn't like。either 用于否定句句末表示“也”。"
@@ -334,33 +289,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🥗",
         "sampleSentence": "Lettuce in salad.",
         "sampleTranslation": "沙拉里的生菜。"
-      },
-      {
-        "word": "pea",
-        "phonetic": "/piː/",
-        "meaning": "n. 豌豆",
-        "mcItem": "Wheat Seeds",
-        "mcItemIcon": "🫛",
-        "sampleSentence": "Green peas.",
-        "sampleTranslation": "青豆。"
-      },
-      {
-        "word": "bean",
-        "phonetic": "/biːn/",
-        "meaning": "n. 豆角，蚕豆",
-        "mcItem": "Cocoa Beans",
-        "mcItemIcon": "🫘",
-        "sampleSentence": "I like beans.",
-        "sampleTranslation": "我喜欢豆子。"
-      },
-      {
-        "word": "pear",
-        "phonetic": "/peə/",
-        "meaning": "n. 梨",
-        "mcItem": "Golden Apple",
-        "mcItemIcon": "🍐",
-        "sampleSentence": "Sweet pears.",
-        "sampleTranslation": "甜梨。"
       },
       {
         "word": "grape",
@@ -490,15 +418,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "Greece",
-        "phonetic": "/ɡriːs/",
-        "meaning": "n. 希腊",
-        "mcItem": "Banner",
-        "mcItemIcon": "🇬🇷",
-        "sampleSentence": "He comes from Greece.",
-        "sampleTranslation": "他来自希腊。"
-      },
-      {
         "word": "climate",
         "phonetic": "/ˈklaɪmət/",
         "meaning": "n. 气候",
@@ -526,33 +445,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "春天来了。"
       },
       {
-        "word": "windy",
-        "phonetic": "/ˈwɪndi/",
-        "meaning": "adj. 有风的",
-        "mcItem": "Feather",
-        "mcItemIcon": "💨",
-        "sampleSentence": "It is windy today.",
-        "sampleTranslation": "今天风很大。"
-      },
-      {
-        "word": "warm",
-        "phonetic": "/wɔːm/",
-        "meaning": "adj. 温暖的",
-        "mcItem": "Campfire",
-        "mcItemIcon": "☀️",
-        "sampleSentence": "It's warm in May.",
-        "sampleTranslation": "五月很暖和。"
-      },
-      {
-        "word": "rain",
-        "phonetic": "/reɪn/",
-        "meaning": "v. 下雨",
-        "mcItem": "Water Bucket",
-        "mcItemIcon": "🌧️",
-        "sampleSentence": "It rains sometimes.",
-        "sampleTranslation": "有时下雨。"
-      },
-      {
         "word": "summer",
         "phonetic": "/ˈsʌmə/",
         "meaning": "n. 夏季",
@@ -578,15 +470,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "❄️",
         "sampleSentence": "It's cold in winter.",
         "sampleTranslation": "冬天很冷。"
-      },
-      {
-        "word": "snow",
-        "phonetic": "/snəʊ/",
-        "meaning": "v. 下雪",
-        "mcItem": "Snow Block",
-        "mcItemIcon": "🌨️",
-        "sampleSentence": "It snows in January.",
-        "sampleTranslation": "一月份下雪。"
       }
     ],
     "grammarNote": "频度副词：always (总是 100%), often (经常 70%), sometimes (有时 30%), never (从不 0%)。放于 be 动词之后，行为动词之前。"
@@ -659,15 +542,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "一月是一年的第一个月。"
       },
       {
-        "word": "February",
-        "phonetic": "/ˈfebruəri/",
-        "meaning": "n. 二月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "February is short.",
-        "sampleTranslation": "二月份较短。"
-      },
-      {
         "word": "March",
         "phonetic": "/mɑːtʃ/",
         "meaning": "n. 三月",
@@ -675,24 +549,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "📅",
         "sampleSentence": "It's windy in March.",
         "sampleTranslation": "三月份多风。"
-      },
-      {
-        "word": "April",
-        "phonetic": "/ˈeɪprəl/",
-        "meaning": "n. 四月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "April showers.",
-        "sampleTranslation": "四月的阵雨。"
-      },
-      {
-        "word": "May",
-        "phonetic": "/meɪ/",
-        "meaning": "n. 五月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "May is warm.",
-        "sampleTranslation": "五月很温暖。"
       },
       {
         "word": "June",
@@ -704,24 +560,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "六月是夏天。"
       },
       {
-        "word": "July",
-        "phonetic": "/dʒuˈlaɪ/",
-        "meaning": "n. 七月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "July is hot.",
-        "sampleTranslation": "七月很热。"
-      },
-      {
-        "word": "August",
-        "phonetic": "/ɔːˈɡʌst/",
-        "meaning": "n. 八月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "School starts after August.",
-        "sampleTranslation": "八月之后开学。"
-      },
-      {
         "word": "September",
         "phonetic": "/sepˈtembə/",
         "meaning": "n. 九月",
@@ -729,24 +567,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "📅",
         "sampleSentence": "September is autumn.",
         "sampleTranslation": "九月是秋天。"
-      },
-      {
-        "word": "October",
-        "phonetic": "/ɒkˈtəʊbə/",
-        "meaning": "n. 十月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "October is cool.",
-        "sampleTranslation": "十月很凉爽。"
-      },
-      {
-        "word": "November",
-        "phonetic": "/nəʊˈvembə/",
-        "meaning": "n. 十一月",
-        "mcItem": "Clock",
-        "mcItemIcon": "📅",
-        "sampleSentence": "November is cold.",
-        "sampleTranslation": "十一月很冷。"
       },
       {
         "word": "December",
@@ -852,15 +672,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "温和的冬天。"
       },
       {
-        "word": "always",
-        "phonetic": "/ˈɔːlweɪz/",
-        "meaning": "adv. 总是",
-        "mcItem": "Clock",
-        "mcItemIcon": "🔄",
-        "sampleSentence": "He is always happy.",
-        "sampleTranslation": "他总是很快乐。"
-      },
-      {
         "word": "north",
         "phonetic": "/nɔːθ/",
         "meaning": "n. & adj. 北方",
@@ -868,15 +679,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🧭",
         "sampleSentence": "North of England.",
         "sampleTranslation": "英格兰北部。"
-      },
-      {
-        "word": "east",
-        "phonetic": "/iːst/",
-        "meaning": "n. & adj. 东方",
-        "mcItem": "Compass",
-        "mcItemIcon": "🧭",
-        "sampleSentence": "The sun rises in the east.",
-        "sampleTranslation": "太阳从东方升起。"
       },
       {
         "word": "south",
@@ -888,15 +690,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "鸟儿飞向南方。"
       },
       {
-        "word": "west",
-        "phonetic": "/west/",
-        "meaning": "n. & adj. 西方",
-        "mcItem": "Compass",
-        "mcItemIcon": "🧭",
-        "sampleSentence": "The sun sets in the west.",
-        "sampleTranslation": "太阳在西方落下。"
-      },
-      {
         "word": "season",
         "phonetic": "/ˈsiːzn/",
         "meaning": "n. 季节",
@@ -906,24 +699,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "一年有四个季节。"
       },
       {
-        "word": "best",
-        "phonetic": "/best/",
-        "meaning": "adv. 最",
-        "mcItem": "Netherite Ingot",
-        "mcItemIcon": "🏆",
-        "sampleSentence": "I like summer best.",
-        "sampleTranslation": "我最喜欢夏天。"
-      },
-      {
-        "word": "night",
-        "phonetic": "/naɪt/",
-        "meaning": "n. 夜晚",
-        "mcItem": "Bed",
-        "mcItemIcon": "🌙",
-        "sampleSentence": "Good night.",
-        "sampleTranslation": "晚安。"
-      },
-      {
         "word": "rise",
         "phonetic": "/raɪz/",
         "meaning": "v. 升起",
@@ -931,51 +706,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🌅",
         "sampleSentence": "The sun rises early.",
         "sampleTranslation": "太阳升起得很早。"
-      },
-      {
-        "word": "early",
-        "phonetic": "/ˈɜːli/",
-        "meaning": "adv. 早",
-        "mcItem": "Clock",
-        "mcItemIcon": "⏰",
-        "sampleSentence": "Wake up early.",
-        "sampleTranslation": "早起。"
-      },
-      {
-        "word": "set",
-        "phonetic": "/set/",
-        "meaning": "v. (太阳)落下",
-        "mcItem": "Campfire",
-        "mcItemIcon": "🌇",
-        "sampleSentence": "The sun sets late.",
-        "sampleTranslation": "太阳落山晚。"
-      },
-      {
-        "word": "late",
-        "phonetic": "/leɪt/",
-        "meaning": "adv. 晚，迟",
-        "mcItem": "Clock",
-        "mcItemIcon": "⌛",
-        "sampleSentence": "Don't be late.",
-        "sampleTranslation": "别迟到。"
-      },
-      {
-        "word": "interesting",
-        "phonetic": "/ˈɪntrəstɪŋ/",
-        "meaning": "adj. 有趣的",
-        "mcItem": "Book",
-        "mcItemIcon": "💡",
-        "sampleSentence": "An interesting book.",
-        "sampleTranslation": "一本有趣的书。"
-      },
-      {
-        "word": "subject",
-        "phonetic": "/ˈsʌbdʒɪkt/",
-        "meaning": "n. 主题，话题",
-        "mcItem": "Paper",
-        "mcItemIcon": "📋",
-        "sampleSentence": "Our subject of conversation.",
-        "sampleTranslation": "我们谈话的主题。"
       },
       {
         "word": "conversation",
@@ -1117,40 +847,40 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "medium",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "The Sawyers live at 87 King Street.",
         "translation": "索耶一家住在国王街87号。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "In the morning, Mr. Sawyer goes to work and the children go to school.",
         "translation": "早上，索耶先生去上班，孩子们去上学。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "Mrs. Sawyer stays at home every day. She does the housework. She always eats her lunch at noon.",
         "translation": "索耶太太每天呆在家里。她做家务。她总是在中午吃午饭。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "In the afternoon, she usually sees her friends. They often drink tea together.",
         "translation": "下午，她通常去会朋友。她们经常在一起喝茶。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "In the evening, the children come home from school. They arrive home early. Mr. Sawyer comes home from work. He arrives home late.",
         "translation": "傍晚，孩子们放学回家。他们到家很早。索耶先生下班回家。他到家很晚。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "At night, the children always do their homework, then they go to bed. Mr. Sawyer usually reads his newspaper, but sometimes he and his wife watch television.",
         "translation": "晚上，孩子们总是做作业，然后上床睡觉。索耶先生通常看报纸，但有时他和妻子一起看电视。",
-        "avatar": "📖"
+        "avatar": "👦"
       }
     ],
     "sentences": [
@@ -1181,33 +911,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "live",
-        "phonetic": "/lɪv/",
-        "meaning": "v. 住，生活",
-        "mcItem": "Oak Door",
-        "mcItemIcon": "🏡",
-        "sampleSentence": "They live in London.",
-        "sampleTranslation": "他们住在伦敦。"
-      },
-      {
-        "word": "stay",
-        "phonetic": "/steɪ/",
-        "meaning": "v. 呆在，停留",
-        "mcItem": "Bed",
-        "mcItemIcon": "🏠",
-        "sampleSentence": "Stay at home.",
-        "sampleTranslation": "呆在家里。"
-      },
-      {
-        "word": "home",
-        "phonetic": "/həʊm/",
-        "meaning": "n. 家",
-        "mcItem": "Oak Door",
-        "mcItemIcon": "🏠",
-        "sampleSentence": "Welcome home.",
-        "sampleTranslation": "欢迎回家。"
-      },
-      {
         "word": "housework",
         "phonetic": "/ˈhaʊswɜːk/",
         "meaning": "n. 家务",
@@ -1224,15 +927,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🍱",
         "sampleSentence": "Eat lunch at noon.",
         "sampleTranslation": "中午吃午餐。"
-      },
-      {
-        "word": "noon",
-        "phonetic": "/nuːn/",
-        "meaning": "n. 中午",
-        "mcItem": "Sun",
-        "mcItemIcon": "🕛",
-        "sampleSentence": "At noon.",
-        "sampleTranslation": "在正午。"
       },
       {
         "word": "together",
@@ -1260,15 +954,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🛬",
         "sampleSentence": "Arrive home early.",
         "sampleTranslation": "早早到家。"
-      },
-      {
-        "word": "night",
-        "phonetic": "/naɪt/",
-        "meaning": "n. 夜晚",
-        "mcItem": "Bed",
-        "mcItemIcon": "🌃",
-        "sampleSentence": "At night.",
-        "sampleTranslation": "在夜晚。"
       }
     ],
     "grammarNote": "时间介词搭配：in the morning / afternoon / evening; at noon / night / 6 o'clock。第三人称单数加 -s (lives, stays, reads, eats) 或 -es (goes, does, watches)。"
@@ -1334,7 +1019,62 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他们晚上7点做作业。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "usually",
+        "phonetic": "/ˈjuː.ʒu.ə.li/",
+        "meaning": "adv. 通常地，平常",
+        "mcItem": "Clock",
+        "mcItemIcon": "⏰",
+        "sampleSentence": "He usually goes to work at eight.",
+        "sampleTranslation": "他通常八点去上班。"
+      },
+      {
+        "word": "morning",
+        "phonetic": "/ˈmɔː.nɪŋ/",
+        "meaning": "n. 早晨，上午",
+        "mcItem": "Daylight Detector",
+        "mcItemIcon": "🌅",
+        "sampleSentence": "Farm wheat in the morning.",
+        "sampleTranslation": "早晨收割小麦。"
+      },
+      {
+        "word": "afternoon",
+        "phonetic": "/ˌɑːf.təˈnuːn/",
+        "meaning": "n. 下午",
+        "mcItem": "Sun",
+        "mcItemIcon": "☀️",
+        "sampleSentence": "Study in the afternoon.",
+        "sampleTranslation": "下午学习。"
+      },
+      {
+        "word": "evening",
+        "phonetic": "/ˈiːv.nɪŋ/",
+        "meaning": "n. 傍晚，晚上",
+        "mcItem": "Campfire",
+        "mcItemIcon": "🌆",
+        "sampleSentence": "Read books in the evening.",
+        "sampleTranslation": "傍晚看书。"
+      },
+      {
+        "word": "night",
+        "phonetic": "/naɪt/",
+        "meaning": "n. 夜晚，黑夜",
+        "mcItem": "Bed",
+        "mcItemIcon": "🌙",
+        "sampleSentence": "Sleep peacefully at night.",
+        "sampleTranslation": "夜晚安稳入睡。"
+      },
+      {
+        "word": "housework",
+        "phonetic": "/ˈhaʊs.wɜːk/",
+        "meaning": "n. 家务劳动",
+        "mcItem": "Broom",
+        "mcItemIcon": "🧹",
+        "sampleSentence": "She does the housework at nine o'clock.",
+        "sampleTranslation": "她在九点钟做家务。"
+      }
+    ],
     "grammarNote": "具体钟点前用介词 at：at eight o'clock, at half past eight。"
   },
   "57": {
@@ -1348,34 +1088,34 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "medium",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "It is eight o'clock. The children go to school by car every day, but today, they are going to school on foot.",
         "translation": "现在是8点钟。孩子们每天乘小汽车去上学，但今天，他们正步行去上学。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "It is ten o'clock. Mrs. Sawyer usually stays at home in the morning, but this morning, she is going to the shops.",
         "translation": "现在是10点钟。索耶太太通常上午呆在家里，但今天上午，她正去商店买东西。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "It is four o'clock. In the afternoon, Mrs. Sawyer usually drinks tea in the living room, but this afternoon, she is drinking tea in the garden.",
         "translation": "现在是4点钟。下午，索耶太太通常在客厅喝茶，但今天下午，她正在花园里喝茶。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "It is six o'clock. In the evening, the children usually do their homework, but this evening, they are not doing their homework. They are playing in the garden.",
         "translation": "现在是6点钟。傍晚，孩子们通常做作业，但今天傍晚，他们没做作业。他们正在花园里玩。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "It is nine o'clock. Mr. Sawyer usually reads his newspaper at night, but tonight he is not reading his newspaper. He is reading an interesting book.",
         "translation": "现在是9点钟。索耶先生通常在晚上看报纸，但今晚他没看报纸。他正在读一本有趣的书。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       }
     ],
     "sentences": [
@@ -1520,7 +1260,62 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "zh": "现在是差10分8点 (7点50)。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "time",
+        "phonetic": "/taɪm/",
+        "meaning": "n. 时间",
+        "mcItem": "Clock",
+        "mcItemIcon": "⏱️",
+        "sampleSentence": "What's the time, please?",
+        "sampleTranslation": "请问几点了？"
+      },
+      {
+        "word": "half",
+        "phonetic": "/hɑːf/",
+        "meaning": "n. 半，一半",
+        "mcItem": "Cake",
+        "mcItemIcon": "🌓",
+        "sampleSentence": "It is half past seven.",
+        "sampleTranslation": "现在是七点半。"
+      },
+      {
+        "word": "past",
+        "phonetic": "/pɑːst/",
+        "meaning": "prep. 过了(几点)",
+        "mcItem": "Rail",
+        "mcItemIcon": "⏭️",
+        "sampleSentence": "It is ten past eight.",
+        "sampleTranslation": "现在是八点十分。"
+      },
+      {
+        "word": "quarter",
+        "phonetic": "/ˈkwɔː.tər/",
+        "meaning": "n. 一刻钟，四分之一",
+        "mcItem": "Gold Nugget",
+        "mcItemIcon": "🕒",
+        "sampleSentence": "It is a quarter past nine.",
+        "sampleTranslation": "现在是九点一刻。"
+      },
+      {
+        "word": "clock",
+        "phonetic": "/klɒk/",
+        "meaning": "n. 钟，时钟",
+        "mcItem": "Clock",
+        "mcItemIcon": "🕰️",
+        "sampleSentence": "The wall clock is ticking.",
+        "sampleTranslation": "挂钟在滴答作响。"
+      },
+      {
+        "word": "o'clock",
+        "phonetic": "/əˈklɒk/",
+        "meaning": "adv. ...点钟",
+        "mcItem": "Bell",
+        "mcItemIcon": "⏰",
+        "sampleSentence": "It is exactly eight o'clock.",
+        "sampleTranslation": "现在正好是八点整。"
+      }
+    ],
     "grammarNote": "时间表达：分针≤30分用 past (a quarter past eight = 8:15)；分针>30分用 to (a quarter to nine = 8:45)。"
   },
   "59": {
@@ -1750,7 +1545,62 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "zh": "9点50分。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "to",
+        "phonetic": "/tuː/",
+        "meaning": "prep. 差(几点到几点)",
+        "mcItem": "Compass",
+        "mcItemIcon": "⏳",
+        "sampleSentence": "It is ten to nine.",
+        "sampleTranslation": "现在是差十分九点。"
+      },
+      {
+        "word": "early",
+        "phonetic": "/ˈɜː.li/",
+        "meaning": "adj./adv. 早的，提早",
+        "mcItem": "Daylight Detector",
+        "mcItemIcon": "🌄",
+        "sampleSentence": "They arrived early today.",
+        "sampleTranslation": "他们今天到得很早。"
+      },
+      {
+        "word": "late",
+        "phonetic": "/leɪt/",
+        "meaning": "adj./adv. 迟的，迟到",
+        "mcItem": "Soul Lantern",
+        "mcItemIcon": "⌛",
+        "sampleSentence": "Don't be late for class.",
+        "sampleTranslation": "上课不要迟到。"
+      },
+      {
+        "word": "minute",
+        "phonetic": "/ˈmɪn.ɪt/",
+        "meaning": "n. 分钟",
+        "mcItem": "Redstone Repeater",
+        "mcItemIcon": "⏲️",
+        "sampleSentence": "Wait for twenty minutes.",
+        "sampleTranslation": "等待二十分钟。"
+      },
+      {
+        "word": "hurry",
+        "phonetic": "/ˈhʌr.i/",
+        "meaning": "v. 匆忙，赶快",
+        "mcItem": "Potion of Swiftness",
+        "mcItemIcon": "🏃",
+        "sampleSentence": "Hurry up, we have ten minutes.",
+        "sampleTranslation": "快点，我们还有十分钟。"
+      },
+      {
+        "word": "catch",
+        "phonetic": "/kætʃ/",
+        "meaning": "v. 赶上，捕捉",
+        "mcItem": "Lead",
+        "mcItemIcon": "🎣",
+        "sampleSentence": "Run fast to catch the bus.",
+        "sampleTranslation": "快跑去赶公共汽车。"
+      }
+    ],
     "grammarNote": "数字 1-60 在时间中的运用：five past, ten past, quarter past, twenty past, half past, twenty to, quarter to, ten to, five to。"
   },
   "61": {
@@ -1841,24 +1691,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "feel",
-        "phonetic": "/fiːl/",
-        "meaning": "v. 感觉",
-        "mcItem": "Heart",
-        "mcItemIcon": "🤒",
-        "sampleSentence": "I feel ill.",
-        "sampleTranslation": "我感觉不舒服。"
-      },
-      {
-        "word": "look",
-        "phonetic": "/lʊk/",
-        "meaning": "v. 看起来",
-        "mcItem": "Ender Eye",
-        "mcItemIcon": "👀",
-        "sampleSentence": "You look tired.",
-        "sampleTranslation": "你看上去很累。"
-      },
       {
         "word": "doctor",
         "phonetic": "/ˈdɒktə/",
@@ -2006,15 +1838,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "看牙医。"
       },
       {
-        "word": "stomach ache",
-        "phonetic": "/ˈstʌmək eɪk/",
-        "meaning": "胃痛，肚子痛",
-        "mcItem": "Rotten Flesh",
-        "mcItemIcon": "🤢",
-        "sampleSentence": "A bad stomach ache.",
-        "sampleTranslation": "严重的胃痛。"
-      },
-      {
         "word": "medicine",
         "phonetic": "/ˈmedsn/",
         "meaning": "n. 药",
@@ -2142,15 +1965,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "better",
-        "phonetic": "/ˈbetə/",
-        "meaning": "adj. 好些了 (well的比较级)",
-        "mcItem": "Golden Apple",
-        "mcItemIcon": "👍",
-        "sampleSentence": "He feels much better.",
-        "sampleTranslation": "他感觉好多了。"
-      },
-      {
         "word": "certainly",
         "phonetic": "/ˈsɜːtnli/",
         "meaning": "adv. 当然",
@@ -2185,15 +1999,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🚫",
         "sampleSentence": "You mustn't touch it.",
         "sampleTranslation": "你千万不能碰它。"
-      },
-      {
-        "word": "rich",
-        "phonetic": "/rɪtʃ/",
-        "meaning": "adj. 油腻的，富饶的",
-        "mcItem": "Cooked Porkchop",
-        "mcItemIcon": "🍔",
-        "sampleSentence": "Don't eat rich food.",
-        "sampleTranslation": "别吃油腻食物。"
       },
       {
         "word": "temperature",
@@ -2260,7 +2065,62 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "zh": "别过马路！你千万不能过马路。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "must",
+        "phonetic": "/mʌst/",
+        "meaning": "modal v. 必须，应当",
+        "mcItem": "Netherite Ingot",
+        "mcItemIcon": "❗",
+        "sampleSentence": "You must stay in bed.",
+        "sampleTranslation": "你必须躺在床上休息。"
+      },
+      {
+        "word": "mustn't",
+        "phonetic": "/ˈmʌs.ənt/",
+        "meaning": "modal v. 绝不准，不能",
+        "mcItem": "Barrier",
+        "mcItemIcon": "🚫",
+        "sampleSentence": "You mustn't play with matches.",
+        "sampleTranslation": "你绝不能玩火柴。"
+      },
+      {
+        "word": "fast",
+        "phonetic": "/fɑːst/",
+        "meaning": "adv./adj. 快速地",
+        "mcItem": "Powered Rail",
+        "mcItemIcon": "⚡",
+        "sampleSentence": "Don't drive too fast on rainy days.",
+        "sampleTranslation": "雨天开车不要太快。"
+      },
+      {
+        "word": "play",
+        "phonetic": "/pleɪ/",
+        "meaning": "v. 玩耍，玩弄",
+        "mcItem": "Slimeball",
+        "mcItemIcon": "🎮",
+        "sampleSentence": "Don't play in the street.",
+        "sampleTranslation": "不要在马路上玩耍。"
+      },
+      {
+        "word": "quiet",
+        "phonetic": "/ˈkwaɪ.ət/",
+        "meaning": "adj. 安静的",
+        "mcItem": "Wool",
+        "mcItemIcon": "🤫",
+        "sampleSentence": "You must be quiet in the hospital.",
+        "sampleTranslation": "在医院里你必须保持安静。"
+      },
+      {
+        "word": "match",
+        "phonetic": "/mætʃ/",
+        "meaning": "n. 火柴",
+        "mcItem": "Torch",
+        "mcItemIcon": "🔥",
+        "sampleSentence": "Keep matches away from children.",
+        "sampleTranslation": "让火柴远离孩子。"
+      }
+    ],
     "grammarNote": "否定祈使句 Don't... 与情态禁止 You mustn't... 表达语气强弱与转换。"
   },
   "65": {
@@ -2698,34 +2558,34 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "medium",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "JACK",
         "text": "There is a car race near our town every year. In 1995, there was a very big race.",
         "translation": "我们镇附近每年都有一场赛车。在1995年，有一场非常盛大的比赛。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "JULIE",
         "text": "There were hundreds of people there. My wife and I were at the race.",
         "translation": "那里有成百上千的人。我和我的妻子当时都在比赛现场。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "JACK",
         "text": "Our friends Julie and Jack were there, too. You can see us in the crowd. We were on the left.",
         "translation": "我们的朋友朱莉和杰克也在那儿。你可以在人群中看到我们。我们当时在左边。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "JULIE",
         "text": "There were twenty cars in the race. There were English cars, French cars, German cars, and Italian cars.",
         "translation": "比赛中有20辆赛车。有英国车、法国车、德国车和意大利车。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "JACK",
         "text": "It was an exciting race. Number twenty-eight was the winner. It was an Italian car.",
         "translation": "这是一场令人激动的比赛。28号车是获胜者。它是一辆意大利赛车。",
-        "avatar": "📖"
+        "avatar": "👨"
       }
     ],
     "sentences": [
@@ -2752,15 +2612,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "year",
-        "phonetic": "/jɪə/",
-        "meaning": "n. 年",
-        "mcItem": "Clock",
-        "mcItemIcon": "🗓️",
-        "sampleSentence": "Every year.",
-        "sampleTranslation": "每年。"
-      },
-      {
         "word": "race",
         "phonetic": "/reɪs/",
         "meaning": "n. 比赛，竞赛",
@@ -2768,15 +2619,6 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🏎️",
         "sampleSentence": "The car race is exciting.",
         "sampleTranslation": "赛车比赛令人激动。"
-      },
-      {
-        "word": "town",
-        "phonetic": "/taʊn/",
-        "meaning": "n. 城镇",
-        "mcItem": "Bricks",
-        "mcItemIcon": "🏙️",
-        "sampleSentence": "Near our town.",
-        "sampleTranslation": "在我们镇附近。"
       },
       {
         "word": "hundred",
@@ -2872,22 +2714,49 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "yesterday",
-        "phonetic": "/ˈjestədeɪ/",
-        "meaning": "adv. 昨天",
+        "word": "when",
+        "phonetic": "/wen/",
+        "meaning": "副词：什么时候；何时",
         "mcItem": "Clock",
-        "mcItemIcon": "⏪",
-        "sampleSentence": "Where were you yesterday?",
-        "sampleTranslation": "你昨天在哪里？"
+        "mcItemIcon": "⏰",
+        "sampleSentence": "When were you at the train station?",
+        "sampleTranslation": "你什么时候在火车站的？"
       },
       {
-        "word": "last",
-        "phonetic": "/lɑːst/",
-        "meaning": "adj. 上一个的",
-        "mcItem": "Clock",
-        "mcItemIcon": "⏮️",
-        "sampleSentence": "Last week.",
-        "sampleTranslation": "上周。"
+        "word": "station",
+        "phonetic": "/ˈsteɪ.ʃən/",
+        "meaning": "名词：车站；局",
+        "mcItem": "Minecart",
+        "mcItemIcon": "🚉",
+        "sampleSentence": "The train arrived at the station on time.",
+        "sampleTranslation": "火车准时到达了车站。"
+      },
+      {
+        "word": "yesterday",
+        "phonetic": "/ˈjes.tə.deɪ/",
+        "meaning": "名词/副词：昨天",
+        "mcItem": "Daylight Detector",
+        "mcItemIcon": "📅",
+        "sampleSentence": "They were in Paris yesterday morning.",
+        "sampleTranslation": "他们昨天早晨在巴黎。"
+      },
+      {
+        "word": "morning",
+        "phonetic": "/ˈmɔː.nɪŋ/",
+        "meaning": "名词：早晨；上午",
+        "mcItem": "Sunlight",
+        "mcItemIcon": "🌅",
+        "sampleSentence": "It was a sunny morning in the village.",
+        "sampleTranslation": "那是村庄里一个晴朗的早晨。"
+      },
+      {
+        "word": "evening",
+        "phonetic": "/ˈiːv.nɪŋ/",
+        "meaning": "名词：傍晚；晚上",
+        "mcItem": "Lantern",
+        "mcItemIcon": "🌆",
+        "sampleSentence": "We stayed at home yesterday evening.",
+        "sampleTranslation": "我们昨天傍晚呆在家里。"
       }
     ],
     "grammarNote": "过去时间状语：yesterday, last night, last week, last month, last year, in 1995。"
@@ -3104,7 +2973,62 @@ export const NCE_BOOK1_UNIT3_DATA: Record<number, LessonCorpusItem> = {
         "zh": "我今天早上烧了水。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "yesterday",
+        "phonetic": "/ˈjes.tə.deɪ/",
+        "meaning": "adv./n. 昨天",
+        "mcItem": "Clock",
+        "mcItemIcon": "📅",
+        "sampleSentence": "I cleaned the room yesterday.",
+        "sampleTranslation": "我昨天打扫了房间。"
+      },
+      {
+        "word": "air",
+        "phonetic": "/eər/",
+        "meaning": "v. 使通风，换气",
+        "mcItem": "Glass",
+        "mcItemIcon": "💨",
+        "sampleSentence": "She aired the bedroom yesterday morning.",
+        "sampleTranslation": "她昨天上午给卧室通了风。"
+      },
+      {
+        "word": "clean",
+        "phonetic": "/kliːn/",
+        "meaning": "v. 打扫，清洗",
+        "mcItem": "Water Bucket",
+        "mcItemIcon": "🧽",
+        "sampleSentence": "He cleaned the blackboard after class.",
+        "sampleTranslation": "下课后他擦了黑板。"
+      },
+      {
+        "word": "wash",
+        "phonetic": "/wɒʃ/",
+        "meaning": "v. 洗涤，洗",
+        "mcItem": "Cauldron",
+        "mcItemIcon": "🧼",
+        "sampleSentence": "They washed the dishes after dinner.",
+        "sampleTranslation": "晚饭后他们洗了碗。"
+      },
+      {
+        "word": "boil",
+        "phonetic": "/bɔɪl/",
+        "meaning": "v. 煮沸，烧开",
+        "mcItem": "Blaze Powder",
+        "mcItemIcon": "🫖",
+        "sampleSentence": "She boiled some water for tea.",
+        "sampleTranslation": "她烧了些水泡茶。"
+      },
+      {
+        "word": "open",
+        "phonetic": "/ˈəʊ.pən/",
+        "meaning": "v. 打开",
+        "mcItem": "Iron Door",
+        "mcItemIcon": "🚪",
+        "sampleSentence": "He opened the window to let fresh air in.",
+        "sampleTranslation": "他打开窗户让新鲜空气进来。"
+      }
+    ],
     "grammarNote": "规则动词过去式加 -ed 读音规则：清辅音后读 /t/ (walked, washed)，浊辅音与元音后读 /d/ (cleaned, opened)，/t/ 或 /d/ 结尾后读 /ɪd/ (waited, painted)。"
   }
 };

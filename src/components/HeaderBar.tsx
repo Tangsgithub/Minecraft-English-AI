@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, APP_VERSION_INFO, CourseVolumeId } from '../types';
 import { getTierForLevel, getXpProgressForCurrentLevel } from '../data/gamificationData';
-import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, HelpCircle, Cloud, User as UserIcon, Mic, Headphones, ChevronDown, LogOut } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Sparkles, Flame, Shield, Cloud, User as UserIcon, Mic, ChevronDown, LogOut } from 'lucide-react';
 import { getSoundEnabled, toggleSoundEffects, playClickSound, playEmeraldSound, unlockAudio } from '../utils/audio';
 import { User } from '../lib/neonAuth';
 import { MinecraftAvatar } from './MinecraftAvatar';
+import { DailyProgressBar } from './DailyProgressBar';
 
 interface HeaderBarProps {
   selectedVolumeId: CourseVolumeId;
@@ -16,11 +17,13 @@ interface HeaderBarProps {
   onOpenVipModal?: () => void;
   onOpenSettings: () => void;
   onOpenUserProfile?: () => void;
-  onOpenHelpWizard: () => void;
+  onOpenHelpWizard?: () => void;
   onOpenParentDashboard: () => void;
   onOpenCustomerService?: () => void;
   onGoToLandingPage?: () => void;
   onOpenAdminConsole?: () => void;
+  onNavigateToTab?: (tab: 'map' | 'chat' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements') => void;
+  onOpenAlexChat?: () => void;
   soundEnabled: boolean;
   setSoundEnabled: (val: boolean) => void;
 }
@@ -40,6 +43,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenCustomerService,
   onGoToLandingPage,
   onOpenAdminConsole,
+  onNavigateToTab,
+  onOpenAlexChat,
   soundEnabled,
   setSoundEnabled
 }) => {
@@ -60,17 +65,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
 
   return (
-    <header className="bg-gradient-to-r from-[#17300e] via-[#2a591a] to-[#17300e] border-b-3 sm:border-b-4 border-[#0f1f09] text-white shadow-[0_8px_20px_rgba(0,0,0,0.4)] sticky top-0 z-40 pt-safe relative">
+    <header className="bg-gradient-to-r from-[#17300e] via-[#2a591a] to-[#17300e] border-b-3 sm:border-b-4 border-[#0f1f09] text-white shadow-[0_8px_20px_rgba(0,0,0,0.4)] sticky top-0 z-50 pt-safe relative w-full">
       {/* Top subtle highlight line */}
       <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 py-2.5 sm:py-4">
+      <div className="max-w-7xl w-full mx-auto px-2 sm:px-4 py-2 sm:py-3">
         
         {/* Main Header Flex Row */}
-        <div className="flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-3">
           
           {/* Left: Brand Crest & Volume Selector */}
-          <div className="flex items-center space-x-2 sm:space-x-3.5 shrink-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
             
             {/* Minecraft 3D Pixel Icon Crest */}
             <div 
@@ -78,78 +83,27 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               onClick={() => onGoToLandingPage?.()}
               title="返回产品官网/介绍"
             >
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-[#5c4033] border-2 sm:border-4 border-black rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl shadow-[0_3px_0_0_#2b1810] relative overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
-                <div className="absolute top-0 left-0 right-0 h-2.5 sm:h-3 bg-[#487E2C] border-b-2 border-[#2A4718]" />
+              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-[#5c4033] border-2 sm:border-4 border-black rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl shadow-[0_2px_0_0_#2b1810] sm:shadow-[0_3px_0_0_#2b1810] relative overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
+                <div className="absolute top-0 left-0 right-0 h-2 sm:h-2.5 bg-[#487E2C] border-b-2 border-[#2A4718]" />
                 <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">⛏️</span>
               </div>
             </div>
 
             <div>
-              <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 <h1 className="font-black text-xs sm:text-base md:text-lg text-amber-300 font-mono tracking-tight uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] flex items-center space-x-1">
                   <span>MC</span>
                   <span className="text-white hidden xs:inline">ENGLISH</span>
                 </h1>
 
-                {/* Volume Switcher Dropdown Badge */}
-                <div className="relative group">
-                  <button
-                    type="button"
-                    className="flex items-center space-x-1 text-[10px] sm:text-xs font-black font-mono bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-slate-950 px-2 sm:px-2.5 py-0.5 rounded-lg border-2 border-black uppercase tracking-wide shadow-xs transition-all cursor-pointer active:translate-y-0.5"
-                  >
-                    <span>{currentVolume.title.replace('新概念英语 ', '新概念 ')}</span>
-                    <ChevronDown className="w-3 h-3 stroke-[3]" />
-                  </button>
-                  <div className="absolute left-0 top-full mt-2 w-60 bg-slate-900 border-2 border-amber-400/60 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden p-1.5">
-                    <div className="px-3 py-1.5 text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800 flex items-center justify-between">
-                      <span>新概念教材分册</span>
-                      <span className="text-amber-400 text-[9px]">1册 144关全量开放</span>
-                    </div>
-                    {APP_VERSION_INFO.volumes.map(vol => {
-                      const isLocked = vol.id !== 'vol1';
-                      const statusText = isLocked 
-                        ? '教研打磨中 · 敬请期待' 
-                        : '144关真实课文已全量开放';
-                      return (
-                        <button
-                          key={vol.id}
-                          disabled={isLocked}
-                          onClick={() => {
-                            if (isLocked) return;
-                            playClickSound();
-                            onChangeVolumeId(vol.id);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold font-mono transition-colors flex items-center justify-between my-0.5 ${
-                            isLocked
-                              ? 'text-slate-500 bg-slate-950/40 cursor-not-allowed opacity-75'
-                              : selectedVolumeId === vol.id
-                              ? 'bg-emerald-600 text-white shadow-xs cursor-pointer'
-                              : 'text-slate-200 hover:bg-slate-800 hover:text-amber-300 cursor-pointer'
-                          }`}
-                        >
-                          <div className="flex flex-col">
-                            <span className="flex items-center space-x-1">
-                              <span>{vol.title}</span>
-                              {isLocked && <span className="text-[10px]">🔒</span>}
-                            </span>
-                            <span className="text-[10px] font-normal opacity-70">
-                              {statusText}
-                            </span>
-                          </div>
-                          {selectedVolumeId === vol.id ? (
-                            <span className="text-amber-300 text-xs">✓</span>
-                          ) : isLocked ? (
-                            <span className="text-[9px] bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded border border-slate-700">敬请期待</span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* Single Volume Badge - Book 1 Full Edition */}
+                <div className="flex items-center space-x-1 text-[10px] sm:text-xs font-black font-mono bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 px-1.5 sm:px-2.5 py-0.5 rounded-lg border-2 border-black uppercase tracking-wide shadow-xs">
+                  <span><span className="hidden sm:inline">新概念 </span>第1册<span className="hidden sm:inline"> (144关全量)</span></span>
                 </div>
               </div>
 
               {/* Subtitle / Realm Title (Desktop Only) */}
-              <div className="hidden md:flex items-center space-x-2 text-xs text-emerald-200/90 font-mono mt-0.5">
+              <div className="hidden xl:flex items-center space-x-2 text-xs text-emerald-200/90 font-mono mt-0.5">
                 <span className="font-bold">新概念英语探险元宇宙</span>
                 <span className="opacity-40">•</span>
                 <span className="text-amber-300 font-black">{tier.title}</span>
@@ -158,7 +112,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
 
           {/* Desktop HUD: Grand RPG HUD Plate (XP, Emeralds, Streak) */}
-          <div className="hidden lg:flex items-center space-x-3 bg-black/40 border-2 border-black/80 px-3 py-2 rounded-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0">
+          <div className="hidden xl:flex items-center space-x-3 bg-black/40 border-2 border-black/80 px-3 py-1.5 rounded-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0">
             
             {/* Level Badge */}
             <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-amber-400/40 px-2 py-1 rounded-xl shadow-xs shrink-0">
@@ -168,10 +122,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
             {/* XP Progress Bar */}
             <div 
-              className="w-40 group/xp relative cursor-help"
+              className="w-36 group/xp relative cursor-help"
               title={`当前等级: Lv.${profile.level} (${tier.title})\n本级升级进度: ${progressInLevel} / ${levelSpan} XP (${progressPercent}%)\n升至 Lv.${profile.level + 1} 还需: ${xpNeededForNextLevel} XP\n累计总经验: ${profile.xp} XP`}
             >
-              <div className="flex justify-between items-center text-[10px] font-mono font-bold mb-1 text-white">
+              <div className="flex justify-between items-center text-[10px] font-mono font-bold mb-0.5 text-white">
                 <div className="flex items-center space-x-1">
                   <span className="text-emerald-300 font-black">XP</span>
                   <span className="text-[9px] text-emerald-400/80 font-normal">本级</span>
@@ -200,7 +154,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               </div>
             </div>
 
-            <div className="h-6 w-px bg-white/20" />
+            <div className="h-5 w-px bg-white/20" />
 
             {/* Emerald Vault Counter */}
             <div
@@ -219,6 +173,16 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <Flame className="w-3.5 h-3.5 text-[#FF6321] fill-[#FF6321] animate-bounce" />
               <span className="text-amber-300">{profile.streakDays}d</span>
             </div>
+          </div>
+
+          {/* Daily Goal Progress Capsule (Directly visible to encourage kids) */}
+          <div className="shrink-0 flex items-center">
+            <DailyProgressBar
+              profile={profile}
+              onNavigateToTab={onNavigateToTab}
+              onOpenAlexChat={onOpenAlexChat}
+              onOpenParentDashboard={onOpenParentDashboard}
+            />
           </div>
 
           {/* Right Actions: User Profile / VIP / Audio / Settings */}
@@ -272,34 +236,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <span className="hidden md:inline">家长</span>
             </button>
 
-            {/* Guide Manual Button (Medium screen and up) */}
-            <button
-              onClick={() => {
-                playClickSound();
-                onOpenHelpWizard();
-              }}
-              className="hidden md:flex px-2 sm:px-2.5 py-1 sm:py-1.5 bg-[#2196F3] hover:bg-[#1976D2] border-2 border-black text-white rounded-xl transition-all items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#0D47A1] active:translate-y-0.5 cursor-pointer"
-              title="查看新手学习指导手册"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-white" />
-              <span>指南</span>
-            </button>
-
-            {/* Customer Service button (Medium screen and up) */}
-            {onOpenCustomerService && (
-              <button
-                onClick={() => {
-                  playClickSound();
-                  onOpenCustomerService();
-                }}
-                className="hidden sm:flex px-2 sm:px-2.5 py-1 sm:py-1.5 bg-emerald-500 hover:bg-emerald-400 border-2 border-black text-slate-950 font-black rounded-xl transition-all items-center space-x-1 text-xs font-mono shadow-[0_2px_0_0_#14532d] active:translate-y-0.5 cursor-pointer"
-                title="在线客服与支持"
-              >
-                <Headphones className="w-3.5 h-3.5 text-slate-950" />
-                <span>客服</span>
-              </button>
-            )}
-
             {/* Sound Toggle */}
             <button
               onClick={handleSoundToggle}
@@ -330,7 +266,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         {/* Mobile / Tablet Dedicated Compact Game HUD Bar */}
-        <div className="flex lg:hidden items-center justify-between mt-2 pt-2 border-t border-white/10 gap-2 font-mono">
+        <div className="flex xl:hidden items-center justify-between mt-1.5 pt-1.5 border-t border-white/10 gap-2 font-mono">
           {/* Level & Title */}
           <div className="flex items-center space-x-1 bg-black/40 border border-white/20 px-2 py-0.5 rounded-lg text-[10px] font-bold text-amber-300 shrink-0">
             <span>{tier.icon}</span>

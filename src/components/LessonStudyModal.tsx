@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2, Lock, ShieldCheck, Check, AlertTriangle, ArrowDown } from 'lucide-react';
+import { Sparkles, Volume2, Play, Square, X, Mic, Headphones, CheckCircle2, Maximize2, Minimize2, Lock, ShieldCheck, Check, AlertTriangle, ArrowDown, Users, UserCheck } from 'lucide-react';
 import { Lesson, UserProfile } from '../types';
 import { getBiomeChapterByUnit } from '../data/storyData';
 import { speakText, stopSpeech, playClickSound, playEmeraldSound, playAnvilSound, playLevelUpSound } from '../utils/audio';
 import { hasLessonAccess } from '../utils/volumeProgress';
 import { MinecraftAvatar } from './MinecraftAvatar';
 import { SceneOralCheckInModal, RealWorldSceneItem } from './SceneOralCheckInModal';
-import { RedstoneLogicWorkbench } from './RedstoneLogicWorkbench';
-import { StoryRetellingDeck } from './StoryRetellingDeck';
 import { OralEvaluationModal } from './OralEvaluationModal';
+import { LootChestVictoryModal } from './LootChestVictoryModal';
 
 interface LessonStudyModalProps {
   lesson: Lesson;
@@ -307,13 +306,13 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     (profile.unlockedLessonIds.includes(lesson.id) && profile.unlockedLessonIds.includes(lesson.id + 1))
   ) : false);
 
-  // Focus only on the top 1-2 core target sentence patterns per lesson
+  // Full authentic target sentences from the curriculum
   const coreSentences = (lesson.targetSentences && lesson.targetSentences.length > 0)
-    ? lesson.targetSentences.slice(0, 2)
+    ? lesson.targetSentences
     : [lesson.dialogueScript?.[0]?.text || 'Look at this!'];
 
   const coreSentenceTranslations = (lesson.targetSentenceTranslations && lesson.targetSentenceTranslations.length > 0)
-    ? lesson.targetSentenceTranslations.slice(0, 2)
+    ? lesson.targetSentenceTranslations
     : [lesson.dialogueScript?.[0]?.translation || '看看这个！'];
 
   // Scaffolding game state
@@ -330,6 +329,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   const [completedSceneTypes, setCompletedSceneTypes] = useState<Record<number, boolean>>({}); // sceneId -> isSpoken
   const [activeSceneForCheckIn, setActiveSceneForCheckIn] = useState<RealWorldSceneItem | null>(null);
   const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string; mcIcon?: string } | null>(null);
+  const [showLootChest, setShowLootChest] = useState<boolean>(false);
 
   useEffect(() => {
     // Shuffle words for sentence crafting
@@ -390,12 +390,33 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     });
   };
 
+  // Role-play / Multi-speaker interactive states
+  const [selectedRole, setSelectedRole] = useState<string>('ALL'); // 'ALL' = normal dialogue, or speaker name
+  const [isWaitingForUserRole, setIsWaitingForUserRole] = useState<boolean>(false);
+  const userContinueResolveRef = useRef<(() => void) | null>(null);
+
+  const uniqueSpeakers = Array.from(new Set(lesson.dialogueScript.map(t => t.speaker)));
+
+  const handleUserRoleContinue = () => {
+    playClickSound();
+    setIsWaitingForUserRole(false);
+    if (userContinueResolveRef.current) {
+      userContinueResolveRef.current();
+      userContinueResolveRef.current = null;
+    }
+  };
+
   const handleTogglePlayAllDialogue = async () => {
     if (isPlayingAllDialogue) {
       stopPlayRef.current = true;
       stopSpeech();
       setIsPlayingAllDialogue(false);
       setCurrentDialogueIndex(null);
+      setIsWaitingForUserRole(false);
+      if (userContinueResolveRef.current) {
+        userContinueResolveRef.current();
+        userContinueResolveRef.current = null;
+      }
       return;
     }
 
@@ -417,12 +438,23 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
         return next;
       });
 
-      await speakText(turn.text, { speaker: turn.speaker });
+      // Role Play Check: If user is role-playing this character, pause and let user speak!
+      if (selectedRole !== 'ALL' && turn.speaker.toUpperCase() === selectedRole.toUpperCase()) {
+        setIsWaitingForUserRole(true);
+        // Wait for user to either speak/test or click "Continue"
+        await new Promise<void>(resolve => {
+          userContinueResolveRef.current = resolve;
+        });
+        setIsWaitingForUserRole(false);
+      } else {
+        // AI speaks this turn
+        await speakText(turn.text, { speaker: turn.speaker });
+      }
 
       if (stopPlayRef.current) break;
 
-      // Small natural pause between dialogue turns
-      await new Promise(res => setTimeout(res, 350));
+      // Natural pause between dialogue turns (650ms for authentic rhythm)
+      await new Promise(res => setTimeout(res, 650));
     }
 
     if (!stopPlayRef.current) {
@@ -432,6 +464,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
 
     setIsPlayingAllDialogue(false);
     setCurrentDialogueIndex(null);
+    setIsWaitingForUserRole(false);
   };
 
   // Vocabulary Continuous Playback
@@ -496,13 +529,13 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     if (!isAllTasksCompleted) {
       playAnvilSound();
       if (!isDialogueDone) {
-        scrollToSection('section-dialogue', '🎧 任务 1：请收听课文对话全文（可点击【一键连读】整篇）！');
+        scrollToSection('section-dialogue', '🎧 步骤 1：请收听课文对话全文（可点击【一键连读】整篇）！');
       } else if (!isScaffoldDone) {
-        scrollToSection('section-scaffold', `🧱 任务 2：请完成全部 ${coreSentences.length} 个句型脚手架拼句（当前已完成 ${completedScaffoldIndices.size}/${coreSentences.length}）！`);
+        scrollToSection('section-scaffold', `🧱 步骤 2：请完成全部 ${coreSentences.length} 个句型脚手架拼句（当前已完成 ${completedScaffoldIndices.size}/${coreSentences.length}）！`);
       } else if (!isRealWorldDone) {
-        scrollToSection('section-realworld', `🎙️ 任务 3：请完成全部 ${realWorldScenes.length} 个生活场景的朗读打卡（当前已打卡 ${completedQuests.size}/${realWorldScenes.length}）！`);
+        scrollToSection('section-realworld', `🎙️ 步骤 3：请完成全部 ${realWorldScenes.length} 个生活场景的朗读打卡（当前已打卡 ${completedQuests.size}/${realWorldScenes.length}）！`);
       } else if (!isVocabDone) {
-        scrollToSection('section-vocabulary', `📦 任务 4：请收听本课所有 ${lesson.vocabulary.length} 个核心词汇发音（当前已听 ${playedVocabIds.length}/${lesson.vocabulary.length}）！`);
+        scrollToSection('section-vocabulary', `📦 步骤 3：请收听本课所有 ${lesson.vocabulary.length} 个核心词汇发音（当前已听 ${playedVocabIds.length}/${lesson.vocabulary.length}）！`);
       }
       return;
     }
@@ -514,7 +547,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
     if (onCompleteLesson) {
       onCompleteLesson(lesson.id);
     }
-    onClose();
+    setShowLootChest(true);
   };
 
   const totalAudioItems = coreSentences.length + lesson.vocabulary.length + lesson.dialogueScript.length;
@@ -611,25 +644,25 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
             <p className="text-sm text-amber-950 font-bold">{lesson.sceneDescription}</p>
           </div>
 
-          {/* 🛡️ 通关探险任务清单 (Study Quest Progress Tracker) */}
+          {/* 🛡️ 3步探险通关里程碑 (3-Step Quest Progress Tracker) */}
           <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white p-4 sm:p-5 rounded-2xl border-3 border-emerald-600 shadow-lg space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
               <div className="flex items-center space-x-2">
-                <span className="text-xl">📋</span>
+                <span className="text-xl">🗺️</span>
                 <div>
                   <h3 className="text-xs sm:text-sm font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>探险通关学习任务单</span>
+                    <span>探险通关 3 步闭环路线</span>
                     <span className="text-[10px] bg-emerald-900/90 text-emerald-200 px-2 py-0.2 rounded border border-emerald-600 font-bold">
-                      {isAllTasksCompleted ? '全部已达成 ✨' : `达标进度: ${completedTaskCount}/4`}
+                      {isAllTasksCompleted ? '全线通关 ✨' : `达标进度: ${completedTaskCount}/4 项`}
                     </span>
                   </h3>
                   <p className="text-[10px] text-slate-400 font-mono">
-                    完成以下 4 项核心学习环节，即可通关并解锁下一课探险！
+                    循序渐进完成 3 步闭环，即可开启通关宝箱并解锁下一关！
                   </p>
                 </div>
               </div>
 
-              {/* Progress Bar */}
+              {/* Progress Bar & Open Chest Shortcut */}
               <div className="flex items-center space-x-2 shrink-0">
                 <div className="w-24 sm:w-32 bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700">
                   <div
@@ -642,95 +675,119 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                 <span className="text-xs font-mono font-bold text-amber-300">
                   {isAlreadyCompleted ? '100%' : `${Math.round((completedTaskCount / 4) * 100)}%`}
                 </span>
+                {isAllTasksCompleted && (
+                  <button
+                    onClick={handleTriggerCompleteLesson}
+                    className="ml-1 px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-xs font-mono font-black border border-amber-300 shadow-sm active:scale-95 transition-all cursor-pointer animate-bounce flex items-center gap-1"
+                  >
+                    <span>🎁 开启宝箱</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* 4 Interactive Quest Badges */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
-              {/* Task 1: Dialogue Listening */}
+            {/* 3 Interactive Milestone Pipeline Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+              
+              {/* Step 1: Dialogue Listening */}
               <div
                 onClick={() => {
                   if (!isDialogueDone) {
-                    scrollToSection('section-dialogue', '🎧 正在定位课文对话：可点击【连续朗读】连听整篇！');
+                    scrollToSection('section-dialogue', '🎧 步骤 1：正在定位课文情境对话，可点击【一键连读】整篇！');
                   }
                 }}
-                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
+                className={`p-3 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer relative overflow-hidden ${
                   isDialogueDone
                     ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
-                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800 shadow-md ring-1 ring-amber-500/40'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <span>🎧 1. 课文听读</span>
+                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-[11px]">
+                      1
+                    </span>
+                    <span>🎧 课文情境精听</span>
                   </span>
                   {isDialogueDone ? (
                     <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
-                      <Check className="w-2.5 h-2.5" /> 已完成
+                      <Check className="w-2.5 h-2.5" /> 已听完
                     </span>
                   ) : (
                     <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
-                      待收听
+                      当前进行中
                     </span>
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isDialogueDone ? '✓ 课文对话已听完' : `点击【连读整篇】听完全文 (${dialogueAudioCount}/${lesson.dialogueScript.length})`}
+                  {isDialogueDone ? '✓ 课文双人对白已精听完成' : `收听原声对话 (${dialogueAudioCount}/${lesson.dialogueScript.length})`}
                 </p>
               </div>
 
-              {/* Task 2: Sentence Scaffolding */}
+              {/* Step 2: Sentence Scaffolding */}
               <div
                 onClick={() => {
                   if (!isScaffoldDone) {
-                    scrollToSection('section-scaffold', `🧱 正在定位语法拼句：需完成本课全部 ${coreSentences.length} 个核心句型拼句！`);
+                    scrollToSection('section-scaffold', `🧱 步骤 2：正在定位方块语法拼句，需完成全部 ${coreSentences.length} 个核心句型！`);
                   }
                 }}
-                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
+                className={`p-3 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer relative overflow-hidden ${
                   isScaffoldDone
                     ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
-                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                    : isDialogueDone
+                    ? 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800 shadow-md ring-1 ring-amber-500/40'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-500'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <span>🧱 2. 方块拼句</span>
+                    <span className="w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center font-black text-[11px]">
+                      2
+                    </span>
+                    <span>🧱 方块语法拼句</span>
                   </span>
                   {isScaffoldDone ? (
                     <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
-                      <Check className="w-2.5 h-2.5" /> 已完成
+                      <Check className="w-2.5 h-2.5" /> 已掌握
                     </span>
                   ) : (
-                    <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
-                      待拼句
+                    <span className="text-[10px] bg-blue-500/30 text-blue-300 border border-blue-500/60 px-1.5 py-0.2 rounded">
+                      {isDialogueDone ? '待拼句' : '接续步骤'}
                     </span>
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isScaffoldDone ? `✓ 全部 ${coreSentences.length} 个句型均已拼对` : `需拼对全部句型 (${completedScaffoldIndices.size}/${coreSentences.length})`}
+                  {isScaffoldDone ? `✓ 全部 ${coreSentences.length} 个句型拼句成功` : `拼对目标句型 (${completedScaffoldIndices.size}/${coreSentences.length})`}
                 </p>
               </div>
 
-              {/* Task 3: Real-World Oral Bridge */}
+              {/* Step 3: Real-World Oral Bridge & Vocabulary */}
               <div
                 onClick={() => {
                   if (!isRealWorldDone) {
-                    scrollToSection('section-realworld', `🎙️ 正在定位生活场景：需完成全部 ${realWorldScenes.length} 个场景的朗读打卡！`);
+                    scrollToSection('section-realworld', `🎙️ 步骤 3：正在定位生活场景打卡，需完成全部 ${realWorldScenes.length} 个场景！`);
+                  } else if (!isVocabDone) {
+                    scrollToSection('section-vocabulary', `📦 步骤 3：正在定位词汇发音，请收听全部 ${lesson.vocabulary.length} 个核心生词！`);
                   }
                 }}
-                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
-                  isRealWorldDone
+                className={`p-3 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer relative overflow-hidden ${
+                  isRealWorldDone && isVocabDone
                     ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
-                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
+                    : (isDialogueDone && isScaffoldDone)
+                    ? 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800 shadow-md ring-1 ring-amber-500/40'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-500'
                 }`}
               >
                 <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
                   <span className="flex items-center gap-1.5">
-                    <span>🎙️ 3. 场景打卡</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black text-[11px]">
+                      3
+                    </span>
+                    <span>🎙️ 场景打卡与生词</span>
                   </span>
-                  {isRealWorldDone ? (
+                  {isRealWorldDone && isVocabDone ? (
                     <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
-                      <Check className="w-2.5 h-2.5" /> 已完成
+                      <Check className="w-2.5 h-2.5" /> 已达标
                     </span>
                   ) : (
                     <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
@@ -739,86 +796,133 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                   )}
                 </div>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  {isRealWorldDone ? `✓ 全部 ${realWorldScenes.length} 个场景均已打卡` : `需打卡全部 3 场景 (${completedQuests.size}/${realWorldScenes.length})`}
+                  {isRealWorldDone && isVocabDone ? '✓ 真实生活场景与生词已全打卡' : `打卡 3 场景 (${completedQuests.size}/${realWorldScenes.length}) + 生词`}
                 </p>
               </div>
 
-              {/* Task 4: Vocabulary Study */}
-              <div
-                onClick={() => {
-                  if (!isVocabDone) {
-                    scrollToSection('section-vocabulary', `📦 正在定位核心词汇：需收听全部 ${lesson.vocabulary.length} 个生词发音！`);
-                  }
-                }}
-                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col justify-between cursor-pointer ${
-                  isVocabDone
-                    ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-200'
-                    : 'bg-slate-800/80 border-slate-700 hover:border-amber-400 text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs font-bold font-mono mb-1.5">
-                  <span className="flex items-center gap-1.5">
-                    <span>📦 4. 词汇听读</span>
-                  </span>
-                  {isVocabDone ? (
-                    <span className="text-[10px] bg-emerald-500 text-slate-950 font-black px-1.5 py-0.2 rounded flex items-center gap-0.5">
-                      <Check className="w-2.5 h-2.5" /> 已完成
-                    </span>
-                  ) : (
-                    <span className="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-500/60 px-1.5 py-0.2 rounded">
-                      待收听
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  {isVocabDone ? `✓ 全部 ${lesson.vocabulary.length} 个词汇发音已收听` : `需收听全量生词 (${playedVocabIds.length}/${lesson.vocabulary.length})`}
-                </p>
-              </div>
             </div>
           </div>
 
-          {/* Minecraft Scene Original Dialogue - WeChat Style */}
+          {/* Minecraft Scene Original Dialogue - WeChat Style with Multi-speaker Roleplay */}
           <div
             id="section-dialogue"
-            className={`bg-[#EDEDED] p-3 sm:p-5 rounded-2xl border-2 border-[#DCDCDC] space-y-3 shadow-inner transition-all duration-300 ${
+            className={`bg-[#EDEDED] p-3 sm:p-5 rounded-2xl border-2 border-[#DCDCDC] space-y-3.5 shadow-inner transition-all duration-300 ${
               highlightedSection === 'section-dialogue' ? 'ring-4 ring-amber-400 animate-pulse' : ''
             }`}
           >
+            {/* Header with Title & Continuous Play */}
             <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#CCCCCC]">
               <div className="flex items-center space-x-2">
                 <span className="text-lg">💬</span>
-                <h3 className="text-xs sm:text-sm font-mono font-black text-[#2D2D2D] uppercase tracking-wider">
-                  原版对话练习 (微信风格)
-                </h3>
-                {isPlayingAllDialogue && (
-                  <span className="inline-flex items-center space-x-1.5 text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold border border-emerald-300">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>连读中 ({currentDialogueIndex !== null ? currentDialogueIndex + 1 : 1}/{lesson.dialogueScript.length})</span>
-                  </span>
-                )}
+                <div>
+                  <h3 className="text-xs sm:text-sm font-mono font-black text-[#2D2D2D] uppercase tracking-wider flex items-center gap-1.5">
+                    <span>原版情景对话练习</span>
+                    <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full border border-indigo-200 font-bold">
+                      {uniqueSpeakers.length} 位真实角色对戏
+                    </span>
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    不同人物采用英美男女声/童声纯正配音，拒绝单人独白念经
+                  </p>
+                </div>
               </div>
 
-              <button
-                onClick={handleTogglePlayAllDialogue}
-                className={`px-3 py-1.5 rounded-xl border-2 font-mono text-xs font-black transition-all flex items-center space-x-1.5 shadow-sm active:translate-y-0.5 ${
-                  isPlayingAllDialogue
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-black animate-pulse'
-                    : 'bg-[#487E2C] hover:bg-[#355E20] text-white border-black hover:scale-105'
-                }`}
-              >
-                {isPlayingAllDialogue ? (
-                  <>
-                    <Square className="w-3.5 h-3.5 fill-current" />
-                    <span>⏹ 停止连读</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>▶ 连续朗读整篇对话</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleTogglePlayAllDialogue}
+                  className={`px-3 py-1.5 rounded-xl border-2 font-mono text-xs font-black transition-all flex items-center space-x-1.5 shadow-sm active:translate-y-0.5 ${
+                    isPlayingAllDialogue
+                      ? 'bg-amber-500 hover:bg-amber-600 text-white border-black animate-pulse'
+                      : 'bg-[#487E2C] hover:bg-[#355E20] text-white border-black hover:scale-105'
+                  }`}
+                >
+                  {isPlayingAllDialogue ? (
+                    <>
+                      <Square className="w-3.5 h-3.5 fill-current" />
+                      <span>⏹ 停止</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>{selectedRole === 'ALL' ? '▶ 双人连续朗读' : `▶ 角色扮演对戏 (${selectedRole})`}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* 🎭 Role Selection Pill Bar (角色扮演对戏选择) */}
+            <div className="bg-white/80 p-2.5 rounded-xl border border-slate-300 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+              <div className="flex items-center space-x-1.5 text-slate-700 font-bold text-[11px]">
+                <Users className="w-3.5 h-3.5 text-indigo-600" />
+                <span>角色模式：</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    playClickSound();
+                    setSelectedRole('ALL');
+                    if (isPlayingAllDialogue) {
+                      stopPlayRef.current = true;
+                      stopSpeech();
+                      setIsPlayingAllDialogue(false);
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                    selectedRole === 'ALL'
+                      ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                      : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  🎧 双人原声轮读
+                </button>
+
+                {uniqueSpeakers.map(spk => (
+                  <button
+                    key={spk}
+                    onClick={() => {
+                      playClickSound();
+                      setSelectedRole(spk);
+                      if (isPlayingAllDialogue) {
+                        stopPlayRef.current = true;
+                        stopSpeech();
+                        setIsPlayingAllDialogue(false);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border flex items-center space-x-1 transition-all ${
+                      selectedRole === spk
+                        ? 'bg-amber-500 text-slate-950 border-amber-600 shadow-xs ring-1 ring-amber-400 font-black'
+                        : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                    }`}
+                  >
+                    <UserCheck className="w-3 h-3" />
+                    <span>我来演: {spk}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Role Play Active Prompt Notification */}
+            {isWaitingForUserRole && (
+              <div className="bg-amber-400 text-slate-950 p-3 rounded-xl border-2 border-amber-600 shadow-md flex items-center justify-between animate-bounce">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xl">🎙️</span>
+                  <div>
+                    <div className="font-mono font-black text-xs">轮到你了！请大声读出你的台词：</div>
+                    <div className="text-[11px] font-mono text-amber-950">
+                      你可以点击高亮气泡右侧的「跟读」评测发音，或完成后点击右侧按钮继续！
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleUserRoleContinue}
+                  className="px-3.5 py-1.5 bg-black text-white hover:bg-slate-800 rounded-lg text-xs font-mono font-black shadow-xs transition-all active:scale-95"
+                >
+                  我读完了，下一句 ➔
+                </button>
+              </div>
+            )}
 
             {/* WeChat Style Chat Feed */}
             <div className="space-y-3.5 pt-1">
@@ -827,9 +931,10 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                 const isPlayed = playedAudioIds.has(audioId);
                 const isCurrentlyPlaying = index === currentDialogueIndex;
 
-                // Identify left vs right speaker (e.g. Steve/User on Right, Alex/NPC on Left)
+                // Identify left vs right speaker
                 const firstSpeaker = lesson.dialogueScript[0]?.speaker || 'Steve';
                 const isRightSpeaker = (turn.speaker !== firstSpeaker && turn.speaker !== 'Alex') || turn.speaker === 'Steve' || turn.speaker === 'You';
+                const isUserAssignedRole = selectedRole !== 'ALL' && turn.speaker.toUpperCase() === selectedRole.toUpperCase();
 
                 return (
                   <div
@@ -848,24 +953,35 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                       isRightSpeaker ? 'items-end text-right' : 'items-start text-left'
                     }`}>
                       {/* Speaker Name */}
-                      <div className={`text-[10px] font-mono font-bold px-1 text-slate-500 flex items-center gap-1.5 ${
+                      <div className={`text-[10px] font-mono font-bold px-1 text-slate-600 flex items-center gap-1.5 ${
                         isRightSpeaker ? 'justify-end' : 'justify-start'
                       }`}>
-                        <span>{turn.speaker}</span>
+                        <span className="font-black">{turn.speaker}</span>
+                        {isUserAssignedRole && (
+                          <span className="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded border border-amber-400 font-bold">
+                            ★ 你的角色
+                          </span>
+                        )}
                         {isCurrentlyPlaying && (
-                          <span className="text-[9px] text-emerald-800 bg-emerald-200 px-1.5 py-0.2 rounded border border-emerald-400 font-bold animate-pulse">
-                            🔊 正在朗读...
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded border font-bold animate-pulse ${
+                            isWaitingForUserRole
+                              ? 'text-amber-900 bg-amber-300 border-amber-500'
+                              : 'text-emerald-800 bg-emerald-200 border-emerald-400'
+                          }`}>
+                            {isWaitingForUserRole ? '🎙️ 请你开口朗读' : '🔊 正在朗读...'}
                           </span>
                         )}
                       </div>
 
                       {/* WeChat Message Bubble */}
                       <div className={`p-3 sm:p-3.5 rounded-2xl text-xs sm:text-sm border shadow-xs transition-all relative ${
-                        isRightSpeaker
-                          ? 'bg-[#95ec69] text-slate-950 border-[#82e054] rounded-tr-none'
-                          : 'bg-white text-slate-900 border-[#E0E0E0] rounded-tl-none'
+                        isUserAssignedRole && isCurrentlyPlaying
+                          ? 'bg-amber-100 text-slate-950 border-amber-400 ring-2 ring-amber-500'
+                          : isRightSpeaker
+                            ? 'bg-[#95ec69] text-slate-950 border-[#82e054] rounded-tr-none'
+                            : 'bg-white text-slate-900 border-[#E0E0E0] rounded-tl-none'
                       } ${
-                        isCurrentlyPlaying
+                        isCurrentlyPlaying && !isUserAssignedRole
                           ? 'ring-2 ring-emerald-500 shadow-md'
                           : isPlayed
                             ? 'opacity-95'
@@ -904,6 +1020,15 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                             >
                               <span>🎙️ 跟读</span>
                             </button>
+
+                            {isWaitingForUserRole && isCurrentlyPlaying && (
+                              <button
+                                onClick={handleUserRoleContinue}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 rounded-lg text-[10px] font-mono font-black animate-pulse"
+                              >
+                                <span>完成 ➔</span>
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -931,7 +1056,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                 <span>核心句型与发音 (Target Sentences)</span>
               </span>
               <span className="text-[10px] bg-emerald-100 text-[#487E2C] font-bold px-2 py-0.5 rounded-full border border-emerald-300">
-                本课精选 {coreSentences.length} 个核心句型
+                本课共 {coreSentences.length} 个核心句型
               </span>
             </h3>
             <div className="space-y-2">
@@ -1136,27 +1261,6 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
               </div>
             )}
           </div>
-
-          {/* 第二册专属差异化学习模式：红石逻辑电路工作台 & 篇章复述挑战 */}
-          {(profile?.selectedVolumeId === 'vol2' || lesson.topic.toLowerCase().includes('past') || lesson.topic.toLowerCase().includes('perfect') || lesson.topic.toLowerCase().includes('infinitive') || lesson.topic.toLowerCase().includes('indirect')) && (
-            <div className="space-y-5">
-              {/* 1. 红石逻辑连词与时态中继器 */}
-              <RedstoneLogicWorkbench
-                lesson={lesson}
-                onSuccessReward={(emeralds, xp) => {
-                  if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
-                }}
-              />
-
-              {/* 2. 篇章摘要与故事复述挑战 */}
-              <StoryRetellingDeck
-                lesson={lesson}
-                onSuccessReward={(emeralds, xp) => {
-                  if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
-                }}
-              />
-            </div>
-          )}
 
           {/* 4. 丰富生活场景迁移 (Real-World Bridge) - Dynamically tailored to current lesson theme */}
           <div
@@ -1428,13 +1532,13 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
                     >
                       {isAllTasksCompleted ? (
                         <>
-                          <ShieldCheck className="w-4 h-4 text-emerald-800" />
-                          <span>🏅 学习达标 · 打卡通关并解锁第 {lesson.id + 1} 课</span>
+                          <span className="text-base">🎁</span>
+                          <span>学习达标 · 开启通关宝箱领绿宝石 (开箱)</span>
                         </>
                       ) : (
                         <>
                           <Lock className="w-4 h-4 text-amber-800" />
-                          <span>🔒 完成学习任务后打卡通关 ({completedTaskCount}/4)</span>
+                          <span>🔒 完成 3 步闭环任务后开启宝箱 ({completedTaskCount}/4)</span>
                         </>
                       )}
                     </button>
@@ -1482,6 +1586,26 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           onClose={() => setOralTarget(null)}
           onAwardEmeralds={(emeralds, xp) => {
             if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
+          }}
+        />
+      )}
+
+      {/* Victory Loot Chest Settlement Modal */}
+      {showLootChest && (
+        <LootChestVictoryModal
+          isOpen={showLootChest}
+          lesson={lesson}
+          emeraldsEarned={15}
+          xpEarned={30}
+          hasNextLesson={lesson.id < 144}
+          onClose={() => {
+            setShowLootChest(false);
+            onClose();
+          }}
+          onNextLesson={() => {
+            setShowLootChest(false);
+            onClose();
+            onStartPractice(lesson);
           }}
         />
       )}

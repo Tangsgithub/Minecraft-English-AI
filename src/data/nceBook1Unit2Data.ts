@@ -42,52 +42,52 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "easy",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "Mrs. Smith's kitchen is small.",
         "translation": "史密斯太太的厨房很小。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There is a refrigerator in the kitchen.",
         "translation": "厨房里有个电冰箱。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "The refrigerator is white. It is on the right.",
         "translation": "电冰箱是白色的，它在右边。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There is an electric cooker in the kitchen.",
         "translation": "厨房里有个电灶。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "The cooker is blue. It is on the left.",
         "translation": "电灶是蓝色的，它在左边。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There is a table in the middle of the room.",
         "translation": "房间中央有张桌子。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "There is a bottle on the table. The bottle is empty.",
         "translation": "桌上有个瓶子，瓶子是空的。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There is a cup on the table, too. The cup is clean.",
         "translation": "桌上还有一只茶杯，茶杯是干净的。",
-        "avatar": "📖"
+        "avatar": "👦"
       }
     ],
     "sentences": [
@@ -126,15 +126,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "Mrs.",
-        "phonetic": "/ˈmɪsɪz/",
-        "meaning": "夫人",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👩",
-        "sampleSentence": "Mrs. Smith is in the kitchen.",
-        "sampleTranslation": "史密斯太太在厨房里。"
-      },
-      {
         "word": "kitchen",
         "phonetic": "/ˈkɪtʃɪn/",
         "meaning": "n. 厨房",
@@ -151,15 +142,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🧊",
         "sampleSentence": "There is a refrigerator in the kitchen.",
         "sampleTranslation": "厨房里有一台冰箱。"
-      },
-      {
-        "word": "right",
-        "phonetic": "/raɪt/",
-        "meaning": "n. 右边",
-        "mcItem": "Compass",
-        "mcItemIcon": "➡️",
-        "sampleSentence": "It is on the right.",
-        "sampleTranslation": "它在右边。"
       },
       {
         "word": "electric",
@@ -187,15 +169,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🎯",
         "sampleSentence": "The table is in the middle of the room.",
         "sampleTranslation": "桌子在房间中间。"
-      },
-      {
-        "word": "room",
-        "phonetic": "/ruːm/",
-        "meaning": "n. 房间",
-        "mcItem": "Door",
-        "mcItemIcon": "🚪",
-        "sampleSentence": "The room is clean.",
-        "sampleTranslation": "房间很干净。"
       }
     ],
     "grammarNote": "There is + 单数名词 + 地点状语：表示某处有某物。on the right 在右边，on the left 在左边，in the middle of 在……中间。"
@@ -277,7 +250,53 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "zh": "刀在哪里？在盒子里。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "teapot",
+        "phonetic": "/ˈtiː.pɒt/",
+        "meaning": "n. 茶壶",
+        "mcItem": "Cauldron",
+        "mcItemIcon": "🫖",
+        "sampleSentence": "The teapot is on the shelf.",
+        "sampleTranslation": "茶壶在架子上。"
+      },
+      {
+        "word": "cup",
+        "phonetic": "/kʌp/",
+        "meaning": "n. 茶杯",
+        "mcItem": "Bowl",
+        "mcItemIcon": "☕",
+        "sampleSentence": "The cup is on the table.",
+        "sampleTranslation": "茶杯在桌子上。"
+      },
+      {
+        "word": "middle",
+        "phonetic": "/ˈmɪd.əl/",
+        "meaning": "n. 中间，中央",
+        "mcItem": "Target",
+        "mcItemIcon": "🎯",
+        "sampleSentence": "The table is in the middle of the room.",
+        "sampleTranslation": "桌子在房间正中央。"
+      },
+      {
+        "word": "floor",
+        "phonetic": "/flɔːr/",
+        "meaning": "n. 地板",
+        "mcItem": "Oak Planks",
+        "mcItemIcon": "🪵",
+        "sampleSentence": "The rug is on the wooden floor.",
+        "sampleTranslation": "地毯铺在木地板上。"
+      },
+      {
+        "word": "plate",
+        "phonetic": "/pleɪt/",
+        "meaning": "n. 盘子",
+        "mcItem": "Pressure Plate",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "Put the warm bread on the plate.",
+        "sampleTranslation": "把温热的面包放在盘子里。"
+      }
+    ],
     "grammarNote": "询问单数物品位置：Where is the ...? 回答：It's in / on / under / near the ..."
   },
   "27": {
@@ -291,70 +310,70 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "easy",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "Mrs. Smith's living room is large.",
         "translation": "史密斯太太的客厅很大。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There is a television in the room.",
         "translation": "客厅里有台电视机。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "The television is near the window.",
         "translation": "电视机靠近窗户。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There are some magazines on the television.",
         "translation": "电视机上放着几本杂志。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "There is a table in the room.",
         "translation": "客厅里有张桌子。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There are some armchairs in the room.",
         "translation": "客厅里有几把扶手椅。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "The armchairs are near the table.",
         "translation": "扶手椅靠近桌子。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There is a stereo in the room.",
         "translation": "客厅里有台立体声音响。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "The stereo is near the door.",
         "translation": "音响靠近门。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "STEVE",
         "text": "There are some books on the stereo.",
         "translation": "音响上有几本书。",
-        "avatar": "📖"
+        "avatar": "👦"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "ALEX",
         "text": "There are some pictures in the room. The pictures are on the wall.",
         "translation": "客厅里有几幅画。画挂在墙上。",
-        "avatar": "📖"
+        "avatar": "👩‍🦰"
       }
     ],
     "sentences": [
@@ -398,24 +417,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "客厅很大。"
       },
       {
-        "word": "near",
-        "phonetic": "/nɪə/",
-        "meaning": "prep. 靠近",
-        "mcItem": "Compass",
-        "mcItemIcon": "📍",
-        "sampleSentence": "The chair is near the window.",
-        "sampleTranslation": "椅子在窗户附近。"
-      },
-      {
-        "word": "window",
-        "phonetic": "/ˈwɪndəʊ/",
-        "meaning": "n. 窗户",
-        "mcItem": "Glass Pane",
-        "mcItemIcon": "🪟",
-        "sampleSentence": "Open the window, please.",
-        "sampleTranslation": "请打开窗户。"
-      },
-      {
         "word": "armchair",
         "phonetic": "/ˈɑːmtʃeə/",
         "meaning": "n. 扶手椅",
@@ -425,13 +426,13 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "坐在扶手椅上。"
       },
       {
-        "word": "door",
-        "phonetic": "/dɔː/",
-        "meaning": "n. 门",
-        "mcItem": "Oak Door",
-        "mcItemIcon": "🚪",
-        "sampleSentence": "Shut the door.",
-        "sampleTranslation": "关上门。"
+        "word": "window",
+        "phonetic": "/ˈwɪndəʊ/",
+        "meaning": "n. 窗户",
+        "mcItem": "Glass Pane",
+        "mcItemIcon": "🪟",
+        "sampleSentence": "Open the window, please.",
+        "sampleTranslation": "请打开窗户。"
       },
       {
         "word": "picture",
@@ -530,12 +531,39 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     "words": [
       {
         "word": "trousers",
-        "phonetic": "/ˈtraʊzəz/",
-        "meaning": "n. 裤子",
+        "phonetic": "/ˈtraʊ.zəz/",
+        "meaning": "名词：裤子（复数）",
         "mcItem": "Leather Leggings",
         "mcItemIcon": "👖",
-        "sampleSentence": "Where are my trousers?",
-        "sampleTranslation": "我的裤子在哪里？"
+        "sampleSentence": "His trousers are hanging on the wardrobe door.",
+        "sampleTranslation": "他的裤子挂在衣柜门上。"
+      },
+      {
+        "word": "kitchen",
+        "phonetic": "/ˈkɪtʃ.ɪn/",
+        "meaning": "名词：厨房",
+        "mcItem": "Smoker",
+        "mcItemIcon": "🍳",
+        "sampleSentence": "Alex is preparing soup in the kitchen.",
+        "sampleTranslation": "亚历克斯正在厨房里煮汤。"
+      },
+      {
+        "word": "bedroom",
+        "phonetic": "/ˈbed.ruːm/",
+        "meaning": "名词：卧室",
+        "mcItem": "Red Bed",
+        "mcItemIcon": "🛏️",
+        "sampleSentence": "My comfortable bed is in the bedroom.",
+        "sampleTranslation": "我舒适的床在卧室里。"
+      },
+      {
+        "word": "living room",
+        "phonetic": "/ˈlɪv.ɪŋ ˌruːm/",
+        "meaning": "名词：客厅；起居室",
+        "mcItem": "Painting",
+        "mcItemIcon": "🛋️",
+        "sampleSentence": "They are sitting quietly in the living room.",
+        "sampleTranslation": "他们正安静地坐在客厅里。"
       }
     ],
     "grammarNote": "询问复数物品位置：Where are the ...? 回答：They're on / in / under the ..."
@@ -641,15 +669,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "shut",
-        "phonetic": "/ʃʌt/",
-        "meaning": "v. 关上",
-        "mcItem": "Iron Door",
-        "mcItemIcon": "🚪",
-        "sampleSentence": "Shut the door, please.",
-        "sampleTranslation": "请关门。"
-      },
-      {
         "word": "bedroom",
         "phonetic": "/ˈbedruːm/",
         "meaning": "n. 卧室",
@@ -666,51 +685,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🧹",
         "sampleSentence": "The room is very untidy.",
         "sampleTranslation": "房间非常不整洁。"
-      },
-      {
-        "word": "must",
-        "phonetic": "/mʌst/",
-        "meaning": "modal v. 必须",
-        "mcItem": "Beacon",
-        "mcItemIcon": "❗",
-        "sampleSentence": "What must I do?",
-        "sampleTranslation": "我必须做什么？"
-      },
-      {
-        "word": "open",
-        "phonetic": "/ˈəʊpən/",
-        "meaning": "v. 打开",
-        "mcItem": "Door",
-        "mcItemIcon": "🔓",
-        "sampleSentence": "Open the window.",
-        "sampleTranslation": "打开窗户。"
-      },
-      {
-        "word": "air",
-        "phonetic": "/eə/",
-        "meaning": "v. 使通风",
-        "mcItem": "Feather",
-        "mcItemIcon": "💨",
-        "sampleSentence": "Air the room, please.",
-        "sampleTranslation": "请给房间通风。"
-      },
-      {
-        "word": "put",
-        "phonetic": "/pʊt/",
-        "meaning": "v. 放置",
-        "mcItem": "Chest",
-        "mcItemIcon": "📥",
-        "sampleSentence": "Put the clothes in the wardrobe.",
-        "sampleTranslation": "把衣服放进衣柜。"
-      },
-      {
-        "word": "clothes",
-        "phonetic": "/kləʊðz/",
-        "meaning": "n. 衣服 (复数)",
-        "mcItem": "Leather Armor",
-        "mcItemIcon": "👗",
-        "sampleSentence": "These clothes are clean.",
-        "sampleTranslation": "这些衣服是干净的。"
       },
       {
         "word": "wardrobe",
@@ -840,24 +814,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "empty",
-        "phonetic": "/ˈempti/",
-        "meaning": "v. 倒空",
-        "mcItem": "Bucket",
-        "mcItemIcon": "🪣",
-        "sampleSentence": "Empty the cup, please.",
-        "sampleTranslation": "请把杯子倒空。"
-      },
-      {
-        "word": "read",
-        "phonetic": "/riːd/",
-        "meaning": "v. 读",
-        "mcItem": "Book",
-        "mcItemIcon": "📖",
-        "sampleSentence": "Read this book.",
-        "sampleTranslation": "读这本书。"
-      },
       {
         "word": "sharpen",
         "phonetic": "/ˈʃɑːpən/",
@@ -1041,24 +997,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "他正在爬树。"
       },
       {
-        "word": "who",
-        "phonetic": "/huː/",
-        "meaning": "pron. 谁",
-        "mcItem": "Compass",
-        "mcItemIcon": "❓",
-        "sampleSentence": "Who is climbing the tree?",
-        "sampleTranslation": "谁在爬树？"
-      },
-      {
-        "word": "run",
-        "phonetic": "/rʌn/",
-        "meaning": "v. 跑",
-        "mcItem": "Speed Potion",
-        "mcItemIcon": "🏃",
-        "sampleSentence": "The dog is running.",
-        "sampleTranslation": "狗正在跑。"
-      },
-      {
         "word": "grass",
         "phonetic": "/ɡrɑːs/",
         "meaning": "n. 草，草地",
@@ -1066,24 +1004,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🌱",
         "sampleSentence": "It is running across the grass.",
         "sampleTranslation": "它正跑过草地。"
-      },
-      {
-        "word": "after",
-        "phonetic": "/ˈɑːftə/",
-        "meaning": "prep. 在……之后",
-        "mcItem": "Lead",
-        "mcItemIcon": "🐕",
-        "sampleSentence": "It's running after a cat.",
-        "sampleTranslation": "它正在追一只猫。"
-      },
-      {
-        "word": "cat",
-        "phonetic": "/kæt/",
-        "meaning": "n. 猫",
-        "mcItem": "Cod",
-        "mcItemIcon": "🐱",
-        "sampleSentence": "The cat is in the garden.",
-        "sampleTranslation": "猫在花园里。"
       }
     ],
     "grammarNote": "现在进行时：主语 + be (am/is/are) + 动词-ing。sitting (双写t加ing), running (双写n加ing), climbing。"
@@ -1214,33 +1134,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "苹果在篮子里。"
       },
       {
-        "word": "eat",
-        "phonetic": "/iːt/",
-        "meaning": "v. 吃",
-        "mcItem": "Apple",
-        "mcItemIcon": "🍎",
-        "sampleSentence": "He is eating an apple.",
-        "sampleTranslation": "他正在吃一个苹果。"
-      },
-      {
-        "word": "bone",
-        "phonetic": "/bəʊn/",
-        "meaning": "n. 骨头",
-        "mcItem": "Bone",
-        "mcItemIcon": "🦴",
-        "sampleSentence": "The dog is eating a bone.",
-        "sampleTranslation": "狗正在啃骨头。"
-      },
-      {
-        "word": "clean",
-        "phonetic": "/kliːn/",
-        "meaning": "v. 清洗",
-        "mcItem": "Water Bucket",
-        "mcItemIcon": "🧽",
-        "sampleSentence": "He is cleaning his teeth.",
-        "sampleTranslation": "他正在刷牙。"
-      },
-      {
         "word": "tooth",
         "phonetic": "/tuːθ/",
         "meaning": "n. 牙齿 (pl. teeth)",
@@ -1250,15 +1143,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "刷牙。"
       },
       {
-        "word": "cook",
-        "phonetic": "/kʊk/",
-        "meaning": "v. 做饭",
-        "mcItem": "Smoker",
-        "mcItemIcon": "🍳",
-        "sampleSentence": "She is cooking a meal.",
-        "sampleTranslation": "她正在做饭。"
-      },
-      {
         "word": "meal",
         "phonetic": "/miːl/",
         "meaning": "n. 一顿饭",
@@ -1266,24 +1150,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🍲",
         "sampleSentence": "Enjoy your meal.",
         "sampleTranslation": "享受你的美餐。"
-      },
-      {
-        "word": "drink",
-        "phonetic": "/drɪŋk/",
-        "meaning": "v. 喝",
-        "mcItem": "Water Bottle",
-        "mcItemIcon": "🥛",
-        "sampleSentence": "The cat is drinking milk.",
-        "sampleTranslation": "猫在喝牛奶。"
-      },
-      {
-        "word": "tap",
-        "phonetic": "/tæp/",
-        "meaning": "n. 水龙头",
-        "mcItem": "Tripwire Hook",
-        "mcItemIcon": "🚰",
-        "sampleSentence": "Turn off the tap.",
-        "sampleTranslation": "关上水龙头。"
       }
     ],
     "grammarNote": "动词-ing变形规则：一般直接+ing；以不发音e结尾去e+ing (typing, closing)；重读闭音节双写尾字母+ing (putting, running, sitting)。"
@@ -1299,40 +1165,40 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "easy",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "MR. JONES",
         "text": "It is a fine day today.",
         "translation": "今天天气很好。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MRS. JONES",
         "text": "There are some clouds in the sky, but the sun is shining.",
         "translation": "天空中有些白云，但阳光明媚。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MR. JONES",
         "text": "Mr. Jones is with his family. They are walking over the bridge.",
         "translation": "琼斯先生和他的家人在一起。他们正在过桥。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MRS. JONES",
         "text": "There are some boats on the river. Mr. Jones and his wife are looking at them.",
         "translation": "河上有些小船。琼斯先生和他的妻子正在看那些船。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "SALLY",
         "text": "Sally is looking at a big ship. The ship is going under the bridge.",
         "translation": "萨莉正在看一艘大船。这艘船正在从桥下驶过。",
-        "avatar": "📖"
+        "avatar": "👧"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "TIM",
         "text": "Tim is looking at an aeroplane. The aeroplane is flying over the river.",
         "translation": "蒂姆正在看一架飞机。飞机正飞过河流上方。",
-        "avatar": "📖"
+        "avatar": "👦"
       }
     ],
     "sentences": [
@@ -1363,15 +1229,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "day",
-        "phonetic": "/deɪ/",
-        "meaning": "n. 日子，天",
-        "mcItem": "Sun",
-        "mcItemIcon": "☀️",
-        "sampleSentence": "It is a fine day.",
-        "sampleTranslation": "今天是个晴天。"
-      },
-      {
         "word": "cloud",
         "phonetic": "/klaʊd/",
         "meaning": "n. 云",
@@ -1390,15 +1247,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "天空是蓝色的。"
       },
       {
-        "word": "sun",
-        "phonetic": "/sʌn/",
-        "meaning": "n. 太阳",
-        "mcItem": "Glowstone",
-        "mcItemIcon": "☀️",
-        "sampleSentence": "The sun is shining.",
-        "sampleTranslation": "太阳正在照耀。"
-      },
-      {
         "word": "shine",
         "phonetic": "/ʃaɪn/",
         "meaning": "v. 照耀",
@@ -1406,42 +1254,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "✨",
         "sampleSentence": "The sun shines brightly.",
         "sampleTranslation": "太阳明亮地照耀着。"
-      },
-      {
-        "word": "with",
-        "phonetic": "/wɪð/",
-        "meaning": "prep. 和……在一起",
-        "mcItem": "Lead",
-        "mcItemIcon": "🤝",
-        "sampleSentence": "He is with his family.",
-        "sampleTranslation": "他和家人在一起。"
-      },
-      {
-        "word": "family",
-        "phonetic": "/ˈfæməli/",
-        "meaning": "n. 家庭",
-        "mcItem": "Player Head",
-        "mcItemIcon": "👨‍👩‍👧‍👦",
-        "sampleSentence": "They are a happy family.",
-        "sampleTranslation": "他们是一个幸福的家庭。"
-      },
-      {
-        "word": "walk",
-        "phonetic": "/wɔːk/",
-        "meaning": "v. 走",
-        "mcItem": "Boots",
-        "mcItemIcon": "🚶",
-        "sampleSentence": "They are walking in the park.",
-        "sampleTranslation": "他们正在公园里散步。"
-      },
-      {
-        "word": "over",
-        "phonetic": "/ˈəʊvə/",
-        "meaning": "prep. 跨越，在……之上",
-        "mcItem": "Oak Fence",
-        "mcItemIcon": "🌉",
-        "sampleSentence": "They are walking over the bridge.",
-        "sampleTranslation": "他们正在过桥。"
       },
       {
         "word": "bridge",
@@ -1453,15 +1265,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "桥在河上。"
       },
       {
-        "word": "boat",
-        "phonetic": "/bəʊt/",
-        "meaning": "n. 小船",
-        "mcItem": "Boat",
-        "mcItemIcon": "🛶",
-        "sampleSentence": "There are boats on the river.",
-        "sampleTranslation": "河上有小船。"
-      },
-      {
         "word": "river",
         "phonetic": "/ˈrɪvə/",
         "meaning": "n. 河",
@@ -1471,15 +1274,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "这条河很长。"
       },
       {
-        "word": "ship",
-        "phonetic": "/ʃɪp/",
-        "meaning": "n. 轮船",
-        "mcItem": "Boat",
-        "mcItemIcon": "🚢",
-        "sampleSentence": "The ship is big.",
-        "sampleTranslation": "轮船很大。"
-      },
-      {
         "word": "aeroplane",
         "phonetic": "/ˈeərəpleɪn/",
         "meaning": "n. 飞机",
@@ -1487,15 +1281,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "✈️",
         "sampleSentence": "The aeroplane is flying high.",
         "sampleTranslation": "飞机飞得很高。"
-      },
-      {
-        "word": "fly",
-        "phonetic": "/flaɪ/",
-        "meaning": "v. 飞",
-        "mcItem": "Elytra",
-        "mcItemIcon": "🕊️",
-        "sampleSentence": "Birds can fly.",
-        "sampleTranslation": "鸟会飞。"
       }
     ],
     "grammarNote": "介词辨析：over (在……上方跨越/穿过), under (在……正下方), on (在……表面上)。"
@@ -1642,58 +1427,58 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "easy",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "TOM",
         "text": "This is a photograph of our village.",
         "translation": "这是我们村庄的一张照片。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MARY",
         "text": "Our village is in a valley. It is between two hills.",
         "translation": "我们的村庄坐落在一个山谷中。它在两座山丘之间。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "TOM",
         "text": "The village is on a river.",
         "translation": "村庄位于一条小河边。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MARY",
         "text": "Here is another photograph of the village.",
         "translation": "这是我们村庄的另一张照片。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "TOM",
         "text": "My wife and I are walking along the banks of the river. We are on the left.",
         "translation": "我和我的妻子正沿着河岸散步。我们在左边。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MARY",
         "text": "There is a boy in the water. He is swimming across the river.",
         "translation": "水里有个男孩。他正游过小河。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "TOM",
         "text": "Here is another photograph. This is the school building.",
         "translation": "这是另一张照片。这是学校的教学楼。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MARY",
         "text": "It is beside a park. The park is on the right.",
         "translation": "它在一个公园旁边。公园在右边。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "TOM",
         "text": "Some children are coming out of the building. Some of them are going into the park.",
         "translation": "一些孩子正从大楼里出来。他们中的一些正走进公园。",
-        "avatar": "📖"
+        "avatar": "👨"
       }
     ],
     "sentences": [
@@ -1728,15 +1513,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "photograph",
-        "phonetic": "/ˈfəʊtəɡrɑːf/",
-        "meaning": "n. 照片",
-        "mcItem": "Painting",
-        "mcItemIcon": "📷",
-        "sampleSentence": "This is a photograph of our village.",
-        "sampleTranslation": "这是我们村庄的照片。"
-      },
-      {
         "word": "village",
         "phonetic": "/ˈvɪlɪdʒ/",
         "meaning": "n. 村庄",
@@ -1755,15 +1531,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "村庄位于山谷中。"
       },
       {
-        "word": "between",
-        "phonetic": "/bɪˈtwiːn/",
-        "meaning": "prep. 在……之间",
-        "mcItem": "Oak Fence",
-        "mcItemIcon": "↔️",
-        "sampleSentence": "It is between two hills.",
-        "sampleTranslation": "它在两座小山之间。"
-      },
-      {
         "word": "hill",
         "phonetic": "/hɪl/",
         "meaning": "n. 小山",
@@ -1771,24 +1538,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "⛰️",
         "sampleSentence": "The hill is green.",
         "sampleTranslation": "小山很绿。"
-      },
-      {
-        "word": "another",
-        "phonetic": "/əˈnʌðə/",
-        "meaning": "adj. & pron. 另一个",
-        "mcItem": "Paper",
-        "mcItemIcon": "➕",
-        "sampleSentence": "Here is another photo.",
-        "sampleTranslation": "这里是另一张照片。"
-      },
-      {
-        "word": "along",
-        "phonetic": "/əˈlɒŋ/",
-        "meaning": "prep. 沿着",
-        "mcItem": "Rail",
-        "mcItemIcon": "🛤️",
-        "sampleSentence": "Walk along the river.",
-        "sampleTranslation": "沿着河走。"
       },
       {
         "word": "bank",
@@ -1800,24 +1549,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "我们走在河岸上。"
       },
       {
-        "word": "water",
-        "phonetic": "/ˈwɔːtə/",
-        "meaning": "n. 水",
-        "mcItem": "Water Bucket",
-        "mcItemIcon": "💧",
-        "sampleSentence": "The water is clean.",
-        "sampleTranslation": "水很清澈。"
-      },
-      {
-        "word": "swim",
-        "phonetic": "/swɪm/",
-        "meaning": "v. 游泳",
-        "mcItem": "Water Bottle",
-        "mcItemIcon": "🏊",
-        "sampleSentence": "He is swimming in the river.",
-        "sampleTranslation": "他正在河里游泳。"
-      },
-      {
         "word": "building",
         "phonetic": "/ˈbɪldɪŋ/",
         "meaning": "n. 大楼，建筑物",
@@ -1825,24 +1556,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🏫",
         "sampleSentence": "This is the school building.",
         "sampleTranslation": "这是学校大楼。"
-      },
-      {
-        "word": "beside",
-        "phonetic": "/bɪˈsaɪd/",
-        "meaning": "prep. 在……身旁",
-        "mcItem": "Oak Trapdoor",
-        "mcItemIcon": "👉",
-        "sampleSentence": "The park is beside the river.",
-        "sampleTranslation": "公园在河边。"
-      },
-      {
-        "word": "into",
-        "phonetic": "/ˈɪntə/",
-        "meaning": "prep. 进入",
-        "mcItem": "Ender Pearl",
-        "mcItemIcon": "➡️",
-        "sampleSentence": "Walk into the room.",
-        "sampleTranslation": "走进房间。"
       }
     ],
     "grammarNote": "动态介词短语：into (进入), out of (出来), across (穿过表面), along (沿着)。"
@@ -1908,7 +1621,62 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "zh": "飞机正飞过群山。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "into",
+        "phonetic": "/ˈɪn.tuː/",
+        "meaning": "prep. 进入...里面",
+        "mcItem": "Hopper",
+        "mcItemIcon": "📥",
+        "sampleSentence": "Walk into the cozy house.",
+        "sampleTranslation": "走进温馨的房屋。"
+      },
+      {
+        "word": "out of",
+        "phonetic": "/aʊt əv/",
+        "meaning": "prep. 从...出来",
+        "mcItem": "Dispenser",
+        "mcItemIcon": "📤",
+        "sampleSentence": "Come out of the deep mine.",
+        "sampleTranslation": "从深矿井里走出来。"
+      },
+      {
+        "word": "over",
+        "phonetic": "/ˈəʊ.vər/",
+        "meaning": "prep. 越过，在...上方",
+        "mcItem": "Oak Fence",
+        "mcItemIcon": "🪜",
+        "sampleSentence": "Walk over the stone bridge.",
+        "sampleTranslation": "走过石桥。"
+      },
+      {
+        "word": "between",
+        "phonetic": "/bɪˈtwiːn/",
+        "meaning": "prep. 在...之间",
+        "mcItem": "Two Chests",
+        "mcItemIcon": "↔️",
+        "sampleSentence": "Stand between the two pillars.",
+        "sampleTranslation": "站在两根柱子之间。"
+      },
+      {
+        "word": "across",
+        "phonetic": "/əˈkrɒs/",
+        "meaning": "prep. 横过，穿过",
+        "mcItem": "Bridge",
+        "mcItemIcon": "🌉",
+        "sampleSentence": "Swim across the calm river.",
+        "sampleTranslation": "游过平静的小河。"
+      },
+      {
+        "word": "along",
+        "phonetic": "/əˈlɒŋ/",
+        "meaning": "prep. 沿着",
+        "mcItem": "Powered Rail",
+        "mcItemIcon": "🛤️",
+        "sampleSentence": "Ride along the railway line.",
+        "sampleTranslation": "沿着铁路线骑行。"
+      }
+    ],
     "grammarNote": "动态介词：into / out of, across / along, over / under。"
   },
   "37": {
@@ -2012,33 +1780,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "work",
-        "phonetic": "/wɜːk/",
-        "meaning": "v. 工作",
-        "mcItem": "Crafting Table",
-        "mcItemIcon": "🔨",
-        "sampleSentence": "You are working hard.",
-        "sampleTranslation": "你工作很努力。"
-      },
-      {
-        "word": "hard",
-        "phonetic": "/hɑːd/",
-        "meaning": "adv. 努力地",
-        "mcItem": "Iron Pickaxe",
-        "mcItemIcon": "💪",
-        "sampleSentence": "He works hard every day.",
-        "sampleTranslation": "他每天都很努力工作。"
-      },
-      {
-        "word": "make",
-        "phonetic": "/meɪk/",
-        "meaning": "v. 制作",
-        "mcItem": "Crafting Table",
-        "mcItemIcon": "🛠️",
-        "sampleSentence": "I am making a bookcase.",
-        "sampleTranslation": "我正在做一个书架。"
-      },
-      {
         "word": "bookcase",
         "phonetic": "/ˈbʊkkeɪs/",
         "meaning": "n. 书架，书柜",
@@ -2073,6 +1814,15 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🌸",
         "sampleSentence": "She likes pink dresses.",
         "sampleTranslation": "她喜欢粉红色的连衣裙。"
+      },
+      {
+        "word": "hard",
+        "phonetic": "/hɑːd/",
+        "meaning": "adv. 努力地",
+        "mcItem": "Iron Pickaxe",
+        "mcItemIcon": "💪",
+        "sampleSentence": "He works hard every day.",
+        "sampleTranslation": "他每天都很努力工作。"
       }
     ],
     "grammarNote": "be going to + 动词原形：打算做某事。What are you going to do? I am going to paint it."
@@ -2136,22 +1886,49 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
     ],
     "words": [
       {
-        "word": "listen",
-        "phonetic": "/ˈlɪsn/",
-        "meaning": "v. 听",
-        "mcItem": "Jukebox",
-        "mcItemIcon": "🎧",
-        "sampleSentence": "Listen to the radio.",
-        "sampleTranslation": "听收音机。"
+        "word": "do",
+        "phonetic": "/duː/",
+        "meaning": "动词：做；干",
+        "mcItem": "Crafting Table",
+        "mcItemIcon": "🔨",
+        "sampleSentence": "What are you going to do this afternoon?",
+        "sampleTranslation": "今天下午你打算做什么？"
       },
       {
-        "word": "dish",
-        "phonetic": "/dɪʃ/",
-        "meaning": "n. 盘子，碟子 (pl. dishes)",
-        "mcItem": "Bowl",
-        "mcItemIcon": "🍽️",
-        "sampleSentence": "Wash the dishes.",
-        "sampleTranslation": "洗盘子。"
+        "word": "homework",
+        "phonetic": "/ˈhəʊm.wɜːk/",
+        "meaning": "名词：家庭作业",
+        "mcItem": "Writable Book",
+        "mcItemIcon": "📝",
+        "sampleSentence": "Finish your English homework before playing Minecraft.",
+        "sampleTranslation": "玩我的世界之前先完成你的英语作业。"
+      },
+      {
+        "word": "shave",
+        "phonetic": "/ʃeɪv/",
+        "meaning": "动词：刮脸；刮胡子",
+        "mcItem": "Shears",
+        "mcItemIcon": "🪒",
+        "sampleSentence": "My father is going to shave this morning.",
+        "sampleTranslation": "我父亲今天早晨打算刮胡子。"
+      },
+      {
+        "word": "wash",
+        "phonetic": "/wɒʃ/",
+        "meaning": "动词：洗；洗涤",
+        "mcItem": "Water Bucket",
+        "mcItemIcon": "🧼",
+        "sampleSentence": "Wash your hands before eating dinner.",
+        "sampleTranslation": "吃晚饭前洗洗手。"
+      },
+      {
+        "word": "listen",
+        "phonetic": "/ˈlɪs.ən/",
+        "meaning": "动词：听",
+        "mcItem": "Jukebox",
+        "mcItemIcon": "🎧",
+        "sampleSentence": "Listen to the music disc on the jukebox.",
+        "sampleTranslation": "在唱片机上听音乐唱片。"
       }
     ],
     "grammarNote": "对比时态：I'm going to do... (打算做) 与 I'm doing... (正在做)。"
@@ -2351,7 +2128,62 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "zh": "我准备把它们从架子上拿下来。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "show",
+        "phonetic": "/ʃəʊ/",
+        "meaning": "v. 展示，给...看",
+        "mcItem": "Painting",
+        "mcItemIcon": "🖼️",
+        "sampleSentence": "Show me your diamond sword.",
+        "sampleTranslation": "给我看你的钻石剑。"
+      },
+      {
+        "word": "send",
+        "phonetic": "/send/",
+        "meaning": "v. 寄出，派遣",
+        "mcItem": "Minecart with Chest",
+        "mcItemIcon": "📦",
+        "sampleSentence": "Send a parcel to your friend.",
+        "sampleTranslation": "给你的朋友寄一个包裹。"
+      },
+      {
+        "word": "take off",
+        "phonetic": "/teɪk ɒf/",
+        "meaning": "phr. 脱下，拿走",
+        "mcItem": "Armor Stand",
+        "mcItemIcon": "🧥",
+        "sampleSentence": "Take off your muddy boots.",
+        "sampleTranslation": "脱下你满是泥巴的靴子。"
+      },
+      {
+        "word": "put on",
+        "phonetic": "/pʊt ɒn/",
+        "meaning": "phr. 穿上，戴上",
+        "mcItem": "Iron Helmet",
+        "mcItemIcon": "🪖",
+        "sampleSentence": "Put on your warm coat.",
+        "sampleTranslation": "穿上你保暖的外套。"
+      },
+      {
+        "word": "turn on",
+        "phonetic": "/tɜːn ɒn/",
+        "meaning": "phr. 打开(电灯、水龙头等)",
+        "mcItem": "Redstone Lamp",
+        "mcItemIcon": "💡",
+        "sampleSentence": "Turn on the redstone light.",
+        "sampleTranslation": "打开红石灯。"
+      },
+      {
+        "word": "turn off",
+        "phonetic": "/tɜːn ɒf/",
+        "meaning": "phr. 关掉(电灯、水龙头等)",
+        "mcItem": "Lever",
+        "mcItemIcon": "🔌",
+        "sampleSentence": "Turn off the tap carefully.",
+        "sampleTranslation": "小心关上水龙头。"
+      }
+    ],
     "grammarNote": "put on (放置在……上) / take off (从……拿下来)。"
   },
   "41": {
@@ -2496,15 +2328,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "一块奶酪。"
       },
       {
-        "word": "bread",
-        "phonetic": "/bred/",
-        "meaning": "n. 面包",
-        "mcItem": "Bread",
-        "mcItemIcon": "🍞",
-        "sampleSentence": "A loaf of bread.",
-        "sampleTranslation": "一条面包。"
-      },
-      {
         "word": "soap",
         "phonetic": "/səʊp/",
         "meaning": "n. 肥皂",
@@ -2521,33 +2344,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🍫",
         "sampleSentence": "A bar of chocolate.",
         "sampleTranslation": "一块巧克力。"
-      },
-      {
-        "word": "tea",
-        "phonetic": "/tiː/",
-        "meaning": "n. 茶",
-        "mcItem": "Flower Pot",
-        "mcItemIcon": "🍵",
-        "sampleSentence": "A pound of tea.",
-        "sampleTranslation": "一磅茶。"
-      },
-      {
-        "word": "pocket",
-        "phonetic": "/ˈpɒkɪt/",
-        "meaning": "n. 口袋",
-        "mcItem": "Bundle",
-        "mcItemIcon": "👝",
-        "sampleSentence": "It is in your pocket.",
-        "sampleTranslation": "它在你的口袋里。"
-      },
-      {
-        "word": "piece",
-        "phonetic": "/piːs/",
-        "meaning": "n. 块，张",
-        "mcItem": "Paper",
-        "mcItemIcon": "📄",
-        "sampleSentence": "A piece of paper.",
-        "sampleTranslation": "一张纸。"
       },
       {
         "word": "loaf",
@@ -2895,7 +2691,62 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "zh": "瓶里有牛奶吗？不，没有。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "any",
+        "phonetic": "/ˈen.i/",
+        "meaning": "det. 任何，一些(否定/疑问)",
+        "mcItem": "Emerald",
+        "mcItemIcon": "❓",
+        "sampleSentence": "Are there any spoons on the table?",
+        "sampleTranslation": "桌子上有勺子吗？"
+      },
+      {
+        "word": "some",
+        "phonetic": "/sʌm/",
+        "meaning": "det. 一些，若干(肯定句)",
+        "mcItem": "Bundle",
+        "mcItemIcon": "📦",
+        "sampleSentence": "There are some apples in the basket.",
+        "sampleTranslation": "篮子里有一些苹果。"
+      },
+      {
+        "word": "spoon",
+        "phonetic": "/spuːn/",
+        "meaning": "n. 勺子，调羹",
+        "mcItem": "Iron Shovel",
+        "mcItemIcon": "🥄",
+        "sampleSentence": "A clean silver spoon.",
+        "sampleTranslation": "一把干净的银勺。"
+      },
+      {
+        "word": "plate",
+        "phonetic": "/pleɪt/",
+        "meaning": "n. 盘子，碟子",
+        "mcItem": "Heavy Pressure Plate",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "There are plates in the cupboard.",
+        "sampleTranslation": "碗橱里有一些盘子。"
+      },
+      {
+        "word": "fork",
+        "phonetic": "/fɔːk/",
+        "meaning": "n. 叉子",
+        "mcItem": "Trident",
+        "mcItemIcon": "🍴",
+        "sampleSentence": "Pass me the fork, please.",
+        "sampleTranslation": "请递给我叉子。"
+      },
+      {
+        "word": "cupboard",
+        "phonetic": "/ˈkʌb.əd/",
+        "meaning": "n. 碗橱，壁橱",
+        "mcItem": "Barrel",
+        "mcItemIcon": "🗄️",
+        "sampleSentence": "Store cups in the cupboard.",
+        "sampleTranslation": "把茶杯存放在碗橱里。"
+      }
+    ],
     "grammarNote": "复数可数用 Are there any...? / 不可数用 Is there any...?"
   },
   "45": {
@@ -3363,15 +3214,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "sampleTranslation": "这些鸡蛋很新鲜。"
       },
       {
-        "word": "egg",
-        "phonetic": "/eɡ/",
-        "meaning": "n. 鸡蛋",
-        "mcItem": "Egg",
-        "mcItemIcon": "🥚",
-        "sampleSentence": "I eat an egg every morning.",
-        "sampleTranslation": "我每天早晨吃一个鸡蛋。"
-      },
-      {
         "word": "butter",
         "phonetic": "/ˈbʌtə/",
         "meaning": "n. 黄油",
@@ -3379,15 +3221,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🧈",
         "sampleSentence": "Fresh butter is good.",
         "sampleTranslation": "新鲜黄油很好吃。"
-      },
-      {
-        "word": "pure",
-        "phonetic": "/pjʊə/",
-        "meaning": "adj. 纯净的",
-        "mcItem": "Water Bottle",
-        "mcItemIcon": "✨",
-        "sampleSentence": "This is pure honey.",
-        "sampleTranslation": "这是纯蜂蜜。"
       },
       {
         "word": "honey",
@@ -3424,42 +3257,6 @@ export const NCE_BOOK1_UNIT2_DATA: Record<number, LessonCorpusItem> = {
         "mcItemIcon": "🍓",
         "sampleSentence": "Strawberry jam on bread.",
         "sampleTranslation": "面包上的草莓酱。"
-      },
-      {
-        "word": "sweet",
-        "phonetic": "/swiːt/",
-        "meaning": "adj. 甜的",
-        "mcItem": "Sugar",
-        "mcItemIcon": "🍬",
-        "sampleSentence": "These oranges are sweet.",
-        "sampleTranslation": "这些橙子很甜。"
-      },
-      {
-        "word": "orange",
-        "phonetic": "/ˈɒrɪndʒ/",
-        "meaning": "n. 橙子",
-        "mcItem": "Orange Dye",
-        "mcItemIcon": "🍊",
-        "sampleSentence": "Eat an orange.",
-        "sampleTranslation": "吃个橙子。"
-      },
-      {
-        "word": "apple",
-        "phonetic": "/ˈæpl/",
-        "meaning": "n. 苹果",
-        "mcItem": "Apple",
-        "mcItemIcon": "🍎",
-        "sampleSentence": "An apple a day.",
-        "sampleTranslation": "一天一个苹果。"
-      },
-      {
-        "word": "beer",
-        "phonetic": "/bɪə/",
-        "meaning": "n. 啤酒",
-        "mcItem": "Potion",
-        "mcItemIcon": "🍺",
-        "sampleSentence": "He drinks cold beer.",
-        "sampleTranslation": "他喝冰啤酒。"
       }
     ],
     "grammarNote": "一般现在时句型：Do you like + 可数名词复数 / 不可数名词? Do you want some / any?"

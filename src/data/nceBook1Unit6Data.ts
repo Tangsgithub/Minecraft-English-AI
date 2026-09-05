@@ -176,7 +176,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "讲法语的那个女孩来自巴黎。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "who",
+        "phonetic": "/huː/",
+        "meaning": "pron. 谁(引导定语从句修饰人)",
+        "mcItem": "Player Head",
+        "mcItemIcon": "🧑",
+        "sampleSentence": "The boy who won the race is my brother.",
+        "sampleTranslation": "赢得比赛的那个男孩是我弟弟。"
+      },
+      {
+        "word": "which",
+        "phonetic": "/wɪtʃ/",
+        "meaning": "pron. 哪一个(引导定语从句修饰物)",
+        "mcItem": "Diamond",
+        "mcItemIcon": "💎",
+        "sampleSentence": "The book which is on the desk is mine.",
+        "sampleTranslation": "桌子上的那本书是我的。"
+      },
+      {
+        "word": "that",
+        "phonetic": "/ðæt/",
+        "meaning": "pron. 引导定语从句修饰人或物",
+        "mcItem": "Book",
+        "mcItemIcon": "📜",
+        "sampleSentence": "The umbrella that I bought yesterday.",
+        "sampleTranslation": "我昨天买的那把雨伞。"
+      },
+      {
+        "word": "lady",
+        "phonetic": "/ˈleɪ.di/",
+        "meaning": "n. 女士，夫人",
+        "mcItem": "Rose",
+        "mcItemIcon": "👒",
+        "sampleSentence": "The lady who is playing the piano is an artist.",
+        "sampleTranslation": "正在弹钢琴的那位女士是一位艺术家。"
+      },
+      {
+        "word": "umbrella",
+        "phonetic": "/ʌmˈbrel.ə/",
+        "meaning": "n. 雨伞",
+        "mcItem": "Shield",
+        "mcItemIcon": "☂️",
+        "sampleSentence": "The umbrella which has a carved wooden handle.",
+        "sampleTranslation": "那把有着雕花木手柄的雨伞。"
+      },
+      {
+        "word": "photograph",
+        "phonetic": "/ˈfəʊ.tə.ɡrɑːf/",
+        "meaning": "n. 照片",
+        "mcItem": "Painting",
+        "mcItemIcon": "🖼️",
+        "sampleSentence": "Look at the photograph that we took.",
+        "sampleTranslation": "看我们拍的那张照片。"
+      }
+    ],
     "grammarNote": "定语从句关系词选择：先行词为人用 who/that，先行词为物用 which/that。"
   },
   "123": {
@@ -302,7 +357,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "住在隔壁的人非常有礼貌。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "writer",
+        "phonetic": "/ˈraɪ.tər/",
+        "meaning": "n. 作家，著述者",
+        "mcItem": "Book and Quill",
+        "mcItemIcon": "✍️",
+        "sampleSentence": "The famous writer whom we met yesterday.",
+        "sampleTranslation": "我们昨天见到的那位著名作家。"
+      },
+      {
+        "word": "computer",
+        "phonetic": "/kəmˈpjuː.tər/",
+        "meaning": "n. 计算机，电脑",
+        "mcItem": "Redstone Block",
+        "mcItemIcon": "💻",
+        "sampleSentence": "The computer that I bought last week.",
+        "sampleTranslation": "我上周买的那台电脑。"
+      },
+      {
+        "word": "actor",
+        "phonetic": "/ˈæk.tər/",
+        "meaning": "n. 男演员",
+        "mcItem": "Player Head",
+        "mcItemIcon": "🎭",
+        "sampleSentence": "The actor whom everybody likes.",
+        "sampleTranslation": "人人都喜欢的那位演员。"
+      },
+      {
+        "word": "letter",
+        "phonetic": "/ˈlet.ər/",
+        "meaning": "n. 信件",
+        "mcItem": "Paper",
+        "mcItemIcon": "✉️",
+        "sampleSentence": "The letter that she received this morning.",
+        "sampleTranslation": "她今晨收到的那封信。"
+      },
+      {
+        "word": "film",
+        "phonetic": "/fɪlm/",
+        "meaning": "n. 电影",
+        "mcItem": "Glowstone",
+        "mcItemIcon": "🎞️",
+        "sampleSentence": "The film which we saw last night was exciting.",
+        "sampleTranslation": "我们昨晚看的电影很刺激。"
+      },
+      {
+        "word": "serve",
+        "phonetic": "/sɜːv/",
+        "meaning": "v. 服务，款待",
+        "mcItem": "Cake",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "The meal that the waiter served was delicious.",
+        "sampleTranslation": "服务员端上来的那一餐很美味。"
+      }
+    ],
     "grammarNote": "that 既可以代指人也可以代指物，在限制性定语从句中可替代 who 或 which。"
   },
   "125": {
@@ -428,7 +538,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "你每天早晨都吃早饭吗？是的，我吃。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "have to",
+        "phonetic": "/hæv tuː/",
+        "meaning": "phr. 不得不，必须(客观)",
+        "mcItem": "Netherite Ingot",
+        "mcItemIcon": "📋",
+        "sampleSentence": "I have to finish my homework before eight.",
+        "sampleTranslation": "八点前我必须完成家庭作业。"
+      },
+      {
+        "word": "need",
+        "phonetic": "/niːd/",
+        "meaning": "v./modal v. 需要",
+        "mcItem": "Bread",
+        "mcItemIcon": "🍞",
+        "sampleSentence": "You do not need to water the garden today.",
+        "sampleTranslation": "你今天不需要给花园浇水。"
+      },
+      {
+        "word": "water",
+        "phonetic": "/ˈwɔː.tər/",
+        "meaning": "v. 浇水; n. 水",
+        "mcItem": "Water Bucket",
+        "mcItemIcon": "🚿",
+        "sampleSentence": "Peter had to water the dry lawn.",
+        "sampleTranslation": "彼得不得不给干枯的草坪浇水。"
+      },
+      {
+        "word": "rain",
+        "phonetic": "/reɪn/",
+        "meaning": "v./n. 下雨，雨水",
+        "mcItem": "Splash Bottle",
+        "mcItemIcon": "🌧️",
+        "sampleSentence": "It began to rain heavily.",
+        "sampleTranslation": "天开始下起了大雨。"
+      },
+      {
+        "word": "spare",
+        "phonetic": "/speər/",
+        "meaning": "adj. 备用的，多余的，空闲的",
+        "mcItem": "Tripwire Hook",
+        "mcItemIcon": "🗝️",
+        "sampleSentence": "Have you got any spare time this afternoon?",
+        "sampleTranslation": "你今天下午有空闲时间吗？"
+      },
+      {
+        "word": "plenty",
+        "phonetic": "/ˈplen.ti/",
+        "meaning": "n./pron. 充足，大量",
+        "mcItem": "Chest",
+        "mcItemIcon": "🌾",
+        "sampleSentence": "We have plenty of tea for everyone.",
+        "sampleTranslation": "我们为大家准备了充足的茶水。"
+      }
+    ],
     "grammarNote": "表示“拥有”时：Have you got = Do you have；表示习惯性动作时（如 have breakfast），只能用 Do you have...?"
   },
   "127": {
@@ -560,7 +725,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "英语在许多国家被使用。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "can't be",
+        "phonetic": "/kɑːnt biː/,",
+        "meaning": "phr. 不可能是(否定推测)",
+        "mcItem": "Barrier",
+        "mcItemIcon": "❌",
+        "sampleSentence": "He can't be sixty years old! He looks young.",
+        "sampleTranslation": "他不可能六十岁！他看起来很年轻。"
+      },
+      {
+        "word": "must be",
+        "phonetic": "/mʌst biː/",
+        "meaning": "phr. 一定是(肯定推测)",
+        "mcItem": "Emerald",
+        "mcItemIcon": "✔️",
+        "sampleSentence": "She must be at least forty.",
+        "sampleTranslation": "她肯定至少有四十岁了。"
+      },
+      {
+        "word": "dentist",
+        "phonetic": "/ˈden.tɪst/",
+        "meaning": "n. 牙医",
+        "mcItem": "Bone",
+        "mcItemIcon": "👨‍⚕️",
+        "sampleSentence": "He can't be a dentist; he is an engineer.",
+        "sampleTranslation": "他不可能是一名牙医；他是工程师。"
+      },
+      {
+        "word": "busy",
+        "phonetic": "/ˈbɪz.i/",
+        "meaning": "adj. 忙碌的",
+        "mcItem": "Clock",
+        "mcItemIcon": "🏃",
+        "sampleSentence": "The doctor must be busy right now.",
+        "sampleTranslation": "医生现在一定很忙。"
+      },
+      {
+        "word": "famous",
+        "phonetic": "/ˈfeɪ.məs/",
+        "meaning": "adj. 著名的",
+        "mcItem": "Golden Crown",
+        "mcItemIcon": "🌟",
+        "sampleSentence": "She is a very famous film actress.",
+        "sampleTranslation": "她是极其著名的电影女演员。"
+      },
+      {
+        "word": "young",
+        "phonetic": "/jʌŋ/",
+        "meaning": "adj. 年轻的",
+        "mcItem": "Baby Sheep",
+        "mcItemIcon": "🌱",
+        "sampleSentence": "She looks very young on television.",
+        "sampleTranslation": "她在电视上看起来非常年轻。"
+      }
+    ],
     "grammarNote": "be made of (看得出原材料：物理变化) vs. be made from (看不出原材料：化学变化) vs. be made in (在某地制造)。"
   },
   "129": {
@@ -698,94 +918,186 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "被盗车辆已被警方找到。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "abroad",
+        "phonetic": "/əˈbrɔːd/",
+        "meaning": "adv. 在国外，到海外",
+        "mcItem": "Elytra",
+        "mcItemIcon": "✈️",
+        "sampleSentence": "He can't have been abroad last week.",
+        "sampleTranslation": "他上周不可能在国外。"
+      },
+      {
+        "word": "drive",
+        "phonetic": "/draɪv/",
+        "meaning": "v. 驾驶，开车",
+        "mcItem": "Minecart",
+        "mcItemIcon": "🚗",
+        "sampleSentence": "He was driving at seventy miles an hour.",
+        "sampleTranslation": "他正以每小时70英里的速度行驶。"
+      },
+      {
+        "word": "speed",
+        "phonetic": "/spiːd/",
+        "meaning": "n. 速度",
+        "mcItem": "Powered Rail",
+        "mcItemIcon": "⚡",
+        "sampleSentence": "The car was travelling at high speed.",
+        "sampleTranslation": "汽车正以高速飞驰。"
+      },
+      {
+        "word": "overtake",
+        "phonetic": "/ˌəʊ.vəˈteɪk/",
+        "meaning": "v. 超车，赶上",
+        "mcItem": "Potion of Swiftness",
+        "mcItemIcon": "🏎️",
+        "sampleSentence": "The police car overtook the red car.",
+        "sampleTranslation": "警车超越了那辆红色轿车。"
+      },
+      {
+        "word": "mile",
+        "phonetic": "/maɪl/",
+        "meaning": "n. 英里",
+        "mcItem": "Compass",
+        "mcItemIcon": "🛣️",
+        "sampleSentence": "Seventy miles an hour on the motorway.",
+        "sampleTranslation": "高速公路上每小时七十英里。"
+      },
+      {
+        "word": "licence",
+        "phonetic": "/ˈlaɪ.səns/",
+        "meaning": "n. 执照，驾照",
+        "mcItem": "Paper",
+        "mcItemIcon": "🪪",
+        "sampleSentence": "May I see your driving licence, please?",
+        "sampleTranslation": "请让我看一下您的驾驶执照好吗？"
+      }
+    ],
     "grammarNote": "特殊疑问句被动语态：When + was/were + 主语 + 过去分词...?"
   },
   "131": {
     "id": 131,
     "unit": 6,
-    "title": "Don't drop that vase!",
-    "titleZh": "别摔了那个花瓶！",
-    "topic": "Antiques & Modal Passives",
-    "topicZh": "古董保护与情态动词被动语态",
-    "grammar": "Modal verbs in passive voice: must be done / can be repaired",
+    "title": "Don't be so sure!",
+    "titleZh": "别那么肯定！",
+    "topic": "Uncertain Future & Holiday Decisions",
+    "topicZh": "假期安排与可能情态推测",
+    "grammar": "Modals of possibility: may / might (可能，也许)",
     "difficulty": "hard",
     "dialogue": [
       {
-        "speaker": "FATHER",
-        "text": "Be careful with that Chinese vase, Sam! Don't drop it!",
-        "translation": "萨姆，小心那个中国花瓶！千万别摔了！",
+        "speaker": "Harry",
+        "text": "Where are you going to spend your holidays this year, Gary?",
+        "translation": "今年你打算去哪里度假，加里？",
         "avatar": "👨"
       },
       {
-        "speaker": "SAM",
-        "text": "Don't worry, Dad. I'm holding it tight.",
-        "translation": "别担心，爸爸。我抓得很紧。",
-        "avatar": "👦"
+        "speaker": "Gary",
+        "text": "We may go abroad. I'm not sure. My wife wants to go to Egypt.",
+        "translation": "我们可能会出国。我不确定。我妻子想去埃及。",
+        "avatar": "🧔"
       },
       {
-        "speaker": "FATHER",
-        "text": "It is very ancient and fragile. It cannot be replaced if it is broken!",
-        "translation": "它非常古老且易碎。如果打碎了就无法替换了！",
+        "speaker": "Harry",
+        "text": "Will you travel by sea or by air?",
+        "translation": "你们坐轮船还是坐飞机去？",
         "avatar": "👨"
       },
       {
-        "speaker": "SAM",
-        "text": "Where must it be placed?",
-        "translation": "它必须放在哪儿？",
-        "avatar": "👦"
+        "speaker": "Gary",
+        "text": "We may travel by sea. It may be cheaper, but it takes a long time.",
+        "translation": "我们可能会坐船。坐船可能便宜些，但要花很长时间。",
+        "avatar": "🧔"
       },
       {
-        "speaker": "FATHER",
-        "text": "It must be kept in the glass cabinet where it will be safe.",
-        "translation": "它必须存放在玻璃柜里，那里才安全。",
+        "speaker": "Harry",
+        "text": "I'm sure you will enjoy yourselves.",
+        "translation": "我敢肯定你们会玩得非常开心的。",
         "avatar": "👨"
+      },
+      {
+        "speaker": "Gary",
+        "text": "Don't be so sure! We might not go anywhere. My wife always worries about the dog and house!",
+        "translation": "别那么肯定！我们可能哪儿也去不了。我妻子总发愁家里的狗和房子！",
+        "avatar": "🧔"
       }
     ],
     "sentences": [
       {
-        "en": "It cannot be replaced if it is broken.",
-        "zh": "如果被打碎了就无法替代了。"
+        "en": "Where are you going to spend your holidays this year, Gary?",
+        "zh": "今年你打算去哪里度假，加里？"
       },
       {
-        "en": "Where must it be placed?",
-        "zh": "它必须放在哪儿？"
+        "en": "We may go abroad. My wife wants to go to Egypt.",
+        "zh": "我们可能会出国。我妻子想去埃及。"
       },
       {
-        "en": "It must be kept in the glass cabinet.",
-        "zh": "它必须保存在玻璃柜里。"
+        "en": "Don't be so sure! We might not go anywhere.",
+        "zh": "别那么肯定！我们可能哪儿也去不了。"
+      },
+      {
+        "en": "Who is going to look after the dog, the house, and the garden?",
+        "zh": "谁来照看狗、房子和花园呢？"
       }
     ],
     "words": [
       {
-        "word": "ancient",
-        "phonetic": "/ˈeɪnʃənt/",
-        "meaning": "adj. 古代的，古老的",
-        "mcItem": "Ancient Debris",
-        "mcItemIcon": "🏺",
-        "sampleSentence": "Ancient history.",
-        "sampleTranslation": "古代历史。"
+        "word": "sure",
+        "phonetic": "/ʃɔːr/",
+        "meaning": "adj. 确信的，肯定的",
+        "mcItem": "Spyglass",
+        "mcItemIcon": "🔍",
+        "sampleSentence": "Don't be so sure about their plans.",
+        "sampleTranslation": "对他们的计划别那么肯定。"
       },
       {
-        "word": "fragile",
-        "phonetic": "/ˈfrædʒaɪl/",
-        "meaning": "adj. 易碎的",
-        "mcItem": "Glass",
-        "mcItemIcon": "⚠️",
-        "sampleSentence": "Fragile items.",
-        "sampleTranslation": "易碎品。"
+        "word": "abroad",
+        "phonetic": "/əˈbrɔːd/",
+        "meaning": "adv. 到国外，在国外",
+        "mcItem": "Compass",
+        "mcItemIcon": "🌍",
+        "sampleTranslation": "我们今年可能会出国。",
+        "sampleSentence": "We may go abroad this year."
       },
       {
-        "word": "cabinet",
-        "phonetic": "/ˈkæbɪnət/",
-        "meaning": "n. 柜子，橱柜",
-        "mcItem": "Chest",
-        "mcItemIcon": "🗄️",
-        "sampleSentence": "A glass cabinet.",
-        "sampleTranslation": "玻璃柜。"
+        "word": "Egypt",
+        "phonetic": "/ˈiː.dʒɪpt/",
+        "meaning": "n. 埃及",
+        "mcItem": "Sandstone",
+        "mcItemIcon": "🏜️",
+        "sampleSentence": "His wife wants to travel to Egypt.",
+        "sampleTranslation": "他的妻子想去埃及旅游。"
+      },
+      {
+        "word": "worry",
+        "phonetic": "/ˈwʌr.i/",
+        "meaning": "v. 发愁，担心",
+        "mcItem": "Soul Lantern",
+        "mcItemIcon": "😟",
+        "sampleSentence": "She always worries too much about everything.",
+        "sampleTranslation": "她总是对一切都忧心忡忡。"
+      },
+      {
+        "word": "look after",
+        "phonetic": "/lʊk ˈɑːf.tər/",
+        "meaning": "phr. 照看，照料",
+        "mcItem": "Wolf",
+        "mcItemIcon": "🐕",
+        "sampleSentence": "Who is going to look after the dog?",
+        "sampleTranslation": "谁来照料这条狗？"
+      },
+      {
+        "word": "mind",
+        "phonetic": "/maɪnd/",
+        "meaning": "n. 头脑，想法",
+        "mcItem": "Book",
+        "mcItemIcon": "🧠",
+        "sampleSentence": "We cannot make up our minds yet.",
+        "sampleTranslation": "我们还没有下定决心。"
       }
     ],
-    "grammarNote": "情态动词被动语态：情态动词 (can/must/should) + be + 过去分词 (must be kept, can be done)。"
+    "grammarNote": "情态动词 may 与 might 表示对未来的可能性推测 (也许，可能)。might 语气比 may 更加不确定。"
   },
   "132": {
     "id": 132,
@@ -824,7 +1136,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "门千万不能打开。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "may",
+        "phonetic": "/meɪ/",
+        "meaning": "modal v. 可能，也许",
+        "mcItem": "Ender Pearl",
+        "mcItemIcon": "🎲",
+        "sampleSentence": "He may be at home or in the library.",
+        "sampleTranslation": "他可能在家里或者在图书馆。"
+      },
+      {
+        "word": "might",
+        "phonetic": "/maɪt/",
+        "meaning": "modal v. 或许，可能(更弱可能性)",
+        "mcItem": "Chorus Fruit",
+        "mcItemIcon": "🔮",
+        "sampleSentence": "We might go by train if the car breaks down.",
+        "sampleTranslation": "如果车坏了我们或许会坐火车去。"
+      },
+      {
+        "word": "perhaps",
+        "phonetic": "/pəˈhæps/",
+        "meaning": "adv. 也许，可能",
+        "mcItem": "Compass",
+        "mcItemIcon": "💭",
+        "sampleSentence": "Perhaps they have already arrived in London.",
+        "sampleTranslation": "也许他们已经抵达伦敦了。"
+      },
+      {
+        "word": "sea",
+        "phonetic": "/siː/",
+        "meaning": "n. 海洋，海",
+        "mcItem": "Water Bucket",
+        "mcItemIcon": "🌊",
+        "sampleSentence": "Travel across the Mediterranean Sea.",
+        "sampleTranslation": "横渡地中海航行。"
+      },
+      {
+        "word": "air",
+        "phonetic": "/eər/",
+        "meaning": "n. 空中，航空",
+        "mcItem": "Elytra",
+        "mcItemIcon": "✈️",
+        "sampleSentence": "Travel by air is faster.",
+        "sampleTranslation": "乘飞机旅行更快。"
+      },
+      {
+        "word": "cheap",
+        "phonetic": "/tʃiːp/",
+        "meaning": "adj. 便宜的",
+        "mcItem": "Copper Ingot",
+        "mcItemIcon": "🏷️",
+        "sampleSentence": "It may be cheaper, but takes longer.",
+        "sampleTranslation": "它可能便宜些，但花的时间更长。"
+      }
+    ],
     "grammarNote": "否定形式：must not be done, cannot be done。"
   },
   "133": {
@@ -981,7 +1348,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他们问飞机什么时候起飞。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "said",
+        "phonetic": "/sed/",
+        "meaning": "v. (say的过去式)说",
+        "mcItem": "Paper",
+        "mcItemIcon": "💬",
+        "sampleSentence": "He said that he was very pleased.",
+        "sampleTranslation": "他说他非常高兴。"
+      },
+      {
+        "word": "thought",
+        "phonetic": "/θɔːt/",
+        "meaning": "v. (think的过去式)想，认为",
+        "mcItem": "Lectern",
+        "mcItemIcon": "💭",
+        "sampleSentence": "She thought that the report was true.",
+        "sampleTranslation": "她以为那篇报道是真的。"
+      },
+      {
+        "word": "news",
+        "phonetic": "/njuːz/",
+        "meaning": "n. 新闻，消息",
+        "mcItem": "Book and Quill",
+        "mcItemIcon": "📰",
+        "sampleSentence": "Have you heard the sensational news?",
+        "sampleTranslation": "你听到这则耸人听闻的新闻了吗？"
+      },
+      {
+        "word": "retire",
+        "phonetic": "/rɪˈtaɪər/",
+        "meaning": "v. 退休，退役",
+        "mcItem": "Armchair",
+        "mcItemIcon": "🛋️",
+        "sampleSentence": "She said that she would retire from the screen.",
+        "sampleTranslation": "她说她将告别银幕退休。"
+      },
+      {
+        "word": "famous",
+        "phonetic": "/ˈfeɪ.məs/",
+        "meaning": "adj. 著名的",
+        "mcItem": "Diamond",
+        "mcItemIcon": "🌟",
+        "sampleSentence": "The famous actress announced her retirement.",
+        "sampleTranslation": "著名女演员宣布了她的退休。"
+      },
+      {
+        "word": "future",
+        "phonetic": "/ˈfjuː.tʃər/",
+        "meaning": "n. 未来，前途",
+        "mcItem": "Clock",
+        "mcItemIcon": "🔮",
+        "sampleSentence": "Think carefully about your future.",
+        "sampleTranslation": "仔细考虑你的未来。"
+      }
+    ],
     "grammarNote": "转述一般疑问句用 if 或 whether 连接，且必须使用陈述语序（主语在前，谓语在后）。"
   },
   "135": {
@@ -995,28 +1417,28 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "hard",
     "dialogue": [
       {
-        "speaker": "NEWSCASTER",
+        "speaker": "ANCHOR",
         "text": "Here is the latest news report.",
         "translation": "下面播送最新新闻报道。",
         "avatar": "🎙️"
       },
       {
-        "speaker": "NEWSCASTER",
+        "speaker": "REPORTER",
         "text": "A new modern hospital will be built in the north of the city next year.",
         "translation": "一座新的现代化医院将于明年在城市北部建成。",
-        "avatar": "🎙️"
+        "avatar": "👩‍💼"
       },
       {
-        "speaker": "NEWSCASTER",
+        "speaker": "ANCHOR",
         "text": "Over five hundred doctors and nurses will be employed.",
         "translation": "届时将雇佣500多名医护人员。",
         "avatar": "🎙️"
       },
       {
-        "speaker": "NEWSCASTER",
+        "speaker": "REPORTER",
         "text": "The opening ceremony will be held in October.",
         "translation": "开幕典礼将于十月举行。",
-        "avatar": "🎙️"
+        "avatar": "👩‍💼"
       }
     ],
     "sentences": [
@@ -1097,7 +1519,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "所有信件将于明天寄出。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "marry",
+        "phonetic": "/ˈmær.i/",
+        "meaning": "v. 结婚，娶，嫁",
+        "mcItem": "Golden Apple",
+        "mcItemIcon": "💍",
+        "sampleSentence": "She said that she was going to marry Carlos.",
+        "sampleTranslation": "她说她准备嫁给卡洛斯。"
+      },
+      {
+        "word": "report",
+        "phonetic": "/rɪˈpɔːt/",
+        "meaning": "n. 报道，报告",
+        "mcItem": "Paper",
+        "mcItemIcon": "📑",
+        "sampleSentence": "Read the latest report in today's paper.",
+        "sampleTranslation": "阅读今天报纸上的最新报道。"
+      },
+      {
+        "word": "allow",
+        "phonetic": "/əˈlaʊ/",
+        "meaning": "v. 允许，准许",
+        "mcItem": "Shield",
+        "mcItemIcon": "🛡️",
+        "sampleSentence": "Her future husband will not allow her to act.",
+        "sampleTranslation": "她未来的丈夫不会允许她演戏。"
+      },
+      {
+        "word": "would",
+        "phonetic": "/wʊd/",
+        "meaning": "modal v. 将(will的过去式)",
+        "mcItem": "Arrow",
+        "mcItemIcon": "🏹",
+        "sampleSentence": "She said that she would never make another film.",
+        "sampleTranslation": "她说她决不再拍电影了。"
+      },
+      {
+        "word": "introduce",
+        "phonetic": "/ˌɪn.trəˈdjuːs/",
+        "meaning": "v. 介绍，引见",
+        "mcItem": "Player Head",
+        "mcItemIcon": "🤝",
+        "sampleSentence": "Allow me to introduce Carlos.",
+        "sampleTranslation": "请允许我介绍卡洛斯。"
+      },
+      {
+        "word": "husband",
+        "phonetic": "/ˈhʌz.bənd/",
+        "meaning": "n. 丈夫",
+        "mcItem": "Armor Stand",
+        "mcItemIcon": "🤵",
+        "sampleSentence": "He will be her sixth husband.",
+        "sampleTranslation": "他将是她的第六任丈夫。"
+      }
+    ],
     "grammarNote": "将来被动语态常配合将来时间状语：tomorrow, next week, next year, soon。"
   },
   "137": {
@@ -1245,7 +1722,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "如果我有翅膀，我就会在天空飞翔。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "if",
+        "phonetic": "/ɪf/",
+        "meaning": "conj. 如果，假如",
+        "mcItem": "Redstone Wire",
+        "mcItemIcon": "🔀",
+        "sampleSentence": "If I had a lot of money, I would travel.",
+        "sampleTranslation": "如果我有很多钱，我会去环游世界。"
+      },
+      {
+        "word": "rich",
+        "phonetic": "/rɪtʃ/",
+        "meaning": "adj. 富有的，有钱的",
+        "mcItem": "Gold Block",
+        "mcItemIcon": "💰",
+        "sampleSentence": "If they were rich, they would buy a mansion.",
+        "sampleTranslation": "如果他们有钱，他们会买一座大宅。"
+      },
+      {
+        "word": "spend",
+        "phonetic": "/spend/",
+        "meaning": "v. 花费(金钱/时间)",
+        "mcItem": "Emerald",
+        "mcItemIcon": "💸",
+        "sampleSentence": "Don't spend all the money on luxury goods.",
+        "sampleTranslation": "不要把所有钱都花在奢侈品上。"
+      },
+      {
+        "word": "poor",
+        "phonetic": "/pɔːr/",
+        "meaning": "adj. 贫穷的",
+        "mcItem": "Rotten Flesh",
+        "mcItemIcon": "🏚️",
+        "sampleSentence": "We would be poor again if we spent it all.",
+        "sampleTranslation": "如果我们全花光，我们又会变穷。"
+      },
+      {
+        "word": "dream",
+        "phonetic": "/driːm/",
+        "meaning": "n. 梦想，美梦",
+        "mcItem": "Bed",
+        "mcItemIcon": "💭",
+        "sampleSentence": "It is a pleasant dream, but depends on \"if\"!",
+        "sampleTranslation": "这是一个美好的梦，但一切取决于“如果”！"
+      },
+      {
+        "word": "travel",
+        "phonetic": "/ˈtræv.əl/",
+        "meaning": "v. 旅行，漫游",
+        "mcItem": "Boat",
+        "mcItemIcon": "🚢",
+        "sampleSentence": "They want to travel around the world.",
+        "sampleTranslation": "他们想环游世界。"
+      }
+    ],
     "grammarNote": "在虚拟条件句中，be 动词在所有人称后都可以统一用 were (If I were you...)。"
   },
   "139": {
@@ -1320,25 +1852,52 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
       }
     ],
     "words": [
-      {
-        "word": "right away",
-        "phonetic": "/ˌraɪt əˈweɪ/",
-        "meaning": "立刻，马上",
-        "mcItem": "Feather",
-        "mcItemIcon": "⚡",
-        "sampleSentence": "Come right away.",
-        "sampleTranslation": "马上过来。"
-      },
-      {
-        "word": "prepare",
-        "phonetic": "/prɪˈpeə/",
-        "meaning": "v. 准备",
-        "mcItem": "Crafting Table",
-        "mcItemIcon": "🍲",
-        "sampleSentence": "Prepare dinner.",
-        "sampleTranslation": "准备晚餐。"
-      }
-    ],
+        {
+                "word": "telephone",
+                "phonetic": "/ˈtel.ɪ.fəʊn/",
+                "meaning": "名词：电话；动词：打电话",
+                "mcItem": "Bell",
+                "mcItemIcon": "☎️",
+                "sampleSentence": "The telephone is ringing in the front hall.",
+                "sampleTranslation": "前厅的电话正在响。"
+        },
+        {
+                "word": "call",
+                "phonetic": "/kɔːl/",
+                "meaning": "动词：通话；打电话",
+                "mcItem": "Jukebox",
+                "mcItemIcon": "📞",
+                "sampleSentence": "Who is calling, please?",
+                "sampleTranslation": "请问是哪一位在打电话？"
+        },
+        {
+                "word": "speak",
+                "phonetic": "/spiːk/",
+                "meaning": "动词：说话；通话",
+                "mcItem": "Note Block",
+                "mcItemIcon": "🗣️",
+                "sampleSentence": "This is John speaking from the London office.",
+                "sampleTranslation": "我是伦敦办公室的约翰。"
+        },
+        {
+                "word": "message",
+                "phonetic": "/ˈmes.ɪdʒ/",
+                "meaning": "名词：消息；留言",
+                "mcItem": "Writable Book",
+                "mcItemIcon": "📩",
+                "sampleSentence": "Can I take a message for Mr. Smith?",
+                "sampleTranslation": "我能为史密斯先生记个留言吗？"
+        },
+        {
+                "word": "hold on",
+                "phonetic": "/həʊld ɒn/",
+                "meaning": "短语：等一下；别挂断",
+                "mcItem": "Clock",
+                "mcItemIcon": "⏳",
+                "sampleSentence": "Please hold on for a moment while I check.",
+                "sampleTranslation": "请稍候片刻，我查一下。"
+        }
+      ],
     "grammarNote": "电话经典句型：Is that you...? / This is ... speaking. I'm calling from..."
   },
   "140": {
@@ -1378,7 +1937,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "他们说他们已经看过了展览。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "want",
+        "phonetic": "/wɒnt/",
+        "meaning": "v. 想要，希望",
+        "mcItem": "Chest",
+        "mcItemIcon": "🎯",
+        "sampleSentence": "He wants to know if dinner is ready.",
+        "sampleTranslation": "他想知道晚餐是否准备好了。"
+      },
+      {
+        "word": "know",
+        "phonetic": "/nəʊ/",
+        "meaning": "v. 知道，了解",
+        "mcItem": "Book",
+        "mcItemIcon": "💡",
+        "sampleSentence": "Does anyone know where John is?",
+        "sampleTranslation": "有人知道约翰在哪里吗？"
+      },
+      {
+        "word": "wonder",
+        "phonetic": "/ˈwʌn.dər/",
+        "meaning": "v. 想知道，琢磨",
+        "mcItem": "Spyglass",
+        "mcItemIcon": "🤔",
+        "sampleSentence": "I wonder why he was late.",
+        "sampleTranslation": "我想知道他为什么迟到了。"
+      },
+      {
+        "word": "telephone",
+        "phonetic": "/ˈtel.ɪ.fəʊn/",
+        "meaning": "n. 电话",
+        "mcItem": "Redstone Repeater",
+        "mcItemIcon": "☎️",
+        "sampleSentence": "He answered the ringing telephone.",
+        "sampleTranslation": "他接听了正在鸣响的电话。"
+      },
+      {
+        "word": "engineer",
+        "phonetic": "/ˌen.dʒɪˈnɪər/",
+        "meaning": "n. 工程师",
+        "mcItem": "Redstone Dust",
+        "mcItemIcon": "👷",
+        "sampleSentence": "The telephone engineer is repairing the line.",
+        "sampleTranslation": "电话工程师正在修理线路。"
+      },
+      {
+        "word": "repair",
+        "phonetic": "/rɪˈpeər/",
+        "meaning": "v. 修理，修复",
+        "mcItem": "Anvil",
+        "mcItemIcon": "🔧",
+        "sampleSentence": "He is repairing the broken connection.",
+        "sampleTranslation": "他正在检修损坏的接线。"
+      }
+    ],
     "grammarNote": "时态呼应法则：主句谓语为过去时 (said, told)，从句时态往后推一个时态（一般现在->一般过去，现在完成->过去完成，will->would）。"
   },
   "141": {
@@ -1392,34 +2006,34 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "hard",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "MOTHER",
         "text": "Sally was only six years old when she had her first train journey.",
         "translation": "萨莉第一次坐火车旅行时只有六岁。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "SALLY",
         "text": "She was sitting near the window with her mother. The train was moving fast through the countryside.",
         "translation": "她和母亲坐在一起靠近窗户。火车在乡村快速穿行。",
-        "avatar": "📖"
+        "avatar": "👧"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MOTHER",
         "text": "Sally was looking out at green hills, rivers, and quiet villages.",
         "translation": "萨莉望着窗外的青山、河流和宁静的村庄。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "SALLY",
         "text": "'Look, Mummy!' cried Sally. 'The trees and houses are running backwards!'",
         "translation": "‘瞧，妈妈！’萨莉叫道，‘树和房子都在往后跑呢！’",
-        "avatar": "📖"
+        "avatar": "👧"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MOTHER",
         "text": "Her mother smiled and explained that the train was carrying them forward.",
         "translation": "母亲笑了笑，向她解释是火车正载着她们向前奔跑。",
-        "avatar": "📖"
+        "avatar": "👩"
       }
     ],
     "sentences": [
@@ -1522,7 +2136,62 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
         "zh": "电话铃响时，他们正在吃晚餐。"
       }
     ],
-    "words": [],
+    "words": [
+      {
+        "word": "invite",
+        "phonetic": "/ɪnˈvaɪt/",
+        "meaning": "v. 邀请",
+        "mcItem": "Written Book",
+        "mcItemIcon": "💌",
+        "sampleSentence": "Someone invited Sally to a party.",
+        "sampleTranslation": "有人邀请萨莉去参加聚会。"
+      },
+      {
+        "word": "party",
+        "phonetic": "/ˈpɑː.ti/",
+        "meaning": "n. 聚会，派对",
+        "mcItem": "Cake",
+        "mcItemIcon": "🎈",
+        "sampleSentence": "She went to an exciting children's party.",
+        "sampleTranslation": "她去参加了一场热闹的儿童派对。"
+      },
+      {
+        "word": "powder",
+        "phonetic": "/ˈpaʊ.dər/",
+        "meaning": "n. 香粉，粉饼",
+        "mcItem": "Sugar",
+        "mcItemIcon": "🪞",
+        "sampleSentence": "The lady put powder on her nose.",
+        "sampleTranslation": "那位女士往鼻子上扑粉。"
+      },
+      {
+        "word": "mirror",
+        "phonetic": "/ˈmɪr.ər/",
+        "meaning": "n. 镜子",
+        "mcItem": "Glass Pane",
+        "mcItemIcon": "🪞",
+        "sampleSentence": "She looked at herself in the mirror.",
+        "sampleTranslation": "她在镜子里看着自己。"
+      },
+      {
+        "word": "beautiful",
+        "phonetic": "/ˈbjuː.tɪ.fəl/",
+        "meaning": "adj. 美丽的，漂亮的",
+        "mcItem": "Diamond",
+        "mcItemIcon": "✨",
+        "sampleSentence": "She wanted to make herself beautiful.",
+        "sampleTranslation": "她想把自己打扮得漂漂亮亮。"
+      },
+      {
+        "word": "ugly",
+        "phonetic": "/ˈʌɡ.li/",
+        "meaning": "adj. 丑陋的，难看的",
+        "mcItem": "Zombie Head",
+        "mcItemIcon": "🙈",
+        "sampleSentence": "'But you are still ugly!' Sally said.",
+        "sampleTranslation": "“可你还是很难看！”萨莉说道。"
+      }
+    ],
     "grammarNote": "when 引导的时间状语从句与过去进行时结合。"
   },
   "143": {
@@ -1536,34 +2205,34 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
     "difficulty": "hard",
     "dialogue": [
       {
-        "speaker": "NARRATOR",
+        "speaker": "MR. SMITH",
         "text": "On a warm autumn afternoon, Mr. and Mrs. Smith went for a walk through the quiet woods.",
         "translation": "在一个温暖的秋日下午，史密斯夫妇去宁静的树林里散步。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MRS. SMITH",
         "text": "Golden leaves were falling from the trees, covering the ground like a soft carpet.",
         "translation": "金黄的树叶正从树上飘落，像一层柔软的地毯覆盖着大地。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MR. SMITH",
         "text": "They walked along the winding path until they reached a crystal-clear stream.",
         "translation": "他们沿着蜿蜒的小径前行，直到来到一条清澈见底的小溪边。",
-        "avatar": "📖"
+        "avatar": "👨"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MRS. SMITH",
         "text": "'This is the most peaceful place in the world,' whispered Mrs. Smith.",
         "translation": "‘这是世界上最宁静的地方，’史密斯太太轻声说道。",
-        "avatar": "📖"
+        "avatar": "👩"
       },
       {
-        "speaker": "NARRATOR",
+        "speaker": "MR. SMITH",
         "text": "They sat on a wooden bench, listened to birds singing, and enjoyed the beauty of nature.",
         "translation": "他们坐在一条木长凳上，聆听鸟儿歌唱，享受着大自然的美好。",
-        "avatar": "📖"
+        "avatar": "👨"
       }
     ],
     "sentences": [
@@ -1649,91 +2318,112 @@ export const NCE_BOOK1_UNIT6_DATA: Record<number, LessonCorpusItem> = {
   "144": {
     "id": 144,
     "unit": 6,
-    "title": "Congratulations! Master of Book 1",
-    "titleZh": "祝贺！新概念第一册全通关",
-    "topic": "Book 1 Graduation & Grand Review",
-    "topicZh": "第一册总复习与毕业通关",
-    "grammar": "NCE Book 1 Grand Syntax Review (All 8 Core Tenses, Passive Voice, Clauses)",
+    "title": "He hasn't been served yet",
+    "titleZh": "他还没有被招待",
+    "topic": "Present Perfect Passive",
+    "topicZh": "现在完成时被动语态",
+    "grammar": "has/have been + past participle (现在完成时被动语态)",
     "difficulty": "hard",
     "dialogue": [
       {
-        "speaker": "TEACHER",
-        "text": "Congratulations on completing all 144 lessons of New Concept English Book 1!",
-        "translation": "热烈祝贺你学完《新概念英语》第一册全部144课！",
-        "avatar": "👨‍🏫"
+        "speaker": "Customer",
+        "text": "Excuse me, waiter! I haven't been served yet!",
+        "translation": "打扰一下，服务员！我还没有受到招待呢！",
+        "avatar": "👨"
       },
       {
-        "speaker": "STUDENT",
-        "text": "Thank you, Teacher! I have learned so much vocabulary and grammar!",
-        "translation": "谢谢老师！我学到了很多词汇和语法！",
-        "avatar": "🎓"
+        "speaker": "Waiter",
+        "text": "I'm very sorry, sir. We are short-staffed today.",
+        "translation": "非常抱歉，先生。我们今天人手紧缺。",
+        "avatar": "🧑‍💼"
       },
       {
-        "speaker": "TEACHER",
-        "text": "You have mastered present, past, future, perfect tenses, passive voice, and relative clauses.",
-        "translation": "你已经掌握了现在时、过去时、将来时、完成时、被动语态和定语从句。",
-        "avatar": "👨‍🏫"
+        "speaker": "Customer",
+        "text": "Has my order been taken to the kitchen yet?",
+        "translation": "我的菜单送去厨房了吗？",
+        "avatar": "👨"
       },
       {
-        "speaker": "STUDENT",
-        "text": "I can now communicate in English confidently in daily life.",
-        "translation": "我现在可以在日常生活中自信地用英语交流了。",
-        "avatar": "🎓"
-      },
-      {
-        "speaker": "TEACHER",
-        "text": "Keep practicing every day, and see you in Book 2!",
-        "translation": "坚持每天练习，我们在第二册见！",
-        "avatar": "👨‍🏫"
+        "speaker": "Waiter",
+        "text": "Yes, sir. Your dinner has already been cooked. I will bring it right away.",
+        "translation": "是的，先生。您的晚餐已经做好了。我马上端上来。",
+        "avatar": "🧑‍💼"
       }
     ],
     "sentences": [
       {
-        "en": "Congratulations on completing all 144 lessons of New Concept English Book 1!",
-        "zh": "祝贺你学完《新概念英语》第一册全部144课！"
+        "en": "He hasn't been served yet.",
+        "zh": "他还没有被招待。"
       },
       {
-        "en": "You have mastered present, past, future, and perfect tenses.",
-        "zh": "你已经掌握了现在、过去、将来和完成时态。"
+        "en": "Has the letter been posted yet? Yes, it has already been posted.",
+        "zh": "信已经寄出去了吗？是的，已经寄出去了。"
       },
       {
-        "en": "I can now communicate in English confidently in daily life.",
-        "zh": "我现在能够在日常生活中自信地用英语交流了。"
+        "en": "Has the car been repaired yet? No, it hasn't been repaired yet.",
+        "zh": "汽车修好了吗？还没有，还没修好。"
       },
       {
-        "en": "Keep practicing every day, and see you in Book 2!",
-        "zh": "保持每天练习，第二册见！"
+        "en": "All the guest rooms have already been cleaned.",
+        "zh": "所有的客房都已经被打扫干净了。"
       }
     ],
     "words": [
       {
-        "word": "congratulations",
-        "phonetic": "/kənˌɡrætʃuˈleɪʃnz/",
-        "meaning": "n. 祝贺，恭喜",
-        "mcItem": "Firework Rocket",
-        "mcItemIcon": "🎉",
-        "sampleSentence": "Congratulations to you!",
-        "sampleTranslation": "向你表示祝贺！"
+        "word": "serve",
+        "phonetic": "/sɜːv/",
+        "meaning": "v. 招待，服务，端上(菜肴)",
+        "mcItem": "Cake",
+        "mcItemIcon": "🍽️",
+        "sampleSentence": "He hasn't been served yet by the waiter.",
+        "sampleTranslation": "他还没有受到服务员的招待。"
       },
       {
-        "word": "master",
-        "phonetic": "/ˈmɑːstə/",
-        "meaning": "v. & n. 精通，掌握；大师",
-        "mcItem": "Netherite Ingot",
-        "mcItemIcon": "👑",
-        "sampleSentence": "Master English.",
-        "sampleTranslation": "精通英语。"
+        "word": "customer",
+        "phonetic": "/ˈkʌs.tə.mər/",
+        "meaning": "n. 顾客，主顾",
+        "mcItem": "Emerald",
+        "mcItemIcon": "👥",
+        "sampleSentence": "The polite waiter served the new customer.",
+        "sampleTranslation": "礼貌的服务员招待了新顾客。"
       },
       {
-        "word": "confident",
-        "phonetic": "/ˈkɒnfɪdənt/",
-        "meaning": "adj. 自信的",
-        "mcItem": "Beacon",
-        "mcItemIcon": "💪",
-        "sampleSentence": "Feel confident.",
-        "sampleTranslation": "感觉自信。"
+        "word": "counter",
+        "phonetic": "/ˈkaʊn.tər/",
+        "meaning": "n. 柜台，吧台",
+        "mcItem": "Oak Wood",
+        "mcItemIcon": "🏬",
+        "sampleSentence": "Place your order at the counter.",
+        "sampleTranslation": "在柜台处点单。"
+      },
+      {
+        "word": "order",
+        "phonetic": "/ˈɔː.dər/",
+        "meaning": "n. 订购，点餐; v. 点餐",
+        "mcItem": "Paper",
+        "mcItemIcon": "📝",
+        "sampleSentence": "Has your dinner order been taken?",
+        "sampleTranslation": "你的晚餐点单记录好了吗？"
+      },
+      {
+        "word": "promptly",
+        "phonetic": "/ˈprɒmpt.li/",
+        "meaning": "adv. 迅速地，准时地",
+        "mcItem": "Clock",
+        "mcItemIcon": "⚡",
+        "sampleSentence": "All guests should be served promptly.",
+        "sampleTranslation": "所有客人都应受到迅速及时的招待。"
+      },
+      {
+        "word": "delay",
+        "phonetic": "/dɪˈleɪ/",
+        "meaning": "n./v. 耽搁，延误",
+        "mcItem": "Soul Sand",
+        "mcItemIcon": "⏳",
+        "sampleSentence": "We sincerely apologize for the delay.",
+        "sampleTranslation": "我们对这次延误深表歉意。"
       }
     ],
-    "grammarNote": "第一册八大核心语法支柱：1.一般现在时 2.现在进行时 3.一般将来时 4.一般过去时 5.现在完成时 6.过去进行时 7.过去完成时 8.被动语态与定语从句。恭喜圆满通关！"
+    "grammarNote": "现在完成时被动语态：主语 + have/has + been + 动词过去分词。强调过去的动作对现在造成的被动影响。"
   }
 };

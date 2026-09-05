@@ -531,42 +531,8 @@ export const AlexChatView: React.FC<AlexChatViewProps> = ({
     setTimeout(() => setRecentGift(null), 4000);
   };
 
-  // Structured Scenario Roleplay Chips for Children & Book 2 Redstone Engineers
-  const isVol2 = profile.selectedVolumeId === 'vol2';
-
-  const promptCategories = isVol2 ? [
-    {
-      categoryName: '⚡ 红石与叙事逻辑',
-      icon: '🔴',
-      prompts: [
-        'I turned on the redstone lamp because it was getting dark. 💡',
-        'Although the creeper exploded, our cobblestone wall stayed strong! 🧱',
-        'When we arrived at the Nether fortress, the blazes were flying everywhere! 🔥',
-        'By tomorrow morning, we will have gathered thirty diamonds! 💎'
-      ]
-    },
-    {
-      categoryName: '📚 第二册核心句',
-      icon: '📖',
-      prompts: [
-        activeLesson
-          ? `Lesson ${activeLesson.id}: ${activeLesson.targetSentences[0] || 'It was a very interesting story!'}`
-          : 'Can you explain why the redstone circuit needs a repeater?',
-        activeLesson && activeLesson.targetSentences[1]
-          ? activeLesson.targetSentences[1]
-          : 'What happened after Steve entered the ancient stronghold?'
-      ]
-    },
-    {
-      categoryName: '🏰 远古要塞与工业',
-      icon: '🏛️',
-      prompts: [
-        'Let\'s build an automated sugarcane farm with redstone pistons! ⚙️',
-        'We must be careful because the Warden is sleeping nearby! 🤫',
-        'I upgraded my armor to netherite so that I can survive lava! 🛡️'
-      ]
-    }
-  ] : [
+  // Structured Scenario Roleplay Chips for Children
+  const promptCategories = [
     {
       categoryName: '📚 本课核心句',
       icon: '✨',

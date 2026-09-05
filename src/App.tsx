@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId, VolumeProgress } from './types';
-import { getLevelFromXp, evaluateMissionsForProfile } from './data/gamificationData';
+import { getLevelFromXp, evaluateMissionsForProfile, evaluateBadgesForProfile } from './data/gamificationData';
 import { getVolumeProgress, updateVolumeProgress, switchActiveVolume, DEFAULT_VOLUME_PROGRESS, hasLessonAccess } from './utils/volumeProgress';
 import { HeaderBar } from './components/HeaderBar';
 import { FirstLaunchModal } from './components/FirstLaunchModal';
@@ -227,6 +227,13 @@ const sanitizeProfile = (raw: any): UserProfile => {
   const evaluatedReady = evaluateMissionsForProfile(merged);
   merged.readyToClaimMissionIds = evaluatedReady.filter(id => !(merged.completedMissionIds || []).includes(id));
 
+  // Strictly evaluate and populate unlockedBadgeIds based on vocabulary, levels, lessons, streaks
+  const { unlockedBadgeIds: evaluatedBadges } = evaluateBadgesForProfile(merged);
+  merged.unlockedBadgeIds = Array.from(new Set([
+    ...(merged.unlockedBadgeIds || []),
+    ...evaluatedBadges
+  ]));
+
   return merged;
 };
 
@@ -251,7 +258,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
 
   const [selectedVolumeId, setSelectedVolumeId] = useState<CourseVolumeId>('vol1');
-  const [activeTab, setActiveTab] = useState<'map' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'chat' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements'>('map');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
 
   // Active Lesson Context for Alex Chat
@@ -376,8 +383,12 @@ export default function App() {
   const [continuousMinutes, setContinuousMinutes] = useState<number>(0);
 
   useEffect(() => {
-    // 1-minute ticker for study time
+    // 1-minute ticker for study time (only counts when page is visible)
     const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) {
+        return;
+      }
+
       setContinuousMinutes(prev => {
         const next = prev + 1;
         const limit = profile.parentSettings?.continuousTimeLimitMinutes || 20;
@@ -451,7 +462,7 @@ export default function App() {
   };
 
   // Award Emeralds & XP with Level Up check
-  const handleAwardEmeralds = (emeraldAmount: number, xpAmount: number) => {
+  const handleAwardEmeralds = (emeraldAmount: number, xpAmount: number, reason?: string) => {
     setProfile(prev => {
       const newXp = prev.xp + xpAmount;
       const calculatedLevel = getLevelFromXp(newXp);
@@ -466,23 +477,33 @@ export default function App() {
         });
       }
 
-      return {
+      const oralDelta = reason?.includes('口语') ? 1 : 0;
+      const rawNext: UserProfile = {
         ...prev,
         emeralds: prev.emeralds + emeraldAmount,
         xp: newXp,
-        level: newLevel
+        level: newLevel,
+        oralEvaluationCount: (prev.oralEvaluationCount || 0) + oralDelta
       };
+
+      const next = sanitizeProfile(rawNext);
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
+        } catch (e) {
+          console.warn("Storage save error", e);
+        }
+      }
+      saveUserProfileToCloud(next, currentUser?.uid);
+
+      return next;
     });
   };
 
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
 
-  const handleChangeVolumeId = (newVolId: CourseVolumeId) => {
-    if (newVolId !== 'vol1') {
-      alert('《新概念英语》第二册目前正由教研团队深度打磨中，已全量锁定，暂未开放，敬请期待！');
-      setSelectedVolumeId('vol1');
-      return;
-    }
+  const handleChangeVolumeId = (_newVolId: CourseVolumeId) => {
     setSelectedVolumeId('vol1');
     setProfile(prev => {
       const updated = switchActiveVolume(prev, 'vol1');
@@ -531,12 +552,18 @@ export default function App() {
       // Increment today's completed lessons count
       nextProfile.todayCompletedLessonsCount = (nextProfile.todayCompletedLessonsCount || 0) + 1;
 
-      // Automatically evaluate missions for newly completed lesson
+      // Automatically evaluate missions & badges for newly completed lesson
       const newlyReadyMissions = evaluateMissionsForProfile(nextProfile);
       nextProfile.readyToClaimMissionIds = Array.from(new Set([
         ...(nextProfile.readyToClaimMissionIds || []),
         ...newlyReadyMissions
       ])).filter(id => !(nextProfile.completedMissionIds || []).includes(id));
+
+      const { unlockedBadgeIds: evaluatedBadges } = evaluateBadgesForProfile(nextProfile);
+      nextProfile.unlockedBadgeIds = Array.from(new Set([
+        ...(nextProfile.unlockedBadgeIds || []),
+        ...evaluatedBadges
+      ]));
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(nextProfile));
@@ -589,6 +616,12 @@ export default function App() {
         ...newlyReadyMissions
       ])).filter(id => !(next.completedMissionIds || []).includes(id));
 
+      const { unlockedBadgeIds: evaluatedBadges } = evaluateBadgesForProfile(next);
+      next.unlockedBadgeIds = Array.from(new Set([
+        ...(next.unlockedBadgeIds || []),
+        ...evaluatedBadges
+      ]));
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
       }
@@ -597,12 +630,16 @@ export default function App() {
     });
   };
 
-  const handleToggleMasterWord = (word: string) => {
+  const handleToggleMasterWord = (word: string, forceMaster?: boolean) => {
     setProfile(prev => {
-      const isAlready = prev.masteredWords.includes(word);
-      const nextMastered = isAlready
-        ? prev.masteredWords.filter(w => w !== word)
-        : [...prev.masteredWords, word];
+      const lower = word.toLowerCase();
+      const isAlready = prev.masteredWords.some(w => w.toLowerCase() === lower);
+      if (forceMaster && isAlready) {
+        return prev;
+      }
+      const nextMastered = isAlready && !forceMaster
+        ? prev.masteredWords.filter(w => w.toLowerCase() !== lower)
+        : isAlready ? prev.masteredWords : [...prev.masteredWords, word];
 
       if (!isAlready) {
         // Grant bonus for mastering new word
@@ -621,6 +658,12 @@ export default function App() {
         ...newlyReadyMissions
       ])).filter(id => !(next.completedMissionIds || []).includes(id));
 
+      const { unlockedBadgeIds: evaluatedBadges } = evaluateBadgesForProfile(next);
+      next.unlockedBadgeIds = Array.from(new Set([
+        ...(next.unlockedBadgeIds || []),
+        ...evaluatedBadges
+      ]));
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
       }
@@ -630,9 +673,13 @@ export default function App() {
     });
   };
 
+  const handleMasterWordDirect = (word: string) => {
+    handleToggleMasterWord(word, true);
+  };
+
   const handleSelectLessonForChat = (lesson: Lesson) => {
     setSelectedLessonForChat(lesson);
-    setActiveTab('radio');
+    setActiveTab('chat');
     // Add lesson prompt context into chat history
     setChatMessages(prev => [
       ...prev,
@@ -662,7 +709,7 @@ export default function App() {
     setProfile(DEFAULT_PROFILE);
   };
 
-  const handleEnterApp = (targetTab?: 'map' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
+  const handleEnterApp = (targetTab?: 'map' | 'chat' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements') => {
     if (!currentUser) {
       setIsAuthOpen(true);
       return;
@@ -747,13 +794,15 @@ export default function App() {
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
         onGoToLandingPage={() => setIsLandingView(true)}
         onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
+        onNavigateToTab={(tab) => setActiveTab(tab)}
+        onOpenAlexChat={() => setActiveTab('chat')}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
       />
 
       {/* Main App Container */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 flex flex-col pb-safe ${
-        activeTab === 'radio' ? 'py-1.5 sm:py-2.5 space-y-2 sm:space-y-2.5' : 'py-3 sm:py-6 space-y-4 sm:space-y-5'
+        activeTab === 'radio' || activeTab === 'chat' ? 'py-1.5 sm:py-2.5 space-y-2 sm:space-y-2.5' : 'py-3 sm:py-6 space-y-4 sm:space-y-5'
       }`}>
         
         {/* Navigation Tabs Bar (Responsive Mobile Optimized) */}
@@ -777,6 +826,24 @@ export default function App() {
           <button
             onClick={() => {
               playClickSound();
+              setActiveTab('chat');
+            }}
+            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:translate-y-0.5 ${
+              activeTab === 'chat'
+                ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
+                : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="whitespace-nowrap">💬 Alex对话</span>
+            {selectedLessonForChat && activeTab !== 'chat' && (
+              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
+            )}
+          </button>
+
+          <button
+            onClick={() => {
+              playClickSound();
               setActiveTab('radio');
             }}
             className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:translate-y-0.5 ${
@@ -787,9 +854,6 @@ export default function App() {
           >
             <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span className="whitespace-nowrap">📻 磨耳朵</span>
-            {selectedLessonForChat && (
-              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
-            )}
           </button>
 
           <button
@@ -874,6 +938,63 @@ export default function App() {
             </>
           )}
 
+          {activeTab === 'chat' && (
+            <AlexChatView
+              profile={profile}
+              activeLesson={selectedLessonForChat}
+              messages={chatMessages}
+              setMessages={setChatMessages}
+              onAwardEmeralds={handleAwardEmeralds}
+              onCompleteLesson={handleCompleteLesson}
+              onBackToMap={() => setActiveTab('map')}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onCheckMission={(text) => {
+                const lowerText = text.toLowerCase();
+                setProfile(prev => {
+                  const next: UserProfile = {
+                    ...prev,
+                    todayAlexChatDone: true
+                  };
+                  const newlyReadyMissions = evaluateMissionsForProfile(next);
+                  next.readyToClaimMissionIds = Array.from(new Set([
+                    ...(next.readyToClaimMissionIds || []),
+                    ...newlyReadyMissions
+                  ])).filter(id => !(next.completedMissionIds || []).includes(id));
+
+                  const hiddenReady: string[] = [];
+                  import('./data/gamificationData').then(({ INITIAL_MISSIONS }) => {
+                    INITIAL_MISSIONS.forEach(mission => {
+                      if ((next.completedMissionIds || []).includes(mission.id)) return;
+                      if ((next.readyToClaimMissionIds || []).includes(mission.id)) return;
+                      
+                      let matched = false;
+                      if (mission.id === 'mission_001' && lowerText.includes('wooden door')) matched = true;
+                      if (mission.id === 'mission_002' && (lowerText.includes('excuse me') || lowerText.includes('teacher'))) matched = true;
+                      if (mission.id === 'mission_003' && lowerText.includes('diamonds')) matched = true;
+                      if (mission.id === 'mission_004' && (lowerText.includes('how much') || lowerText.includes('emerald'))) matched = true;
+                      
+                      if (matched) {
+                        hiddenReady.push(mission.id);
+                        alert(`🎉 恭喜！你通过对话完成了隐藏任务: [${mission.titleZh}]！请去"任务"页面领取奖励吧！`);
+                      }
+                    });
+                    if (hiddenReady.length > 0) {
+                      handleUpdateProfile({
+                        readyToClaimMissionIds: Array.from(new Set([...(next.readyToClaimMissionIds || []), ...hiddenReady]))
+                      });
+                    }
+                  });
+
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
+                  }
+                  saveUserProfileToCloud(next, currentUser?.uid);
+                  return next;
+                });
+              }}
+            />
+          )}
+
           {activeTab === 'radio' && (
             <RadioImmersionView
               selectedVolumeId={selectedVolumeId}
@@ -945,6 +1066,7 @@ export default function App() {
                 onAwardEmeralds={handleAwardEmeralds}
                 onOpenVipModal={() => setIsVipModalOpen(true)}
                 onNavigateToLesson={handleSelectLessonForChat}
+                onNavigateToCrafting={() => setActiveTab('crafting')}
               />
             </>
           )}
@@ -953,9 +1075,10 @@ export default function App() {
             <CraftingLabView
               profile={profile}
               onAwardEmeralds={handleAwardEmeralds}
-              onMasterWord={handleToggleMasterWord}
+              onMasterWord={handleMasterWordDirect}
               onOpenVipModal={() => setIsVipModalOpen(true)}
               onNavigateToLesson={handleSelectLessonForChat}
+              onNavigateToVocab={() => setActiveTab('vocab')}
               onUpdateProfile={handleUpdateProfile}
             />
           )}
@@ -974,7 +1097,14 @@ export default function App() {
           )}
 
           {activeTab === 'achievements' && (
-            <AchievementsView profile={profile} />
+            <AchievementsView
+              profile={profile}
+              onUpdateProfile={handleUpdateProfile}
+              onNavigateToVocab={() => setActiveTab('vocab')}
+              onNavigateToMap={() => setActiveTab('map')}
+              onNavigateToCrafting={() => setActiveTab('crafting')}
+              onNavigateToChat={() => setActiveTab('chat')}
+            />
           )}
         </div>
 
