@@ -276,11 +276,27 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   onOpenVipModal,
   onMasterWord
 }) => {
-  const [hasPlayedFullDialogue, setHasPlayedFullDialogue] = useState<boolean>(false);
+  const lessonProgressKey = `mc_lesson_progress_${lesson.id}`;
+
+  // Read cached mid-lesson progress if available
+  const getCachedProgress = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(lessonProgressKey);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const cached = getCachedProgress();
+
+  const [hasPlayedFullDialogue, setHasPlayedFullDialogue] = useState<boolean>(() => cached?.hasPlayedFullDialogue || false);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
   const [studyNotice, setStudyNotice] = useState<string | null>(null);
 
-  const [playedAudioIds, setPlayedAudioIds] = useState<Set<string>>(new Set());
+  const [playedAudioIds, setPlayedAudioIds] = useState<Set<string>>(() => new Set(cached?.playedAudioIds || []));
   const [isPlayingAllDialogue, setIsPlayingAllDialogue] = useState<boolean>(false);
   const [currentDialogueIndex, setCurrentDialogueIndex] = useState<number | null>(null);
   const [isMaximized, setIsMaximized] = useState<boolean>(() => {
@@ -324,14 +340,32 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   
   const [shuffledWords, setShuffledWords] = useState<string[]>([]);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
-  const [completedScaffoldIndices, setCompletedScaffoldIndices] = useState<Set<number>>(new Set());
+  const [completedScaffoldIndices, setCompletedScaffoldIndices] = useState<Set<number>>(() => new Set(cached?.completedScaffoldIndices || []));
   const isCurrentScaffoldFinished = completedScaffoldIndices.has(activeScaffoldSentenceIdx);
   const [isScaffoldSuccess, setIsScaffoldSuccess] = useState<boolean>(false);
-  const [completedQuests, setCompletedQuests] = useState<Set<number>>(new Set());
-  const [completedSceneTypes, setCompletedSceneTypes] = useState<Record<number, boolean>>({}); // sceneId -> isSpoken
+  const [completedQuests, setCompletedQuests] = useState<Set<number>>(() => new Set(cached?.completedQuests || []));
+  const [completedSceneTypes, setCompletedSceneTypes] = useState<Record<number, boolean>>(() => cached?.completedSceneTypes || {}); // sceneId -> isSpoken
   const [activeSceneForCheckIn, setActiveSceneForCheckIn] = useState<RealWorldSceneItem | null>(null);
   const [oralTarget, setOralTarget] = useState<{ text: string; translation?: string; phonetic?: string; mcIcon?: string } | null>(null);
   const [showLootChest, setShowLootChest] = useState<boolean>(false);
+
+  // Automatically persist halfway study progress to localStorage so user can resume seamlessly
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const payload = {
+        hasPlayedFullDialogue,
+        playedAudioIds: Array.from(playedAudioIds),
+        completedScaffoldIndices: Array.from(completedScaffoldIndices),
+        completedQuests: Array.from(completedQuests),
+        completedSceneTypes,
+        updatedAt: Date.now()
+      };
+      localStorage.setItem(lessonProgressKey, JSON.stringify(payload));
+    } catch {
+      // ignore quota errors
+    }
+  }, [lessonProgressKey, hasPlayedFullDialogue, playedAudioIds, completedScaffoldIndices, completedQuests, completedSceneTypes]);
 
   useEffect(() => {
     // Shuffle words for sentence crafting
