@@ -8,7 +8,7 @@ import { getVolumeProgress, hasLessonAccess, isVolumeFullyUnlocked, isLessonPayw
 import {
   Compass, Lock, Play, CheckCircle, Volume2, Sparkles, MessageSquare, BookOpen,
   Award, Star, MapPin, ZoomIn, ZoomOut, RefreshCw, Flame, Shield, Trophy, HelpCircle, X,
-  LayoutGrid, ChevronLeft, ChevronRight, Zap, Layers
+  LayoutGrid, ChevronLeft, ChevronRight, Zap, Layers, Search, ArrowRight, CheckCircle2
 } from 'lucide-react';
 import { playClickSound, speakText, playEmeraldSound, playBlockBreakSound, playAnvilSound } from '../utils/audio';
 
@@ -18,6 +18,7 @@ interface GiantWorldMapProps {
   onCompleteLesson: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
   onOpenVipModal?: () => void;
+  onMasterWord?: (word: string) => void;
 }
 
 interface MapNPC {
@@ -129,7 +130,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   onSelectLessonForChat,
   onCompleteLesson,
   onAwardEmeralds,
-  onOpenVipModal
+  onOpenVipModal,
+  onMasterWord
 }) => {
   const [selectedUnit, setSelectedUnit] = useState<number>(1);
   const [biomeNavMode, setBiomeNavMode] = useState<'grid' | 'scroll'>('grid'); // Default to grid for 100% full visibility of 1-6
@@ -143,6 +145,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   const [userQuizChoice, setUserQuizChoice] = useState<string | null>(null);
   const [breakingLessonId, setBreakingLessonId] = useState<number | null>(null);
   const [lockedNotice, setLockedNotice] = useState<{ lessonId: number; msg: string } | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
 
   const selectedVolId = profile.selectedVolumeId || 'vol1';
   const catalog = getFullLessonsCatalog(selectedVolId);
@@ -150,6 +154,16 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
   const currentLessonId = volProg.currentLessonId;
   const unlockedLessonIds = volProg.unlockedLessonIds;
   const completedLessonIds = volProg.completedLessonIds;
+
+  // Filtered lessons for quick search
+  const filteredSearchLessons = searchQuery.trim()
+    ? catalog.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.titleZh.includes(searchQuery) ||
+        item.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.id.toString() === searchQuery.trim()
+      ).slice(0, 8)
+    : [];
 
   // Scroll to selected biome section
   const biomeSectionRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -247,8 +261,100 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           </div>
         </div>
 
-        {/* Right: Map View Controls */}
+        {/* Right: Map View Controls & Fast Search */}
         <div className="flex flex-wrap items-center gap-2">
+          
+          {/* Fast Search & Lesson Finder */}
+          <div className="relative">
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onFocus={() => setIsSearchFocused(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="快速搜课/单词..."
+                className="bg-slate-100 border-2 border-slate-300 rounded-xl pl-8 pr-7 py-1 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-[#487E2C] focus:bg-white w-36 sm:w-44 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Live Search Results Popover */}
+            {searchQuery.trim() && (
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white border-3 border-black rounded-2xl p-2 shadow-2xl z-50 animate-fade-in max-h-72 overflow-y-auto">
+                <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100 text-[11px] font-mono text-slate-500">
+                  <span>搜索结果 ({filteredSearchLessons.length})</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-slate-400 hover:text-slate-700"
+                  >
+                    关闭
+                  </button>
+                </div>
+                {filteredSearchLessons.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-slate-400 font-mono">
+                    未找到匹配课程，试试输入如 "12", "pen", "coat"
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {filteredSearchLessons.map(lesson => {
+                      const status = getLessonUnlockStatus(profile, selectedVolId, lesson.id);
+                      return (
+                        <div
+                          key={lesson.id}
+                          onClick={() => {
+                            setSearchQuery('');
+                            handleJumpToUnit(lesson.unit);
+                            handleOpenLessonDetail(lesson.id, status);
+                          }}
+                          className="p-2 hover:bg-emerald-50 rounded-xl cursor-pointer transition-all flex items-center justify-between"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <div className="flex items-center space-x-1.5">
+                              <span className="text-xs font-mono font-black text-[#487E2C]">
+                                L{lesson.id}
+                              </span>
+                              <span className="text-xs font-bold text-slate-800 truncate">
+                                {lesson.title}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 truncate font-sans">
+                              {lesson.titleZh}
+                            </p>
+                          </div>
+                          <div className="shrink-0 flex items-center space-x-1">
+                            {status.isCompleted ? (
+                              <span className="text-[10px] font-mono font-black text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
+                                已完成
+                              </span>
+                            ) : status.isUnlocked ? (
+                              <span className="text-[10px] font-mono font-black text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                                可学
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-mono font-black text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded flex items-center">
+                                <Lock className="w-2.5 h-2.5 mr-0.5" /> 未解锁
+                              </span>
+                            )}
+                            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           
           {/* Day/Night Lighting Switch */}
           <button
@@ -413,8 +519,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
 
         {/* Display Container: Grid Mode or Scroll Mode */}
         {biomeNavMode === 'grid' ? (
-          /* Responsive 6-card Grid: 6 cols on desktop */
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-1">
+          /* Responsive 6-card Grid: 3 cols on mobile, 6 cols on desktop */
+          <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-1">
             {BIOME_CHAPTERS.map(ch => {
               const isActive = selectedUnit === ch.unit;
               const unitLessons = catalog.filter(l => l.unit === ch.unit);
@@ -429,7 +535,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                   key={ch.unit}
                   type="button"
                   onClick={() => handleJumpToUnit(ch.unit)}
-                  className={`p-2.5 rounded-xl sm:rounded-2xl border-2 font-mono text-left transition-all relative flex flex-col justify-between cursor-pointer active:translate-y-0.5 ${
+                  className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl border-2 font-mono text-left transition-all relative flex flex-col justify-between cursor-pointer active:translate-y-0.5 ${
                     isActive
                       ? 'bg-[#487E2C] border-black text-white shadow-[0_3px_0_0_#000] ring-2 ring-amber-300 scale-[1.02] z-10'
                       : isPlayerHere
@@ -440,8 +546,8 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                   }`}
                 >
                   <div className="flex items-start justify-between">
-                    <span className="text-xl sm:text-2xl leading-none">{ch.icon}</span>
-                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
+                    <span className="text-lg sm:text-2xl leading-none">{ch.icon}</span>
+                    <span className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md ${
                       isActive
                         ? 'bg-black/30 text-white'
                         : isPlayerHere
@@ -450,15 +556,15 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         ? 'bg-emerald-200 text-emerald-900'
                         : 'bg-slate-200 text-slate-600'
                     }`}>
-                      {isPlayerHere ? '当前' : isUnitFinished ? '✓ 通关' : `${completedCount}/24`}
+                      {isPlayerHere ? '当前' : isUnitFinished ? '✓' : `${completedCount}/24`}
                     </span>
                   </div>
 
-                  <div className="mt-1.5 space-y-0.5">
-                    <p className={`font-black text-xs leading-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                  <div className="mt-1 sm:mt-1.5 space-y-0.5">
+                    <p className={`font-black text-[11px] sm:text-xs leading-tight ${isActive ? 'text-white' : 'text-slate-900'}`}>
                       Unit {ch.unit}
                     </p>
-                    <p className={`text-[10px] truncate ${isActive ? 'text-emerald-100 font-bold' : 'text-slate-500 font-medium'}`}>
+                    <p className={`text-[9px] sm:text-[10px] truncate ${isActive ? 'text-emerald-100 font-bold' : 'text-slate-500 font-medium'}`}>
                       {ch.biomeNameZh.split('·')[0]}
                     </p>
                   </div>
@@ -679,7 +785,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                 </div>
 
                 {/* 24 Lessons Grid Nodes inside this Biome */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 relative z-10">
+                <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-2 sm:gap-3.5 relative z-10">
                   {unitLessons.map((item) => {
                     const unlockStatus = getLessonUnlockStatus(profile, selectedVolId, item.id);
                     const { isUnlocked, isCompleted, isCurrent, isPaywallLocked, isProgressionLocked } = unlockStatus;
@@ -729,18 +835,18 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         <button
                           type="button"
                           onClick={() => handleOpenLessonDetail(item.id, unlockStatus)}
-                          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-3 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
+                          className={`w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-2xl border-3 font-mono flex flex-col items-center justify-center relative transition-all duration-300 transform ${
                             isBreaking ? 'scale-125 rotate-6 brightness-150' : ''
                           } ${
                             isCurrent
-                              ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_6px_0_0_#992E00] ring-4 ring-amber-400 scale-105 z-20 group-hover:-translate-y-2 group-hover:scale-115 group-hover:shadow-[0_0_25px_rgba(251,191,36,0.9)] group-hover:ring-amber-300 cursor-pointer'
+                              ? 'bg-[#FF6321] border-amber-300 text-white shadow-[0_4px_0_0_#992E00] sm:shadow-[0_6px_0_0_#992E00] ring-3 sm:ring-4 ring-amber-400 scale-105 z-20 group-hover:-translate-y-2 group-hover:scale-115 group-hover:shadow-[0_0_25px_rgba(251,191,36,0.9)] group-hover:ring-amber-300 cursor-pointer'
                               : isPaywallLocked
-                              ? 'bg-amber-950/80 border-amber-500/80 shadow-[0_5px_0_0_#451a03] text-amber-200 group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-400 group-hover:z-30 cursor-pointer'
+                              ? 'bg-amber-950/80 border-amber-500/80 shadow-[0_4px_0_0_#451a03] text-amber-200 group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-400 group-hover:z-30 cursor-pointer'
                               : isCompleted
-                              ? 'bg-[#487E2C] border-[#2A4718] shadow-[0_5px_0_0_#182B0E] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(72,126,44,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30 cursor-pointer'
+                              ? 'bg-[#487E2C] border-[#2A4718] shadow-[0_4px_0_0_#182B0E] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(72,126,44,0.9)] group-hover:ring-4 group-hover:ring-lime-300 group-hover:z-30 cursor-pointer'
                               : isUnlocked
-                              ? 'bg-amber-600 border-amber-900 shadow-[0_5px_0_0_#542a02] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-300 group-hover:z-30 cursor-pointer'
-                              : 'bg-slate-900 border-slate-950 shadow-[0_4px_0_0_#020617] text-slate-500 hover:bg-slate-800 hover:border-slate-700 hover:text-slate-300 cursor-pointer opacity-75 active:scale-95'
+                              ? 'bg-amber-600 border-amber-900 shadow-[0_4px_0_0_#542a02] text-white border-black group-hover:-translate-y-2 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.9)] group-hover:ring-4 group-hover:ring-amber-300 group-hover:z-30 cursor-pointer'
+                              : 'bg-slate-900 border-slate-950 shadow-[0_3px_0_0_#020617] text-slate-500 hover:bg-slate-800 hover:border-slate-700 hover:text-slate-300 cursor-pointer opacity-75 active:scale-95'
                           }`}
                         >
                           {/* Top Pixel Bevel */}
@@ -849,6 +955,7 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
           lesson={activeLesson}
           profile={profile}
           onClose={() => setActiveLesson(null)}
+          onMasterWord={onMasterWord}
           onCompleteLesson={(lessonId) => {
             if (onCompleteLesson) {
               onCompleteLesson(lessonId);

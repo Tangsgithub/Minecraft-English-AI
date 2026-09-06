@@ -596,17 +596,49 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     setSelectedSlotIndex(0);
   };
 
-  // 一键装填已知配方
+  // 模式切换（新概念生词构词 vs MC原版装备）同时联动材料调色板、配方图鉴与检查卡片
+  const handleSwitchMode = (mode: 'nce_words' | 'mc_gear') => {
+    playClickSound();
+    setBenchMode(mode);
+    setRecipeTypeFilter(mode);
+    setPaletteCategory('all');
+    setRecipeCategoryFilter('all');
+    if (mode === 'nce_words') {
+      if (!selectedInspectRecipe || selectedInspectRecipe.recipeType !== 'nce_word') {
+        setSelectedInspectRecipe(NCE_WORD_CRAFTING_RECIPES[0] || null);
+      }
+    } else {
+      if (!selectedInspectRecipe || selectedInspectRecipe.recipeType === 'nce_word') {
+        setSelectedInspectRecipe(MC_EQUIPMENT_RECIPES[0] || null);
+      }
+    }
+  };
+
+  // 点击选中任意配方卡片，深度检查并 100% 同步切换材料调色板
+  const handleSelectInspectRecipe = (recipe: CraftingRecipe) => {
+    playClickSound();
+    setSelectedInspectRecipe(recipe);
+    if (recipe.recipeType === 'nce_word') {
+      setBenchMode('nce_words');
+      setPaletteCategory('all');
+    } else {
+      setBenchMode('mc_gear');
+      setPaletteCategory('all');
+    }
+  };
+
+  // 一键装填已知配方，同步材料调色板
   const handleQuickFillRecipe = (recipe: CraftingRecipe) => {
     playClickSound();
     unlockMobileAudio();
     setGridSlots([...recipe.gridPattern]);
     setSelectedInspectRecipe(recipe);
-    // 自动同步当前材料板模式
     if (recipe.recipeType === 'nce_word') {
       setBenchMode('nce_words');
+      setPaletteCategory('all');
     } else {
       setBenchMode('mc_gear');
+      setPaletteCategory('all');
     }
   };
 
@@ -641,12 +673,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
     // 奖励绿宝石与经验
     onAwardEmeralds(8, 20);
 
-    // 若为新概念词汇且有掌握回调，自动收录进已掌握单词
-    if (onMasterWord && matchedRecipe.recipeType === 'nce_word') {
-      onMasterWord(matchedRecipe.nameEn);
-    }
-
-    // 自动记录解锁历史与个人档案
+    // 自动记录解锁历史与个人档案 (合成解锁配方，词汇掌握需通过口语跟读≥85分认证)
     const newCraftedIds = Array.from(new Set([...(profile.unlockedCraftingIds || []), matchedRecipe.id]));
     if (onUpdateProfile) {
       onUpdateProfile({
@@ -1040,15 +1067,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
               </span>
               <button
                 id="mode_nce_words_btn"
-                onClick={() => {
-                  playClickSound();
-                  setBenchMode('nce_words');
-                  setRecipeTypeFilter('nce_words');
-                  setPaletteCategory('all');
-                  if (selectedInspectRecipe?.recipeType !== 'nce_word') {
-                    setSelectedInspectRecipe(NCE_WORD_CRAFTING_RECIPES[0] || null);
-                  }
-                }}
+                onClick={() => handleSwitchMode('nce_words')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                   benchMode === 'nce_words'
                     ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/40 scale-105'
@@ -1060,15 +1079,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
               </button>
               <button
                 id="mode_mc_gear_btn"
-                onClick={() => {
-                  playClickSound();
-                  setBenchMode('mc_gear');
-                  setRecipeTypeFilter('mc_gear');
-                  setPaletteCategory('all');
-                  if (selectedInspectRecipe?.recipeType === 'nce_word') {
-                    setSelectedInspectRecipe(MC_EQUIPMENT_RECIPES[0] || null);
-                  }
-                }}
+                onClick={() => handleSwitchMode('mc_gear')}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                   benchMode === 'mc_gear'
                     ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg shadow-amber-900/40 scale-105'
@@ -1380,12 +1391,38 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
               {/* 下方：材料选择调色板 */}
               <div id="materials_palette_section" className="bg-slate-900/80 rounded-2xl p-6 border border-slate-800 shadow-lg">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-2 text-slate-200 font-bold text-sm">
+                  <div className="flex items-center gap-2">
                     <Sparkle className="w-4 h-4 text-amber-400" />
-                    <span>
-                      材料调色板 ({benchMode === 'nce_words' ? '新概念英语构词部件库' : 'Minecraft 原版材料库'})
-                    </span>
+                    <span className="text-slate-200 font-bold text-sm">材料调色板</span>
+                    {/* 直接在调色板头部提供快速同步切换 */}
+                    <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-xs ml-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchMode('nce_words')}
+                        className={`px-2.5 py-1 rounded-md transition-all font-bold flex items-center gap-1 cursor-pointer ${
+                          benchMode === 'nce_words'
+                            ? 'bg-emerald-600 text-white shadow'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <GraduationCap className="w-3 h-3" />
+                        <span>📘 新概念词根部件</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchMode('mc_gear')}
+                        className={`px-2.5 py-1 rounded-md transition-all font-bold flex items-center gap-1 cursor-pointer ${
+                          benchMode === 'mc_gear'
+                            ? 'bg-amber-600 text-white shadow'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <Sword className="w-3 h-3" />
+                        <span>⚔️ MC原版材料</span>
+                      </button>
+                    </div>
                   </div>
+
                   {/* 分类过滤器 */}
                   <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs flex-wrap">
                     {benchMode === 'nce_words' ? (
@@ -1447,7 +1484,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                             paletteCategory === 'all' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          全部材料
+                          全部材料 ({MC_PALETTE_MATERIALS.length})
                         </button>
                         <button
                           onClick={() => setPaletteCategory('wood_stone')}
@@ -1679,7 +1716,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                 {/* 筛选标签 */}
                 <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
                   <button
-                    onClick={() => setRecipeTypeFilter('nce_words')}
+                    onClick={() => handleSwitchMode('nce_words')}
                     className={`flex-1 py-1 rounded-md transition-colors font-bold ${
                       recipeTypeFilter === 'nce_words' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                     }`}
@@ -1687,7 +1724,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                     📘 新概念生词 ({NCE_WORD_CRAFTING_RECIPES.length})
                   </button>
                   <button
-                    onClick={() => setRecipeTypeFilter('mc_gear')}
+                    onClick={() => handleSwitchMode('mc_gear')}
                     className={`flex-1 py-1 rounded-md transition-colors font-bold ${
                       recipeTypeFilter === 'mc_gear' ? 'bg-amber-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                     }`}
@@ -1695,7 +1732,10 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                     ⚔️ MC装备 ({MC_EQUIPMENT_RECIPES.length})
                   </button>
                   <button
-                    onClick={() => setRecipeTypeFilter('all')}
+                    onClick={() => {
+                      playClickSound();
+                      setRecipeTypeFilter('all');
+                    }}
                     className={`px-3 py-1 rounded-md transition-colors font-bold ${
                       recipeTypeFilter === 'all' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                     }`}
@@ -1738,15 +1778,7 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                     return (
                       <div
                         key={recipe.id}
-                        onClick={() => {
-                          playClickSound();
-                          setSelectedInspectRecipe(recipe);
-                          if (isNce && benchMode !== 'nce_words') {
-                            setBenchMode('nce_words');
-                          } else if (!isNce && benchMode !== 'mc_gear') {
-                            setBenchMode('mc_gear');
-                          }
-                        }}
+                        onClick={() => handleSelectInspectRecipe(recipe)}
                         className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
                           selectedInspectRecipe?.id === recipe.id
                             ? 'bg-amber-950/40 border-amber-500/60 shadow-md'
@@ -2591,7 +2623,11 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
             <div className="p-4 bg-slate-950/60 border-b border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setHandbookTab('nce_words')}
+                  onClick={() => {
+                    playClickSound();
+                    setHandbookTab('nce_words');
+                    handleSwitchMode('nce_words');
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                     handbookTab === 'nce_words'
                       ? 'bg-emerald-600 text-white shadow'
@@ -2602,7 +2638,11 @@ export const CraftingLabView: React.FC<CraftingLabViewProps> = ({
                   📘 新概念生词 ({NCE_WORD_CRAFTING_RECIPES.length})
                 </button>
                 <button
-                  onClick={() => setHandbookTab('mc_gear')}
+                  onClick={() => {
+                    playClickSound();
+                    setHandbookTab('mc_gear');
+                    handleSwitchMode('mc_gear');
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                     handbookTab === 'mc_gear'
                       ? 'bg-amber-600 text-white shadow'

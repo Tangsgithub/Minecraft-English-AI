@@ -177,12 +177,28 @@ const sanitizeProfile = (raw: any): UserProfile => {
   const activeVolId: CourseVolumeId = 'vol1';
   const activeProg = volProgress.vol1;
 
-  // Separate permanent completed mission IDs from daily mission IDs
+  // Separate permanent completed mission IDs from daily mission IDs & sanitize invalid entries
   const rawCompletedMissions: string[] = Array.isArray(raw.completedMissionIds)
     ? raw.completedMissionIds
     : (Array.isArray(raw.completedMissions) ? raw.completedMissions : []);
   const permanentCompletedMissions = rawCompletedMissions.filter(id => !id.startsWith('daily_'));
-  const effectiveCompletedMissions = Array.from(new Set([...permanentCompletedMissions, ...completedDailyMissionIds]));
+  
+  // Cleanse premature/invalid permanent completed mission IDs where lesson prerequisites were not met
+  const validCompletedPermanentMissions = permanentCompletedMissions.filter(id => {
+    if (id === 'mission_001') return activeProg.completedLessonIds.includes(1);
+    if (id === 'mission_002') return activeProg.completedLessonIds.includes(2);
+    if (id === 'mission_003') return activeProg.completedLessonIds.includes(3);
+    if (id === 'adv_004') return activeProg.completedLessonIds.includes(5);
+    if (id === 'adv_005') return activeProg.completedLessonIds.includes(7);
+    if (id === 'adv_006') return activeProg.completedLessonIds.length >= 5;
+    if (id === 'adv_007') return activeProg.completedLessonIds.length >= 10;
+    if (id === 'mission_004') return activeProg.completedLessonIds.includes(17);
+    if (id === 'adv_009') return activeProg.completedLessonIds.length >= 20;
+    if (id === 'adv_010') return activeProg.completedLessonIds.length >= 50;
+    if (id === 'adv_011') return activeProg.completedLessonIds.length >= 144;
+    return true;
+  });
+  const effectiveCompletedMissions = Array.from(new Set([...validCompletedPermanentMissions, ...completedDailyMissionIds]));
 
   const merged: UserProfile = {
     ...DEFAULT_PROFILE,
@@ -805,22 +821,22 @@ export default function App() {
         activeTab === 'radio' || activeTab === 'chat' ? 'py-1.5 sm:py-2.5 space-y-2 sm:space-y-2.5' : 'py-3 sm:py-6 space-y-4 sm:space-y-5'
       }`}>
         
-        {/* Navigation Tabs Bar (Responsive Mobile Optimized) */}
-        <nav className="bg-white/95 border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1 sm:p-2 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
+        {/* Navigation Tabs Bar (Responsive Mobile & Tablet Optimized) */}
+        <nav className="bg-white/95 backdrop-blur-md border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1 sm:p-2 flex items-center gap-1 sm:gap-1.5 md:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] touch-pan-x">
           
           <button
             onClick={() => {
               playClickSound();
               setActiveTab('map');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
               activeTab === 'map'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🗺️ 地图</span>
+            <span className="whitespace-nowrap">地图</span>
           </button>
 
           <button
@@ -828,14 +844,14 @@ export default function App() {
               playClickSound();
               setActiveTab('chat');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:translate-y-0.5 ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:scale-95 cursor-pointer ${
               activeTab === 'chat'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">💬 Alex对话</span>
+            <span className="whitespace-nowrap">对练</span>
             {selectedLessonForChat && activeTab !== 'chat' && (
               <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
             )}
@@ -846,14 +862,14 @@ export default function App() {
               playClickSound();
               setActiveTab('radio');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:translate-y-0.5 ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:scale-95 cursor-pointer ${
               activeTab === 'radio'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">📻 磨耳朵</span>
+            <span className="whitespace-nowrap">磨耳朵</span>
           </button>
 
           <button
@@ -861,14 +877,14 @@ export default function App() {
               playClickSound();
               setActiveTab('vocab');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
               activeTab === 'vocab'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">📦 词汇</span>
+            <span className="whitespace-nowrap">词汇</span>
           </button>
 
           <button
@@ -876,14 +892,14 @@ export default function App() {
               playClickSound();
               setActiveTab('crafting');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
               activeTab === 'crafting'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Hammer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🔨 合成</span>
+            <span className="whitespace-nowrap">合成</span>
           </button>
 
           <button
@@ -891,14 +907,14 @@ export default function App() {
               playClickSound();
               setActiveTab('missions');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 relative ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 relative cursor-pointer ${
               activeTab === 'missions'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Scroll className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">📜 任务</span>
+            <span className="whitespace-nowrap">任务</span>
             {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length > 0 && (
               <span className="ml-1 px-1.5 py-0.2 bg-[#FF6321] text-white text-[9px] font-black rounded-full animate-pulse">
                 {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length}
@@ -911,14 +927,14 @@ export default function App() {
               playClickSound();
               setActiveTab('achievements');
             }}
-            className={`flex-1 min-w-[70px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:translate-y-0.5 ${
+            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
               activeTab === 'achievements'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">🏆 成就</span>
+            <span className="whitespace-nowrap">成就</span>
           </button>
 
         </nav>
@@ -934,6 +950,7 @@ export default function App() {
                 onCompleteLesson={handleCompleteLesson}
                 onAwardEmeralds={handleAwardEmeralds}
                 onOpenVipModal={() => setIsVipModalOpen(true)}
+                onMasterWord={handleMasterWordDirect}
               />
             </>
           )}
@@ -948,8 +965,7 @@ export default function App() {
               onCompleteLesson={handleCompleteLesson}
               onBackToMap={() => setActiveTab('map')}
               onOpenSettings={() => setIsSettingsOpen(true)}
-              onCheckMission={(text) => {
-                const lowerText = text.toLowerCase();
+              onCheckMission={(_text) => {
                 setProfile(prev => {
                   const next: UserProfile = {
                     ...prev,
@@ -960,30 +976,6 @@ export default function App() {
                     ...(next.readyToClaimMissionIds || []),
                     ...newlyReadyMissions
                   ])).filter(id => !(next.completedMissionIds || []).includes(id));
-
-                  const hiddenReady: string[] = [];
-                  import('./data/gamificationData').then(({ INITIAL_MISSIONS }) => {
-                    INITIAL_MISSIONS.forEach(mission => {
-                      if ((next.completedMissionIds || []).includes(mission.id)) return;
-                      if ((next.readyToClaimMissionIds || []).includes(mission.id)) return;
-                      
-                      let matched = false;
-                      if (mission.id === 'mission_001' && lowerText.includes('wooden door')) matched = true;
-                      if (mission.id === 'mission_002' && (lowerText.includes('excuse me') || lowerText.includes('teacher'))) matched = true;
-                      if (mission.id === 'mission_003' && lowerText.includes('diamonds')) matched = true;
-                      if (mission.id === 'mission_004' && (lowerText.includes('how much') || lowerText.includes('emerald'))) matched = true;
-                      
-                      if (matched) {
-                        hiddenReady.push(mission.id);
-                        alert(`🎉 恭喜！你通过对话完成了隐藏任务: [${mission.titleZh}]！请去"任务"页面领取奖励吧！`);
-                      }
-                    });
-                    if (hiddenReady.length > 0) {
-                      handleUpdateProfile({
-                        readyToClaimMissionIds: Array.from(new Set([...(next.readyToClaimMissionIds || []), ...hiddenReady]))
-                      });
-                    }
-                  });
 
                   if (typeof window !== 'undefined') {
                     localStorage.setItem('mc_english_user_profile', JSON.stringify(next));
@@ -1007,8 +999,7 @@ export default function App() {
               onCompleteLesson={handleCompleteLesson}
               onOpenSettings={() => setIsSettingsOpen(true)}
               onSelectLessonForChat={handleSelectLessonForChat}
-              onCheckMission={(text) => {
-                const lowerText = text.toLowerCase();
+              onCheckMission={(_text) => {
                 setProfile(prev => {
                   const next: UserProfile = {
                     ...prev,
@@ -1019,30 +1010,6 @@ export default function App() {
                     ...(next.readyToClaimMissionIds || []),
                     ...newlyReadyMissions
                   ])).filter(id => !(next.completedMissionIds || []).includes(id));
-
-                  const hiddenReady: string[] = [];
-                  import('./data/gamificationData').then(({ INITIAL_MISSIONS }) => {
-                    INITIAL_MISSIONS.forEach(mission => {
-                      if ((next.completedMissionIds || []).includes(mission.id)) return;
-                      if ((next.readyToClaimMissionIds || []).includes(mission.id)) return;
-                      
-                      let matched = false;
-                      if (mission.id === 'mission_001' && lowerText.includes('wooden door')) matched = true;
-                      if (mission.id === 'mission_002' && (lowerText.includes('excuse me') || lowerText.includes('teacher'))) matched = true;
-                      if (mission.id === 'mission_003' && lowerText.includes('diamonds')) matched = true;
-                      if (mission.id === 'mission_004' && (lowerText.includes('how much') || lowerText.includes('emerald'))) matched = true;
-                      
-                      if (matched) {
-                        hiddenReady.push(mission.id);
-                        alert(`🎉 恭喜！你通过对话完成了隐藏任务: [${mission.titleZh}]！请去"任务"页面领取奖励吧！`);
-                      }
-                    });
-                    if (hiddenReady.length > 0) {
-                      handleUpdateProfile({
-                        readyToClaimMissionIds: Array.from(new Set([...(next.readyToClaimMissionIds || []), ...hiddenReady]))
-                      });
-                    }
-                  });
 
                   if (typeof window !== 'undefined') {
                     localStorage.setItem('mc_english_user_profile', JSON.stringify(next));

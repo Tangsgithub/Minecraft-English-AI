@@ -18,6 +18,7 @@ interface LessonStudyModalProps {
   onCompleteLesson?: (lessonId: number) => void;
   onAwardEmeralds?: (emeralds: number, xp: number) => void;
   onOpenVipModal?: () => void;
+  onMasterWord?: (word: string) => void;
 }
 
 export interface WordGrammarRole {
@@ -272,7 +273,8 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
   onStartPractice,
   onCompleteLesson,
   onAwardEmeralds,
-  onOpenVipModal
+  onOpenVipModal,
+  onMasterWord
 }) => {
   const [hasPlayedFullDialogue, setHasPlayedFullDialogue] = useState<boolean>(false);
   const [highlightedSection, setHighlightedSection] = useState<string | null>(null);
@@ -1584,6 +1586,7 @@ export const LessonStudyModal: React.FC<LessonStudyModalProps> = ({
           phonetic={oralTarget.phonetic}
           mcItemIcon={oralTarget.mcIcon || '🧱'}
           onClose={() => setOralTarget(null)}
+          onMasterWord={onMasterWord}
           onAwardEmeralds={(emeralds, xp) => {
             if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
           }}

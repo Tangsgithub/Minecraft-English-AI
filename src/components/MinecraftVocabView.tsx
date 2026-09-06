@@ -4,7 +4,7 @@ import { LESSONS_DATA, getLessonById } from '../data/lessonsData';
 import { getFullBook1VocabList } from '../data/book1VocabManager';
 import { NCE_WORD_CRAFTING_RECIPES } from '../data/craftingRecipesData';
 import { VocabItem, UserProfile, CourseVolumeId } from '../types';
-import { Volume2, Search, CheckCircle, Sparkles, BookOpen, Layers, Play, Award, RotateCcw, HelpCircle, CheckCircle2, XCircle, Lock, Unlock, Filter, ArrowRight, Crown, MapPin, Hammer } from 'lucide-react';
+import { Volume2, Search, CheckCircle, Sparkles, BookOpen, Layers, Play, Award, RotateCcw, HelpCircle, CheckCircle2, XCircle, Lock, Unlock, Filter, ArrowRight, Crown, MapPin, Hammer, Mic } from 'lucide-react';
 import { playClickSound, playEmeraldSound, speakText, playLevelUpSound } from '../utils/audio';
 import { OralEvaluationModal } from './OralEvaluationModal';
 import { getVolumeProgress, hasLessonAccess, isLessonPaywallLocked, isVolumeFullyUnlocked } from '../utils/volumeProgress';
@@ -728,20 +728,43 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
                         </span>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          playEmeraldSound();
-                          onToggleMasterWord(item.word);
-                        }}
-                        className={`px-3 py-1.5 rounded-xl font-black flex items-center space-x-1 border-2 transition-all ${
-                          isMastered
-                            ? 'bg-[#487E2C] border-black text-white shadow-sm'
-                            : 'bg-slate-100 border-slate-300 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        <CheckCircle className={`w-3.5 h-3.5 ${isMastered ? 'text-[#7CFC00]' : 'text-slate-400'}`} />
-                        <span>{isMastered ? '已掌握 (+5 ❇️)' : '标记掌握'}</span>
-                      </button>
+                      {isMastered ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              playEmeraldSound();
+                              onToggleMasterWord(item.word);
+                            }}
+                            className="px-2.5 py-1.5 rounded-xl font-black flex items-center space-x-1 border-2 bg-[#487E2C] border-black text-white shadow-xs hover:bg-emerald-700 transition-all text-xs"
+                            title="已通过发音认证掌握，点击可切换状态"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 text-[#7CFC00]" />
+                            <span>已掌握 ✔️</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              playClickSound();
+                              setOralTarget(item);
+                            }}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-xl text-slate-700 hover:text-emerald-700 transition-all"
+                            title="再次口语跟读评测"
+                          >
+                            <Mic className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            playClickSound();
+                            setOralTarget(item);
+                          }}
+                          className="px-3 py-1.5 rounded-xl font-black text-xs flex items-center space-x-1.5 border-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 border-black text-stone-950 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:scale-95 transition-all"
+                          title="点击开启口语跟读评测，发音达标将自动认证掌握！"
+                        >
+                          <Mic className="w-3.5 h-3.5 text-stone-950 animate-pulse" />
+                          <span>跟读掌握</span>
+                        </button>
+                      )}
                     </div>
 
                   </div>
@@ -1175,6 +1198,7 @@ export const MinecraftVocabView: React.FC<MinecraftVocabViewProps> = ({
           phonetic={oralTarget.phonetic}
           mcItemIcon={oralTarget.mcItemIcon || '🧱'}
           onClose={() => setOralTarget(null)}
+          onMasterWord={(word) => onToggleMasterWord(word)}
           onAwardEmeralds={(emeralds, xp) => {
             if (onAwardEmeralds) onAwardEmeralds(emeralds, xp);
           }}

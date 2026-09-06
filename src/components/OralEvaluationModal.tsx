@@ -304,9 +304,10 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
         onAwardEmeralds(result.emeraldReward, result.xpReward, '口语跟读打分');
       }
 
-      // Auto master word only if genuinely 4+ stars
-      if (result.stars >= 4 && onMasterWord && targetText.split(' ').length <= 2) {
-        onMasterWord(targetText);
+      // Auto master word only if pronunciation score >= 85
+      const isWord = targetText.trim().split(/\s+/).length <= 3;
+      if (result.overallScore >= 85 && onMasterWord && isWord) {
+        onMasterWord(targetText.trim());
       }
     } catch (e) {
       console.error("Evaluation error:", e);
@@ -596,6 +597,36 @@ export const OralEvaluationModal: React.FC<OralEvaluationModalProps> = ({
                     <span className="font-black text-amber-400 text-sm">{evaluationResult.completeness}%</span>
                   </div>
                 </div>
+
+                {/* Word Mastery Certification Feedback */}
+                {targetText.trim().split(/\s+/).length <= 3 && (
+                  <div className={`p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between gap-2 ${
+                    evaluationResult.overallScore >= 85
+                      ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
+                      : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{evaluationResult.overallScore >= 85 ? '🏆' : '🎯'}</span>
+                      <div>
+                        <div className="font-black text-[11px]">
+                          {evaluationResult.overallScore >= 85
+                            ? '发音优秀 · 已认证掌握该词'
+                            : `跟读得分: ${evaluationResult.overallScore}分`}
+                        </div>
+                        <div className="text-[10px] opacity-80 font-normal">
+                          {evaluationResult.overallScore >= 85
+                            ? '已同步收录至【核心词汇宝库】与【已掌握词库】！'
+                            : '继续靠近麦克风清晰大声朗读，冲刺更高分吧！'}
+                        </div>
+                      </div>
+                    </div>
+                    {evaluationResult.overallScore >= 85 && (
+                      <span className="px-2 py-0.5 bg-emerald-500 text-stone-950 text-[10px] font-black rounded-lg shrink-0">
+                        已掌握 ✔️
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* 🔊 Side-by-Side Audio Comparison Console (原声示范 VS 我的录音) */}
                 <div className="bg-slate-950/90 border-2 border-indigo-500/40 rounded-2xl p-3 sm:p-3.5 space-y-2.5 shadow-inner">

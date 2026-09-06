@@ -111,8 +111,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
           </div>
 
-          {/* Desktop HUD: Grand RPG HUD Plate (XP, Emeralds, Streak) */}
-          <div className="hidden xl:flex items-center space-x-3 bg-black/40 border-2 border-black/80 px-3 py-1.5 rounded-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0">
+          {/* Desktop & Tablet HUD: Grand RPG HUD Plate (XP, Emeralds, Streak) */}
+          <div className="hidden lg:flex items-center space-x-2.5 xl:space-x-3 bg-black/40 border-2 border-black/80 px-2.5 xl:px-3 py-1.5 rounded-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0">
             
             {/* Level Badge */}
             <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-amber-400/40 px-2 py-1 rounded-xl shadow-xs shrink-0">
@@ -122,7 +122,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
             {/* XP Progress Bar */}
             <div 
-              className="w-36 group/xp relative cursor-help"
+              className="w-28 xl:w-36 group/xp relative cursor-help"
               title={`当前等级: Lv.${profile.level} (${tier.title})\n本级升级进度: ${progressInLevel} / ${levelSpan} XP (${progressPercent}%)\n升至 Lv.${profile.level + 1} 还需: ${xpNeededForNextLevel} XP\n累计总经验: ${profile.xp} XP`}
             >
               <div className="flex justify-between items-center text-[10px] font-mono font-bold mb-0.5 text-white">
@@ -265,18 +265,18 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         </div>
 
-        {/* Mobile / Tablet Dedicated Compact Game HUD Bar */}
-        <div className="flex xl:hidden items-center justify-between mt-1.5 pt-1.5 border-t border-white/10 gap-2 font-mono">
-          {/* Level & Title */}
-          <div className="flex items-center space-x-1 bg-black/40 border border-white/20 px-2 py-0.5 rounded-lg text-[10px] font-bold text-amber-300 shrink-0">
+        {/* Mobile / Compact Tablet Dedicated Game HUD Bar */}
+        <div className="flex lg:hidden items-center justify-between mt-2 pt-2 border-t border-white/15 gap-2 font-mono">
+          {/* Level & Tier */}
+          <div className="flex items-center space-x-1 bg-black/50 border border-white/20 px-2 py-1 rounded-xl text-[11px] font-black text-amber-300 shrink-0 shadow-xs">
             <span>{tier.icon}</span>
             <span>Lv.{profile.level}</span>
           </div>
 
           {/* XP Progress Bar */}
-          <div className="flex-1 max-w-[150px] xs:max-w-[200px]" title={`本级进度: ${progressInLevel}/${levelSpan} XP (${progressPercent}%)\n累计总经验: ${profile.xp} XP\n升至 Lv.${profile.level + 1} 需: ${xpNeededForNextLevel} XP`}>
-            <div className="flex justify-between text-[9px] font-bold text-white mb-0.5">
-              <span className="text-emerald-300">XP <span className="opacity-70 font-normal">本级</span></span>
+          <div className="flex-1 max-w-[170px] sm:max-w-[240px]" title={`本级进度: ${progressInLevel}/${levelSpan} XP (${progressPercent}%)\n累计总经验: ${profile.xp} XP\n升至 Lv.${profile.level + 1} 需: ${xpNeededForNextLevel} XP`}>
+            <div className="flex justify-between text-[10px] font-bold text-white mb-0.5">
+              <span className="text-emerald-300 font-mono">XP <span className="opacity-70 font-normal">本级</span></span>
               <span className="text-amber-300 font-mono font-black">{progressInLevel}/{levelSpan}</span>
             </div>
             <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden p-0.5 border border-white/20 shadow-inner">
@@ -289,12 +289,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
           {/* Counters: Emeralds & Streak */}
           <div className="flex items-center space-x-1.5 shrink-0">
-            <div className="flex items-center space-x-1 bg-emerald-950/70 border border-emerald-500/40 px-2 py-0.5 rounded-lg text-[10px] font-black text-emerald-300">
+            <div className="flex items-center space-x-1 bg-emerald-950/80 border border-emerald-500/50 px-2 py-1 rounded-xl text-[11px] font-black text-emerald-300 shadow-xs">
               <span>❇️</span>
               <span>{profile.emeralds}</span>
             </div>
-            <div className="flex items-center space-x-1 bg-orange-950/70 border border-orange-500/40 px-2 py-0.5 rounded-lg text-[10px] font-black text-amber-300">
-              <Flame className="w-3 h-3 text-[#FF6321] fill-[#FF6321]" />
+            <div className="flex items-center space-x-1 bg-orange-950/80 border border-orange-500/50 px-2 py-1 rounded-xl text-[11px] font-black text-amber-300 shadow-xs">
+              <Flame className="w-3.5 h-3.5 text-[#FF6321] fill-[#FF6321]" />
               <span>{profile.streakDays}d</span>
             </div>
           </div>

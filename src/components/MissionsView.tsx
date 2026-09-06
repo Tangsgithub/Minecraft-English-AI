@@ -37,15 +37,30 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
   const readyToClaimMissionIds = profile.readyToClaimMissionIds || [];
 
   const isMissionCompleted = (mission: Mission) => {
-    return mission.category === 'daily'
+    const isClaimed = mission.category === 'daily'
       ? completedDailyIds.includes(mission.id)
       : completedPermanentIds.includes(mission.id);
+
+    // Safeguard: If an adventure mission requires a specific lesson or count milestone, verify it is truly completed
+    if (isClaimed && mission.category === 'adventure' && mission.requiredLessonId) {
+      if (['adv_006', 'adv_007', 'adv_009', 'adv_010', 'adv_011'].includes(mission.id)) {
+        const reqCount = mission.id === 'adv_006' ? 5 : mission.id === 'adv_007' ? 10 : mission.id === 'adv_009' ? 20 : mission.id === 'adv_010' ? 50 : 144;
+        if ((profile.completedLessonIds || []).length < reqCount) return false;
+      } else if (!(profile.completedLessonIds || []).includes(mission.requiredLessonId)) {
+        return false;
+      }
+    }
+    return isClaimed;
   };
 
   const isMissionReady = (mission: Mission) => {
     if (isMissionCompleted(mission)) return false;
+    const maxUnlocked = Math.max(...(profile.unlockedLessonIds || [1]), 1);
+    const isUnlockedByLesson = !mission.requiredLessonId || mission.requiredLessonId <= maxUnlocked;
+    if (!isUnlockedByLesson) return false;
+
     const progress = getMissionProgress(mission, profile);
-    return readyToClaimMissionIds.includes(mission.id) || progress.isReady || progress.percent >= 100;
+    return progress.percent >= 100 || (progress.isReady && isUnlockedByLesson);
   };
 
   // Keep readyToClaimMissionIds synced with real-time profile achievements
@@ -381,18 +396,21 @@ export const MissionsView: React.FC<MissionsViewProps> = ({
                       {mission.category.toUpperCase()}
                     </span>
 
-                    {isReadyToClaim && (
+                    {isCompleted ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-amber-400 text-stone-900 flex items-center space-x-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-800" />
+                        <span>已完成 · 奖励已领</span>
+                      </span>
+                    ) : isReadyToClaim ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-black bg-[#487E2C] text-white flex items-center space-x-1 animate-pulse">
                         <Sparkles className="w-3 h-3" />
                         <span>已达成 · 可领取</span>
                       </span>
-                    )}
-
-                    {!isUnlockedByLesson && (
+                    ) : !isUnlockedByLesson ? (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-100 text-purple-700 border border-purple-300">
                         🔒 需解锁 Lesson {mission.requiredLessonId}
                       </span>
-                    )}
+                    ) : null}
 
                     <h3 className="font-black text-base text-[#2D2D2D] font-mono">
                       {mission.titleZh}
