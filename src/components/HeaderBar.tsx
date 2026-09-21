@@ -261,18 +261,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">设置</span>
             </button>
-            {/* ✨ New V3.0 Portal Button (跳转至 V3.0 像素新纪元) */}
-            <a
-              href="https://www.minecraftenglish.top/?from=v1"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => playClickSound()}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-emerald-500 via-green-400 to-lime-300 hover:brightness-110 border-2 border-black text-slate-950 font-black text-xs font-mono rounded-xl transition-all flex items-center space-x-1.5 shadow-[0_2px_0_0_#0a300a] active:translate-y-0.5 cursor-pointer animate-pulse shrink-0"
-              title="跳转体验全新 V3.0 像素新纪元"
-            >
-              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 fill-slate-950" />
-              <span className="tracking-wide">V3.0 新版</span>
-            </a>
           </div>
 
         </div>
