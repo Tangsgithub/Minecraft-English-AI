@@ -1,4 +1,3 @@
-import { V3UpgradeModal } from './components/V3UpgradeModal';
 import React, { useState } from 'react';
 import { APP_VERSION_INFO } from '../types';
 import { User } from '../lib/neonAuth';
@@ -291,8 +290,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
           <p className="text-[11px] text-slate-600 font-mono">© 2026 Minecraft English World • {APP_VERSION_INFO.version}</p>
         </footer>
-              {/* ✨ 加上这一行代码即可！ */}
-      <V3UpgradeModal />
       </div>
     </div>
   );
