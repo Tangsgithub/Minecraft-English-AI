@@ -1,4 +1,3 @@
-import { V3UpgradeModal } from './components/V3UpgradeModal';
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId, VolumeProgress } from './types';
 import { getLevelFromXp, evaluateMissionsForProfile, evaluateBadgesForProfile } from './data/gamificationData';
@@ -750,8 +749,6 @@ export default function App() {
           onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
           onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         />
-        {/* ✨ 在这里加上这一行！首页打开立即 100% 弹出！ */}
-        <V3UpgradeModal />
         <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
         {isAdminConsoleOpen && (
           <AdminDashboardModal
