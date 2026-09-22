@@ -1,3 +1,4 @@
+import { V3UpgradeModal } from './components/V3UpgradeModal';
 import React, { useState } from 'react';
 import { APP_VERSION_INFO } from '../types';
 import { User } from '../lib/neonAuth';
