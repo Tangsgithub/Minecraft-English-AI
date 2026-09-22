@@ -1,3 +1,4 @@
+import { V3UpgradeModal } from './components/V3UpgradeModal';
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Lesson, ChatMessage, APP_VERSION_INFO, CourseVolumeId, VolumeProgress } from './types';
 import { getLevelFromXp, evaluateMissionsForProfile, evaluateBadgesForProfile } from './data/gamificationData';
@@ -1186,7 +1187,11 @@ export default function App() {
         onUpdateProfile={handleUpdateProfile}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
       />
-
+{/* 弹窗 */}
+      <V3UpgradeModal />
+    </div>
+  );
+};
     </div>
   );
 }
