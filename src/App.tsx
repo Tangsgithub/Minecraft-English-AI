@@ -750,6 +750,8 @@ export default function App() {
           onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
           onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         />
+        {/* ✨ 在这里加上这一行！首页打开立即 100% 弹出！ */}
+        <V3UpgradeModal />
         <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
         {isAdminConsoleOpen && (
           <AdminDashboardModal
@@ -1187,8 +1189,6 @@ export default function App() {
         onUpdateProfile={handleUpdateProfile}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
       />
-{/* 弹窗 */}
-      <V3UpgradeModal />
     </div>
   );
 };
