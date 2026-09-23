@@ -30,7 +30,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [userSearch, setUserSearch] = useState<string>('');
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
   const [fetchStatusMsg, setFetchStatusMsg] = useState<string | null>(null);
-  const [dbStatus, setDbStatus] = useState<{ neonConnected: boolean; databaseUrlConfigured: boolean }>({ neonConnected: false, databaseUrlConfigured: false });
+  const [dbStatus, setDbStatus] = useState<{ neonConnected: boolean; supabaseConnected?: boolean; dualSyncEnabled?: boolean; databaseUrlConfigured: boolean }>({ neonConnected: false, supabaseConnected: false, dualSyncEnabled: true, databaseUrlConfigured: false });
+
+  // Neon -> Supabase Migration State
+  const [isSyncingToSupabase, setIsSyncingToSupabase] = useState<boolean>(false);
+  const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
+  const [customNeonUrl, setCustomNeonUrl] = useState<string>('');
+  const [syncResultMsg, setSyncResultMsg] = useState<{ success: boolean; message: string } | null>(null);
 
   // Activation Codes Management State
   const [activationCodes, setActivationCodes] = useState<any[]>([]);
@@ -272,6 +278,32 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     });
   };
 
+  const handleSyncNeonToSupabase = async (overrideUrl?: string) => {
+    setIsSyncingToSupabase(true);
+    setSyncResultMsg(null);
+    try {
+      const resp = await fetch('/api/admin/sync-neon-to-supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          neonConnectionString: overrideUrl || customNeonUrl || undefined
+        })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        setSyncResultMsg({ success: true, message: data.message });
+        await fetchRegisteredUsers();
+        await fetchActivationCodes();
+      } else {
+        setSyncResultMsg({ success: false, message: data.error || '同步失败' });
+      }
+    } catch (e: any) {
+      setSyncResultMsg({ success: false, message: `网络连接异常: ${e?.message || e}` });
+    } finally {
+      setIsSyncingToSupabase(false);
+    }
+  };
+
   const fetchRegisteredUsers = async () => {
     setIsLoadingUsers(true);
     setFetchStatusMsg(null);
@@ -286,6 +318,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
           if (data.success && Array.isArray(data.users)) {
             setDbStatus({
               neonConnected: Boolean(data.neonConnected),
+              supabaseConnected: Boolean(data.supabaseConnected),
+              dualSyncEnabled: Boolean(data.dualSyncEnabled),
               databaseUrlConfigured: Boolean(data.databaseUrlConfigured)
             });
             data.users.forEach((u: any) => {
@@ -799,9 +833,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       </div>
                     </div>
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
-                      <div className="text-[11px] text-stone-400">持久化引擎</div>
+                      <div className="text-[11px] text-stone-400">双数据库同步引擎</div>
                       <div className="text-xs font-bold text-amber-300 mt-1 flex flex-wrap gap-1 items-center">
-                        <span className="text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-700">🐘 Neon PostgreSQL</span>
+                        <span className="text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-700 text-[10px]">
+                          🐘 Neon (主)
+                        </span>
+                        <span className="text-teal-300 bg-teal-950/80 px-1.5 py-0.5 rounded border border-teal-700 text-[10px]">
+                          ⚡ Supabase (备)
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1116,22 +1155,68 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       </div>
                     </div>
                     <div className="bg-stone-900 border border-stone-800 p-3 rounded-xl">
-                      <div className="text-[11px] text-stone-400">云端数据库引擎</div>
-                      <div className="text-xs font-bold mt-1 flex items-center">
+                      <div className="text-[11px] text-stone-400">双数据库同步引擎</div>
+                      <div className="text-xs font-bold mt-1 flex flex-wrap gap-1.5 items-center">
                         {dbStatus.neonConnected ? (
-                          <span className="text-emerald-400 flex items-center">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1 inline-block" />
-                            Neon 已连接 🐘
+                          <span className="text-emerald-400 flex items-center text-[11px] bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 inline-block animate-pulse" />
+                            Neon (主) 🐘
                           </span>
                         ) : (
-                          <span className="text-amber-400 flex items-center">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 mr-1 inline-block" />
-                            未配置 DATABASE_URL
+                          <span className="text-amber-400 text-[11px]">Neon 待命</span>
+                        )}
+                        {dbStatus.supabaseConnected ? (
+                          <span className="text-teal-300 flex items-center text-[11px] bg-teal-950/60 px-2 py-0.5 rounded border border-teal-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 mr-1 inline-block animate-pulse" />
+                            Supabase (备) ⚡
                           </span>
+                        ) : (
+                          <span className="text-stone-400 text-[11px]">Supabase 待命</span>
                         )}
                       </div>
                     </div>
                   </div>
+
+                  {/* Dual Sync Action Panel */}
+                  <div className="bg-gradient-to-r from-emerald-950/70 via-stone-900 to-teal-950/70 border border-emerald-700/50 p-3.5 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-amber-300 flex items-center gap-2">
+                        <span>🔄 主备数据库同步 (Neon → Supabase)</span>
+                        <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full border border-emerald-600/50 font-mono">
+                          全量一键迁移
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-300">
+                        一键将 Neon 主数据库中现有的全部学员档案、小红书卡密和自制故事同步镜像到 Supabase 备用数据库。
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                      <button
+                        onClick={() => setShowSyncModal(true)}
+                        className="w-full md:w-auto bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                      >
+                        <span>⚙️ 自定义 Neon 地址同步</span>
+                      </button>
+                      <button
+                        onClick={() => handleSyncNeonToSupabase()}
+                        disabled={isSyncingToSupabase}
+                        className="w-full md:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg px-4 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isSyncingToSupabase ? 'animate-spin' : ''}`} />
+                        <span>{isSyncingToSupabase ? '正在同步数据...' : '立刻同步到 Supabase'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {syncResultMsg && (
+                    <div className={`p-3 rounded-xl border text-xs font-bold ${
+                      syncResultMsg.success 
+                        ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300' 
+                        : 'bg-rose-950/80 border-rose-600 text-rose-300'
+                    }`}>
+                      {syncResultMsg.message}
+                    </div>
+                  )}
 
                   {!dbStatus.databaseUrlConfigured && (
                     <div className="bg-amber-950/80 border border-amber-600/60 p-3.5 rounded-xl text-xs text-amber-200 leading-relaxed space-y-1">
@@ -1519,6 +1604,75 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* Custom Neon Migration Modal */}
+        {showSyncModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-stone-900 border-2 border-emerald-600/80 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl text-stone-200">
+              <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+                <div className="flex items-center space-x-2 text-emerald-400 font-black text-base">
+                  <span>🔄</span>
+                  <span>Neon 数据库全量同步至 Supabase</span>
+                </div>
+                <button
+                  onClick={() => setShowSyncModal(false)}
+                  className="text-stone-400 hover:text-stone-100 text-lg p-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs text-stone-300 leading-relaxed">
+                <p>
+                  此操作会读取指定的 <b>Neon PostgreSQL 数据库</b> 中的所有用户档案（<code className="text-amber-300 font-mono">users</code>）、VIP卡密（<code className="text-amber-300 font-mono">activation_codes</code>）和电台故事（<code className="text-amber-300 font-mono">custom_radio_stories</code>），并批量写入当前配置的 <b>Supabase 备用数据库</b>。
+                </p>
+
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] font-bold text-amber-400 block">
+                    Neon 数据库连接串 (NEON_DATABASE_URL)
+                  </label>
+                  <input
+                    type="text"
+                    value={customNeonUrl}
+                    onChange={(e) => setCustomNeonUrl(e.target.value)}
+                    placeholder="postgres://user:password@ep-xyz.region.aws.neon.tech/neondb?sslmode=require"
+                    className="w-full bg-stone-950 border border-stone-700 focus:border-emerald-500 text-amber-200 text-xs px-3 py-2.5 rounded-lg outline-none font-mono"
+                  />
+                  <span className="text-[10px] text-stone-400 block">
+                    留空将默认使用服务器环境变量中配置的 NEON_DATABASE_URL。
+                  </span>
+                </div>
+
+                {syncResultMsg && (
+                  <div className={`p-3 rounded-lg border text-xs font-bold ${
+                    syncResultMsg.success 
+                      ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300' 
+                      : 'bg-rose-950/80 border-rose-600 text-rose-300'
+                  }`}>
+                    {syncResultMsg.message}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-2 border-t border-stone-800">
+                <button
+                  onClick={() => setShowSyncModal(false)}
+                  className="px-4 py-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-bold transition-all"
+                >
+                  关闭
+                </button>
+                <button
+                  onClick={() => handleSyncNeonToSupabase(customNeonUrl.trim() || undefined)}
+                  disabled={isSyncingToSupabase}
+                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 flex items-center space-x-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingToSupabase ? 'animate-spin' : ''}`} />
+                  <span>{isSyncingToSupabase ? '正在同步迁移中...' : '确认开始全量同步'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
