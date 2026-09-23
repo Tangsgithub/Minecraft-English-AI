@@ -810,7 +810,11 @@ export const GiantWorldMap: React.FC<GiantWorldMapProps> = ({
                         {isCurrent && (
                           <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center animate-bounce">
                             <div className="bg-[#FF6321] text-white px-2 py-1 rounded-xl font-mono font-black text-[10px] shadow-md border-2 border-black flex items-center space-x-1.5 whitespace-nowrap">
-                              <MinecraftAvatar speaker={profile.nickname || 'Steve'} size={18} />
+                              <MinecraftAvatar
+                                speaker={profile.avatar === 'alex' || profile.selectedAvatar === 'alex' ? 'Alex' : 'Steve'}
+                                avatar={profile.avatar || profile.selectedAvatar}
+                                size={18}
+                              />
                               <span>{profile.nickname || 'Steve'} 在此关</span>
                             </div>
                             <div className="w-2.5 h-2.5 bg-[#FF6321] rotate-45 -mt-1 border-r border-b border-black" />

@@ -18,6 +18,7 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { ParentDashboardModal } from './components/ParentDashboardModal';
 import { EyeCareModal } from './components/EyeCareModal';
 import { VipActivationModal } from './components/VipActivationModal';
+import { V3UpgradeModal } from './components/V3UpgradeModal';
 import { RadioImmersionView } from './components/RadioImmersionView';
 import { LandingPage } from './components/LandingPage';
 import { AuthModal } from './components/AuthModal';
@@ -290,6 +291,8 @@ export default function App() {
   const [isAdminConsoleOpen, setIsAdminConsoleOpen] = useState<boolean>(false);
   const [isCustomerServiceOpen, setIsCustomerServiceOpen] = useState<boolean>(false);
   const [isVipModalOpen, setIsVipModalOpen] = useState<boolean>(false);
+  const [isV3UpgradeModalOpen, setIsV3UpgradeModalOpen] = useState<boolean>(false);
+  const [showV3HallBanner, setShowV3HallBanner] = useState<boolean>(true);
 
   // Fetch latest cloud profile on login, initial load, or user switch from Neon Database
   useEffect(() => {
@@ -748,6 +751,8 @@ export default function App() {
           onOpenParentDashboard={() => setIsParentDashboardOpen(true)}
           onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
           onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenV3UpgradeModal={() => setIsV3UpgradeModalOpen(true)}
         />
         <CustomerServiceFloatingButton onClick={() => setIsCustomerServiceOpen(true)} />
         {isAdminConsoleOpen && (
@@ -787,6 +792,20 @@ export default function App() {
           }}
           currentProfile={profile}
         />
+        {isSettingsOpen && (
+          <SettingsModal
+            profile={profile}
+            onSaveProfile={handleUpdateProfile}
+            onClose={() => setIsSettingsOpen(false)}
+            onResetProgress={handleResetProgress}
+            onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
+            onOpenV3UpgradeModal={() => setIsV3UpgradeModalOpen(true)}
+          />
+        )}
+        <V3UpgradeModal
+          isOpen={isV3UpgradeModalOpen}
+          onClose={() => setIsV3UpgradeModalOpen(false)}
+        />
       </>
     );
   }
@@ -812,6 +831,7 @@ export default function App() {
         onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
         onNavigateToTab={(tab) => setActiveTab(tab)}
         onOpenAlexChat={() => setActiveTab('chat')}
+        onOpenV3UpgradeModal={() => setIsV3UpgradeModalOpen(true)}
         soundEnabled={soundEnabled}
         setSoundEnabled={setSoundEnabled}
       />
@@ -820,23 +840,68 @@ export default function App() {
       <main className={`flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 flex flex-col pb-safe ${
         activeTab === 'radio' || activeTab === 'chat' ? 'py-1.5 sm:py-2.5 space-y-2 sm:space-y-2.5' : 'py-3 sm:py-6 space-y-4 sm:space-y-5'
       }`}>
+
+        {/* Learning Hall V3 Switch Banner */}
+        {showV3HallBanner && (
+          <div className="w-full bg-gradient-to-r from-[#173812] via-[#24521e] to-[#122b0f] border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-3xl p-2.5 sm:p-3.5 shadow-[4px_4px_0_0_#1b4313] flex flex-col sm:flex-row items-center justify-between gap-2.5 text-white font-mono animate-fadeIn">
+            <div className="flex items-center space-x-3 min-w-0 w-full sm:w-auto">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-300 text-slate-950 flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-xs animate-pulse">
+                🚀
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-2 flex-wrap">
+                  <span className="font-black text-xs sm:text-sm text-amber-300">
+                    全新 V3.0 像素新纪元已上线！
+                  </span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded-md">
+                    v3.minecraftenglish.top
+                  </span>
+                </div>
+                <div className="text-[10px] sm:text-[11px] text-slate-200 truncate sm:whitespace-normal">
+                  当前为经典旧版 (www.minecraftenglish.top)，点击跳窗可无缝切换至 V3.0 体验 144 关全新像素探险！
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  playEmeraldSound();
+                  setIsV3UpgradeModalOpen(true);
+                }}
+                className="flex-1 sm:flex-none px-3.5 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-xs rounded-xl border-2 border-black shadow-[0_2px_0_0_#000] active:translate-y-0.5 cursor-pointer flex items-center justify-center space-x-1 transition-transform"
+              >
+                <span>✨ 切换至 V3.0 新版</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowV3HallBanner(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-black/30 text-xs cursor-pointer shrink-0"
+                title="关闭提示"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         
-        {/* Navigation Tabs Bar (Responsive Mobile & Tablet Optimized) */}
-        <nav className="bg-white/95 backdrop-blur-md border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1 sm:p-2 flex items-center gap-1 sm:gap-1.5 md:gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] touch-pan-x">
+        {/* Navigation Tabs Bar (Responsive Grid/Flex with Auto-fitting & No Overflow) */}
+        <nav className="w-full max-w-full bg-white/95 backdrop-blur-md border-2 sm:border-4 border-[#487E2C] rounded-2xl sm:rounded-[2rem] p-1 sm:p-1.5 md:p-2 grid grid-cols-7 gap-0.5 xs:gap-1 sm:gap-1.5 md:gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden">
           
           <button
             onClick={() => {
               playClickSound();
               setActiveTab('map');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all active:scale-95 cursor-pointer relative ${
               activeTab === 'map'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">地图</span>
+            <span className="truncate leading-none">地图</span>
           </button>
 
           <button
@@ -844,16 +909,16 @@ export default function App() {
               playClickSound();
               setActiveTab('chat');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:scale-95 cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all relative active:scale-95 cursor-pointer ${
               activeTab === 'chat'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">对练</span>
+            <span className="truncate leading-none">对练</span>
             {selectedLessonForChat && activeTab !== 'chat' && (
-              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FF6321] animate-ping absolute top-1 right-1 border border-white" />
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#FF6321] animate-ping absolute top-0.5 right-0.5 border border-white" />
             )}
           </button>
 
@@ -862,14 +927,14 @@ export default function App() {
               playClickSound();
               setActiveTab('radio');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all relative active:scale-95 cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all relative active:scale-95 cursor-pointer ${
               activeTab === 'radio'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">磨耳朵</span>
+            <span className="truncate leading-none">听力</span>
           </button>
 
           <button
@@ -877,14 +942,14 @@ export default function App() {
               playClickSound();
               setActiveTab('vocab');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all active:scale-95 cursor-pointer relative ${
               activeTab === 'vocab'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">词汇</span>
+            <span className="truncate leading-none">词汇</span>
           </button>
 
           <button
@@ -892,14 +957,14 @@ export default function App() {
               playClickSound();
               setActiveTab('crafting');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all active:scale-95 cursor-pointer relative ${
               activeTab === 'crafting'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Hammer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">合成</span>
+            <span className="truncate leading-none">合成</span>
           </button>
 
           <button
@@ -907,16 +972,16 @@ export default function App() {
               playClickSound();
               setActiveTab('missions');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 relative cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all active:scale-95 relative cursor-pointer ${
               activeTab === 'missions'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Scroll className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">任务</span>
+            <span className="truncate leading-none">任务</span>
             {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-[#FF6321] text-white text-[9px] font-black rounded-full animate-pulse">
+              <span className="absolute top-0.5 right-0.5 px-1 py-0.2 bg-[#FF6321] text-white text-[8px] font-black rounded-full animate-pulse shrink-0 shadow-xs">
                 {((profile.readyToClaimMissionIds || []).filter(id => !(profile.completedMissionIds || []).includes(id))).length}
               </span>
             )}
@@ -927,14 +992,14 @@ export default function App() {
               playClickSound();
               setActiveTab('achievements');
             }}
-            className={`flex-1 min-w-[72px] xs:min-w-[85px] sm:min-w-[110px] shrink-0 snap-start py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl sm:rounded-2xl font-black text-[11px] sm:text-xs md:text-sm flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all active:scale-95 cursor-pointer ${
+            className={`w-full min-w-0 py-1.5 sm:py-2.5 px-0.5 xs:px-1 sm:px-1.5 rounded-xl sm:rounded-2xl font-black text-[9px] xs:text-[10px] sm:text-xs md:text-sm flex flex-col xs:flex-row items-center justify-center gap-0.5 xs:gap-1 transition-all active:scale-95 cursor-pointer relative ${
               activeTab === 'achievements'
                 ? 'bg-[#487E2C] border-2 border-[#355E20] text-white shadow-[0_2px_0_0_#2A4718] sm:shadow-[0_4px_0_0_#2A4718]'
                 : 'bg-transparent border-2 border-transparent text-slate-700 hover:text-[#487E2C] hover:bg-slate-100'
             }`}
           >
             <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="whitespace-nowrap">成就</span>
+            <span className="truncate leading-none">成就</span>
           </button>
 
         </nav>
@@ -1071,6 +1136,7 @@ export default function App() {
               onNavigateToMap={() => setActiveTab('map')}
               onNavigateToCrafting={() => setActiveTab('crafting')}
               onNavigateToChat={() => setActiveTab('chat')}
+              onOpenUserProfile={() => setIsUserProfileOpen(true)}
             />
           )}
         </div>
@@ -1096,6 +1162,7 @@ export default function App() {
           onClose={() => setIsSettingsOpen(false)}
           onResetProgress={handleResetProgress}
           onOpenAdminConsole={() => setIsAdminConsoleOpen(true)}
+          onOpenV3UpgradeModal={() => setIsV3UpgradeModalOpen(true)}
         />
       )}
 
@@ -1185,6 +1252,11 @@ export default function App() {
         profile={profile}
         onUpdateProfile={handleUpdateProfile}
         onOpenCustomerService={() => setIsCustomerServiceOpen(true)}
+      />
+
+      <V3UpgradeModal
+        isOpen={isV3UpgradeModalOpen}
+        onClose={() => setIsV3UpgradeModalOpen(false)}
       />
     </div>
   );

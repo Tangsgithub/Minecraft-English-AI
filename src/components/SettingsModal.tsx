@@ -23,6 +23,7 @@ interface SettingsModalProps {
   onClose: () => void;
   onResetProgress: () => void;
   onOpenAdminConsole?: () => void;
+  onOpenV3UpgradeModal?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -30,7 +31,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSaveProfile,
   onClose,
   onResetProgress,
-  onOpenAdminConsole
+  onOpenAdminConsole,
+  onOpenV3UpgradeModal
 }) => {
   const [provider, setProvider] = useState<'deepseek' | 'gemini' | 'custom'>(profile.apiKeyConfig.provider || 'deepseek');
   const [apiKey, setApiKey] = useState<string>(profile.apiKeyConfig.apiKey || '');
@@ -135,6 +137,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1 min-h-0 text-xs font-mono">
           
+          {/* V3 Upgrade & Switch Card */}
+          <div className="bg-gradient-to-r from-[#173012] via-[#204419] to-[#12280d] p-4 rounded-2xl border-2 border-[#487E2C] text-white space-y-3 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className="px-2 py-0.5 bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 font-black text-[10px] rounded-md shadow-xs animate-bounce">
+                    全新发布
+                  </span>
+                  <span className="font-black text-amber-300 text-sm">
+                    🚀 V3.0 像素新纪元已上线
+                  </span>
+                </div>
+                <div className="text-[11px] text-emerald-200/90 leading-tight">
+                  新版域名：<span className="font-bold underline text-white">v3.minecraftenglish.top</span>（当前旧版：www.minecraftenglish.top）
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  playEmeraldSound();
+                  if (onOpenV3UpgradeModal) {
+                    onOpenV3UpgradeModal();
+                  } else {
+                    window.open('https://v3.minecraftenglish.top/?from=settings', '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-400 to-lime-300 hover:from-emerald-300 hover:to-lime-200 text-slate-950 font-black text-xs rounded-xl border-2 border-black flex items-center justify-center space-x-1.5 shadow-[0_3px_0_0_#1b4313] active:translate-y-0.5 transition-transform cursor-pointer shrink-0"
+              >
+                <span>✨ 切换至 V3.0 新版</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[10px] pt-1.5 border-t border-white/10 text-slate-300">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-amber-400 font-bold">🌟 四步主线</span>
+                <span className="text-slate-300">听力→拼词→喂动物→金光解锁</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <span className="text-emerald-400 font-bold">🐾 动物庄园</span>
+                <span className="text-slate-300">作物饲料喂养生态群系动物</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <span className="text-blue-400 font-bold">⛏️ 像素UI</span>
+                <span className="text-slate-300">木板石砖·3D浮雕下陷按键</span>
+              </div>
+            </div>
+          </div>
+
           {/* DeepSeek / Gemini Key Config */}
           <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 space-y-4">
             <div>

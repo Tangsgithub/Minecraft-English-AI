@@ -24,6 +24,7 @@ interface HeaderBarProps {
   onOpenAdminConsole?: () => void;
   onNavigateToTab?: (tab: 'map' | 'chat' | 'radio' | 'vocab' | 'crafting' | 'missions' | 'achievements') => void;
   onOpenAlexChat?: () => void;
+  onOpenV3UpgradeModal?: () => void;
   soundEnabled: boolean;
   setSoundEnabled: (val: boolean) => void;
 }
@@ -45,6 +46,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenAdminConsole,
   onNavigateToTab,
   onOpenAlexChat,
+  onOpenV3UpgradeModal,
   soundEnabled,
   setSoundEnabled
 }) => {
@@ -65,17 +67,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   const currentVolume = APP_VERSION_INFO.volumes.find(v => v.id === selectedVolumeId) || APP_VERSION_INFO.volumes[0];
 
   return (
-    <header className="bg-gradient-to-r from-[#17300e] via-[#2a591a] to-[#17300e] border-b-3 sm:border-b-4 border-[#0f1f09] text-white shadow-[0_8px_20px_rgba(0,0,0,0.4)] sticky top-0 z-50 pt-safe relative w-full">
-      {/* Top subtle highlight line */}
-      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent pointer-events-none" />
-
-      <div className="max-w-7xl w-full mx-auto px-2 sm:px-4 py-2 sm:py-3">
+    <header className="sticky top-0 z-50 pt-safe w-full pointer-events-none">
+      <div className="max-w-7xl w-full mx-auto px-2 sm:px-4 pt-1.5 sm:pt-2.5">
+        <div className="bg-gradient-to-r from-[#17300e] via-[#2a591a] to-[#17300e] border-2 sm:border-4 border-[#0f1f09] text-white shadow-[0_8px_20px_rgba(0,0,0,0.35)] rounded-2xl sm:rounded-[2rem] px-2 sm:px-4 py-2 sm:py-2.5 relative w-full pointer-events-auto overflow-hidden">
+          {/* Top subtle highlight line */}
+          <div className="absolute top-0 left-6 right-6 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent pointer-events-none rounded-full" />
         
-        {/* Main Header Flex Row */}
-        <div className="flex items-center justify-between gap-1.5 sm:gap-3">
+          {/* Main Header Flex Row */}
+          <div className="flex items-center justify-between gap-1 sm:gap-2">
           
           {/* Left: Brand Crest & Volume Selector */}
-          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-1.5 shrink min-w-0">
             
             {/* Minecraft 3D Pixel Icon Crest */}
             <div 
@@ -83,36 +85,27 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               onClick={() => onGoToLandingPage?.()}
               title="返回产品官网/介绍"
             >
-              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-[#5c4033] border-2 sm:border-4 border-black rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl shadow-[0_2px_0_0_#2b1810] sm:shadow-[0_3px_0_0_#2b1810] relative overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
-                <div className="absolute top-0 left-0 right-0 h-2 sm:h-2.5 bg-[#487E2C] border-b-2 border-[#2A4718]" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#5c4033] border-2 border-black rounded-xl flex items-center justify-center text-sm sm:text-base shadow-[0_2px_0_0_#2b1810] relative overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#487E2C] border-b-2 border-[#2A4718]" />
                 <span className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">⛏️</span>
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <h1 className="font-black text-xs sm:text-base md:text-lg text-amber-300 font-mono tracking-tight uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] flex items-center space-x-1">
-                  <span>MC</span>
-                  <span className="text-white hidden xs:inline">ENGLISH</span>
-                </h1>
+            <div className="min-w-0 flex items-center space-x-1">
+              <h1 className="font-black text-xs sm:text-sm md:text-base text-amber-300 font-mono tracking-tight uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] flex items-center space-x-0.5 shrink-0">
+                <span>MC</span>
+                <span className="text-white hidden xs:inline">ENG</span>
+              </h1>
 
-                {/* Single Volume Badge - Book 1 Full Edition */}
-                <div className="flex items-center space-x-1 text-[10px] sm:text-xs font-black font-mono bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 px-1.5 sm:px-2.5 py-0.5 rounded-lg border-2 border-black uppercase tracking-wide shadow-xs">
-                  <span><span className="hidden sm:inline">新概念 </span>第1册<span className="hidden sm:inline"> (144关全量)</span></span>
-                </div>
-              </div>
-
-              {/* Subtitle / Realm Title (Desktop Only) */}
-              <div className="hidden xl:flex items-center space-x-2 text-xs text-emerald-200/90 font-mono mt-0.5">
-                <span className="font-bold">新概念英语探险元宇宙</span>
-                <span className="opacity-40">•</span>
-                <span className="text-amber-300 font-black">{tier.title}</span>
+              {/* Single Volume Badge - Book 1 Full Edition */}
+              <div className="hidden sm:flex items-center space-x-0.5 text-[9px] sm:text-[10px] font-black font-mono bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 px-1 sm:px-1.5 py-0.5 rounded-lg border border-black uppercase tracking-wide shadow-xs shrink-0 whitespace-nowrap">
+                <span>第1册<span className="hidden lg:inline"> (144关)</span></span>
               </div>
             </div>
           </div>
 
-          {/* Desktop & Tablet HUD: Grand RPG HUD Plate (XP, Emeralds, Streak) */}
-          <div className="hidden lg:flex items-center space-x-2.5 xl:space-x-3 bg-black/40 border-2 border-black/80 px-2.5 xl:px-3 py-1.5 rounded-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0">
+          {/* Desktop HUD: Grand RPG HUD Plate (XP, Emeralds, Streak) - Visible on 2xl screens */}
+          <div className="hidden 2xl:flex items-center space-x-2.5 bg-black/40 border-2 border-black/80 px-2.5 py-1.5 rounded-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] ring-1 ring-white/10 shrink-0">
             
             {/* Level Badge */}
             <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-amber-400/40 px-2 py-1 rounded-xl shadow-xs shrink-0">
@@ -122,7 +115,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
             {/* XP Progress Bar */}
             <div 
-              className="w-28 xl:w-36 group/xp relative cursor-help"
+              className="w-24 group/xp relative cursor-help"
               title={`当前等级: Lv.${profile.level} (${tier.title})\n本级升级进度: ${progressInLevel} / ${levelSpan} XP (${progressPercent}%)\n升至 Lv.${profile.level + 1} 还需: ${xpNeededForNextLevel} XP\n累计总经验: ${profile.xp} XP`}
             >
               <div className="flex justify-between items-center text-[10px] font-mono font-bold mb-0.5 text-white">
@@ -175,8 +168,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
           </div>
 
-          {/* Daily Goal Progress Capsule (Directly visible to encourage kids) */}
-          <div className="shrink-0 flex items-center">
+          {/* Daily Goal Progress Capsule - Visible on 2xl+ to prevent header crowding */}
+          <div className="hidden 2xl:flex shrink-0 items-center">
             <DailyProgressBar
               profile={profile}
               onNavigateToTab={onNavigateToTab}
@@ -185,8 +178,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             />
           </div>
 
-          {/* Right Actions: User Profile / VIP / Audio / Settings */}
-          <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0">
+          {/* Right Actions: User Profile / VIP / Audio / V3 / Settings */}
+          <div className="flex items-center space-x-1 sm:space-x-1.5 shrink-0 ml-auto">
             
             {/* User Profile & Account Center Capsule */}
             <button
@@ -199,24 +192,24 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                   onOpenAuth?.();
                 }
               }}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-900/90 hover:bg-slate-800 border-2 border-black rounded-xl transition-all flex items-center space-x-1.5 text-xs font-black font-mono shadow-[0_2px_0_0_#000] active:translate-y-0.5 cursor-pointer"
+              className="px-1.5 sm:px-2 py-1 sm:py-1.5 bg-slate-900/90 hover:bg-slate-800 border-2 border-black rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#000] active:translate-y-0.5 cursor-pointer shrink-0"
               title="查看个人档案、VIP特权与家长控制"
             >
               <div className="w-5 h-5 rounded-md overflow-hidden bg-black/30 border border-white/20 flex items-center justify-center relative shrink-0">
                 <MinecraftAvatar speaker={profile.avatar === 'alex' || profile.selectedAvatar === 'alex' ? 'Alex' : 'Steve'} size={18} />
               </div>
-              <span className="max-w-[55px] sm:max-w-[80px] truncate text-white font-extrabold text-[11px] sm:text-xs">
+              <span className="max-w-[40px] sm:max-w-[56px] truncate text-white font-extrabold text-[10px] sm:text-xs">
                 {currentUser?.nickname || profile.nickname || '档案'}
               </span>
               {profile.isVip || (profile.activatedVolumes && profile.activatedVolumes.length > 0) ? (
-                <span className="bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 font-black text-[9px] px-1 py-0.2 rounded border border-amber-500 flex items-center space-x-0.5 shadow-xs" title="已激活权益">
+                <span className="bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 font-black text-[9px] px-1 py-0.2 rounded border border-amber-500 flex items-center space-x-0.5 shadow-xs shrink-0" title="已激活权益">
                   <span>👑</span>
-                  <span className="hidden sm:inline">
+                  <span className="hidden md:inline">
                     {profile.isVip ? 'VIP' : profile.activatedVolumes?.map(v => v.replace('vol', '册')).join(',')}
                   </span>
                 </span>
               ) : (
-                <span className="bg-emerald-800 text-emerald-200 text-[9px] px-1 py-0.2 rounded">
+                <span className="hidden sm:inline-block bg-emerald-800 text-emerald-200 text-[9px] px-1 py-0.2 rounded shrink-0">
                   Lv.{profile.level}
                 </span>
               )}
@@ -229,17 +222,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 playClickSound();
                 onOpenParentDashboard();
               }}
-              className="hidden sm:flex px-2 sm:px-2.5 py-1 sm:py-1.5 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl transition-all items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer"
+              className="hidden xl:flex px-2 py-1 sm:py-1.5 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black text-white rounded-xl transition-all items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#2A4718] active:translate-y-0.5 cursor-pointer shrink-0"
               title="家长护航中心与周报仪表盘"
             >
               <span>👨‍👩‍👧</span>
-              <span className="hidden md:inline">家长</span>
+              <span>家长</span>
             </button>
 
             {/* Sound Toggle */}
             <button
               onClick={handleSoundToggle}
-              className={`p-1.5 sm:p-2 border-2 rounded-xl transition-all shadow-[0_2px_0_0_#000] active:translate-y-0.5 cursor-pointer ${
+              className={`p-1.5 sm:p-2 border-2 rounded-xl transition-all shadow-[0_2px_0_0_#000] active:translate-y-0.5 cursor-pointer shrink-0 ${
                 soundEnabled
                   ? 'bg-emerald-600/80 border-black text-white'
                   : 'bg-black/50 border-black text-white/50 hover:bg-black/60'
@@ -249,13 +242,29 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               {soundEnabled ? <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" /> : <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
 
+            {/* V3 New Version Jump Button */}
+            {onOpenV3UpgradeModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  playClickSound();
+                  onOpenV3UpgradeModal();
+                }}
+                className="px-1.5 sm:px-2 py-1 sm:py-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 hover:from-amber-300 hover:to-yellow-200 border-2 border-black text-slate-950 rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#664400] active:translate-y-0.5 cursor-pointer shrink-0 animate-pulse"
+                title="切换至全新 V3.0 版本 (v3.minecraftenglish.top)"
+              >
+                <span className="text-xs">🚀</span>
+                <span className="hidden xs:inline">V3新版</span>
+              </button>
+            )}
+
             {/* Settings */}
             <button
               onClick={() => {
                 playClickSound();
                 onOpenSettings();
               }}
-              className="p-1.5 sm:px-3 sm:py-1.5 bg-[#FF6321] hover:bg-[#e05316] border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#993300] active:translate-y-0.5 cursor-pointer"
+              className="p-1.5 sm:px-2.5 sm:py-1.5 bg-[#FF6321] hover:bg-[#e05316] border-2 border-black text-white rounded-xl transition-all flex items-center space-x-1 text-xs font-black font-mono shadow-[0_2px_0_0_#993300] active:translate-y-0.5 cursor-pointer shrink-0"
               title="系统设置与个性化"
             >
               <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -265,17 +274,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         </div>
 
-        {/* Mobile / Compact Tablet Dedicated Game HUD Bar */}
-        <div className="flex lg:hidden items-center justify-between mt-2 pt-2 border-t border-white/15 gap-2 font-mono">
+        {/* Mobile / Tablet Dedicated Game HUD Bar - Shown when xl HUD is hidden */}
+        <div className="flex xl:hidden items-center justify-between mt-2 pt-2 border-t border-white/15 gap-1.5 xs:gap-2 font-mono overflow-hidden">
           {/* Level & Tier */}
-          <div className="flex items-center space-x-1 bg-black/50 border border-white/20 px-2 py-1 rounded-xl text-[11px] font-black text-amber-300 shrink-0 shadow-xs">
+          <div className="flex items-center space-x-1 bg-black/50 border border-white/20 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-xl text-[10px] xs:text-[11px] font-black text-amber-300 shrink-0 shadow-xs">
             <span>{tier.icon}</span>
             <span>Lv.{profile.level}</span>
           </div>
 
           {/* XP Progress Bar */}
-          <div className="flex-1 max-w-[170px] sm:max-w-[240px]" title={`本级进度: ${progressInLevel}/${levelSpan} XP (${progressPercent}%)\n累计总经验: ${profile.xp} XP\n升至 Lv.${profile.level + 1} 需: ${xpNeededForNextLevel} XP`}>
-            <div className="flex justify-between text-[10px] font-bold text-white mb-0.5">
+          <div className="flex-1 min-w-0 max-w-[150px] xs:max-w-[200px] sm:max-w-[280px]" title={`本级进度: ${progressInLevel}/${levelSpan} XP (${progressPercent}%)\n累计总经验: ${profile.xp} XP\n升至 Lv.${profile.level + 1} 需: ${xpNeededForNextLevel} XP`}>
+            <div className="flex justify-between text-[9px] xs:text-[10px] font-bold text-white mb-0.5">
               <span className="text-emerald-300 font-mono">XP <span className="opacity-70 font-normal">本级</span></span>
               <span className="text-amber-300 font-mono font-black">{progressInLevel}/{levelSpan}</span>
             </div>
@@ -287,19 +296,31 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
           </div>
 
+          {/* Mobile Daily Goal button when hidden in top row */}
+          <div className="flex md:hidden shrink-0">
+            <DailyProgressBar
+              profile={profile}
+              onNavigateToTab={onNavigateToTab}
+              onOpenAlexChat={onOpenAlexChat}
+              onOpenParentDashboard={onOpenParentDashboard}
+              compact={true}
+            />
+          </div>
+
           {/* Counters: Emeralds & Streak */}
-          <div className="flex items-center space-x-1.5 shrink-0">
-            <div className="flex items-center space-x-1 bg-emerald-950/80 border border-emerald-500/50 px-2 py-1 rounded-xl text-[11px] font-black text-emerald-300 shadow-xs">
+          <div className="flex items-center space-x-1 xs:space-x-1.5 shrink-0">
+            <div className="flex items-center space-x-1 bg-emerald-950/80 border border-emerald-500/50 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-xl text-[10px] xs:text-[11px] font-black text-emerald-300 shadow-xs">
               <span>❇️</span>
               <span>{profile.emeralds}</span>
             </div>
-            <div className="flex items-center space-x-1 bg-orange-950/80 border border-orange-500/50 px-2 py-1 rounded-xl text-[11px] font-black text-amber-300 shadow-xs">
-              <Flame className="w-3.5 h-3.5 text-[#FF6321] fill-[#FF6321]" />
+            <div className="flex items-center space-x-1 bg-orange-950/80 border border-orange-500/50 px-1.5 xs:px-2 py-0.5 xs:py-1 rounded-xl text-[10px] xs:text-[11px] font-black text-amber-300 shadow-xs">
+              <Flame className="w-3 h-3 xs:w-3.5 xs:h-3.5 text-[#FF6321] fill-[#FF6321]" />
               <span>{profile.streakDays}d</span>
             </div>
           </div>
         </div>
 
+        </div>
       </div>
     </header>
   );

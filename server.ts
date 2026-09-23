@@ -6,30 +6,69 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import dotenv from "dotenv";
 import { neon } from "@neondatabase/serverless";
 
-dotenv.config();
+dotenv.config({ override: true });
 const app = express();
 
-// In-memory fallback ONLY when Neon DATABASE_URL is not configured yet in local environment
+// In-memory fallback when Neon DATABASE_URL is not configured or temporarily unreachable
 const memoryUsersFallback = new Map<string, any>();
 const memoryCodesFallback = new Map<string, any>();
 const memoryStoriesFallback = new Map<string, any>();
 
+function isValidPostgresUrl(url?: string | null): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('postgres://') && !trimmed.startsWith('postgresql://')) return false;
+  // Check for common documentation placeholders and dummy hostnames
+  if (
+    trimmed.includes('user:password') ||
+    trimmed.includes('ep-xyz') ||
+    trimmed.includes('placeholder') ||
+    trimmed.includes('example.com') ||
+    trimmed.includes('<') ||
+    trimmed.includes('>') ||
+    trimmed.includes('your_password') ||
+    trimmed.includes('username:password')
+  ) {
+    return false;
+  }
+  return true;
+}
+
+let isNeonAvailable: boolean | null = null;
+let lastNeonErrorTime = 0;
+const NEON_COOLDOWN_MS = 60000;
+
+function markNeonUnavailable(err?: any) {
+  isNeonAvailable = false;
+  lastNeonErrorTime = Date.now();
+  if (err) {
+    console.warn("[Database] PostgreSQL connection unreachable, fallback to in-memory store:", err?.message || err);
+  }
+}
+
 // Neon PostgreSQL Serverless Client
 const getNeonSql = () => {
   const connStr = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
-  if (!connStr) return null;
+  if (!isValidPostgresUrl(connStr)) return null;
+
+  // Circuit breaker: cooldown if recent connection failure
+  if (isNeonAvailable === false && Date.now() - lastNeonErrorTime < NEON_COOLDOWN_MS) {
+    return null;
+  }
+
   try {
-    return neon(connStr);
+    return neon(connStr!);
   } catch (e) {
-    console.warn("Neon database client initialization warning:", e);
+    markNeonUnavailable(e);
     return null;
   }
 };
 
 let neonTableInitialized = false;
-async function ensureNeonTable() {
+async function ensureNeonTable(): Promise<boolean> {
+  if (neonTableInitialized) return true;
   const sql = getNeonSql();
-  if (!sql || neonTableInitialized) return;
+  if (!sql) return false;
   try {
     await sql`
       CREATE TABLE IF NOT EXISTS users (
@@ -74,9 +113,12 @@ async function ensureNeonTable() {
       );
     `;
     neonTableInitialized = true;
+    isNeonAvailable = true;
     console.log("[Neon Postgres] Database tables 'users', 'activation_codes', and 'custom_radio_stories' initialized successfully!");
+    return true;
   } catch (e) {
-    console.warn("[Neon Postgres] Table initialization warning:", e);
+    markNeonUnavailable(e);
+    return false;
   }
 }
 
@@ -88,34 +130,36 @@ async function getCloudCode(code: string): Promise<any | null> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const rows = await sql`
-        SELECT * FROM activation_codes 
-        WHERE UPPER(code) = ${cleanCode} 
-           OR UPPER(REPLACE(REPLACE(code, '-', ''), ' ', '')) = ${rawNoHyphen}
-        LIMIT 1
-      `;
-      if (rows && rows.length > 0) {
-        const r: any = rows[0];
-        let parsedDevices = r.devices;
-        if (typeof parsedDevices === 'string') {
-          try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const rows = await sql`
+          SELECT * FROM activation_codes 
+          WHERE UPPER(code) = ${cleanCode} 
+             OR UPPER(REPLACE(REPLACE(code, '-', ''), ' ', '')) = ${rawNoHyphen}
+          LIMIT 1
+        `;
+        if (rows && rows.length > 0) {
+          const r: any = rows[0];
+          let parsedDevices = r.devices;
+          if (typeof parsedDevices === 'string') {
+            try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
+          }
+          const cObj = {
+            code: r.code,
+            isUsed: Boolean(r.is_used),
+            usedByAccount: r.used_by_account || '',
+            usedAt: Number(r.used_at || 0),
+            devices: Array.isArray(parsedDevices) ? parsedDevices : [],
+            maxDevices: Number(r.max_devices || 3),
+            createdAt: Number(r.created_at || Date.now())
+          };
+          memoryCodesFallback.set(cleanCode, cObj);
+          return cObj;
         }
-        const cObj = {
-          code: r.code,
-          isUsed: Boolean(r.is_used),
-          usedByAccount: r.used_by_account || '',
-          usedAt: Number(r.used_at || 0),
-          devices: Array.isArray(parsedDevices) ? parsedDevices : [],
-          maxDevices: Number(r.max_devices || 3),
-          createdAt: Number(r.created_at || Date.now())
-        };
-        memoryCodesFallback.set(cleanCode, cObj);
-        return cObj;
+      } catch (e) {
+        markNeonUnavailable(e);
       }
-    } catch (e) {
-      console.warn("Neon Postgres get code error:", e);
     }
   }
 
@@ -139,31 +183,33 @@ async function saveCloudCode(cObj: any): Promise<boolean> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const devicesJson = JSON.stringify(cObj.devices || []);
-      await sql`
-        INSERT INTO activation_codes (code, is_used, used_by_account, used_at, devices, max_devices, created_at)
-        VALUES (
-          ${cleanCode},
-          ${Boolean(cObj.isUsed)},
-          ${cObj.usedByAccount || ''},
-          ${cObj.usedAt || 0},
-          ${devicesJson}::jsonb,
-          ${cObj.maxDevices || 3},
-          ${cObj.createdAt || Date.now()}
-        )
-        ON CONFLICT (code) DO UPDATE SET
-          is_used = EXCLUDED.is_used,
-          used_by_account = EXCLUDED.used_by_account,
-          used_at = EXCLUDED.used_at,
-          devices = EXCLUDED.devices,
-          max_devices = EXCLUDED.max_devices;
-      `;
-      return true;
-    } catch (e) {
-      console.warn("Neon Postgres save code error:", e);
-      return false;
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const devicesJson = JSON.stringify(cObj.devices || []);
+        await sql`
+          INSERT INTO activation_codes (code, is_used, used_by_account, used_at, devices, max_devices, created_at)
+          VALUES (
+            ${cleanCode},
+            ${Boolean(cObj.isUsed)},
+            ${cObj.usedByAccount || ''},
+            ${cObj.usedAt || 0},
+            ${devicesJson}::jsonb,
+            ${cObj.maxDevices || 3},
+            ${cObj.createdAt || Date.now()}
+          )
+          ON CONFLICT (code) DO UPDATE SET
+            is_used = EXCLUDED.is_used,
+            used_by_account = EXCLUDED.used_by_account,
+            used_at = EXCLUDED.used_at,
+            devices = EXCLUDED.devices,
+            max_devices = EXCLUDED.max_devices;
+        `;
+        return true;
+      } catch (e) {
+        markNeonUnavailable(e);
+        return false;
+      }
     }
   }
   return true;
@@ -174,31 +220,33 @@ async function getAllCloudCodes(): Promise<any[]> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const rows = await sql`SELECT * FROM activation_codes ORDER BY created_at DESC`;
-      if (rows && rows.length > 0) {
-        (rows as any[]).forEach(r => {
-          let parsedDevices = r.devices;
-          if (typeof parsedDevices === 'string') {
-            try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
-          }
-          const cleanCode = String(r.code).toUpperCase();
-          const cObj = {
-            code: r.code,
-            isUsed: Boolean(r.is_used),
-            usedByAccount: r.used_by_account || '',
-            usedAt: Number(r.used_at || 0),
-            devices: Array.isArray(parsedDevices) ? parsedDevices : [],
-            maxDevices: Number(r.max_devices || 3),
-            createdAt: Number(r.created_at || Date.now())
-          };
-          codeMap.set(cleanCode, cObj);
-          memoryCodesFallback.set(cleanCode, cObj);
-        });
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const rows = await sql`SELECT * FROM activation_codes ORDER BY created_at DESC`;
+        if (rows && rows.length > 0) {
+          (rows as any[]).forEach(r => {
+            let parsedDevices = r.devices;
+            if (typeof parsedDevices === 'string') {
+              try { parsedDevices = JSON.parse(parsedDevices); } catch { parsedDevices = []; }
+            }
+            const cleanCode = String(r.code).toUpperCase();
+            const cObj = {
+              code: r.code,
+              isUsed: Boolean(r.is_used),
+              usedByAccount: r.used_by_account || '',
+              usedAt: Number(r.used_at || 0),
+              devices: Array.isArray(parsedDevices) ? parsedDevices : [],
+              maxDevices: Number(r.max_devices || 3),
+              createdAt: Number(r.created_at || Date.now())
+            };
+            codeMap.set(cleanCode, cObj);
+            memoryCodesFallback.set(cleanCode, cObj);
+          });
+        }
+      } catch (e) {
+        markNeonUnavailable(e);
       }
-    } catch (e) {
-      console.warn("Neon Postgres getAllCodes error:", e);
     }
   }
 
@@ -215,11 +263,13 @@ async function clearAllCloudCodes(): Promise<void> {
   memoryCodesFallback.clear();
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      await sql`DELETE FROM activation_codes`;
-    } catch (e) {
-      console.warn("Neon Postgres clearAllCodes error:", e);
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        await sql`DELETE FROM activation_codes`;
+      } catch (e) {
+        markNeonUnavailable(e);
+      }
     }
   }
 }
@@ -231,41 +281,43 @@ async function getCloudUser(accountOrUid: string): Promise<any | null> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const rows = await sql`
-        SELECT * FROM users 
-        WHERE LOWER(account) = ${clean} 
-           OR LOWER(uid) = ${clean} 
-           OR LOWER(profile->>'account') = ${clean}
-           OR profile->>'id' = ${clean}
-        ORDER BY updated_at DESC
-        LIMIT 1
-      `;
-      if (rows && rows.length > 0) {
-        const r: any = rows[0];
-        let parsedProfile = r.profile;
-        if (typeof parsedProfile === 'string') {
-          try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const rows = await sql`
+          SELECT * FROM users 
+          WHERE LOWER(account) = ${clean} 
+             OR LOWER(uid) = ${clean} 
+             OR LOWER(profile->>'account') = ${clean}
+             OR profile->>'id' = ${clean}
+          ORDER BY updated_at DESC
+          LIMIT 1
+        `;
+        if (rows && rows.length > 0) {
+          const r: any = rows[0];
+          let parsedProfile = r.profile;
+          if (typeof parsedProfile === 'string') {
+            try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
+          }
+          const u = {
+            uid: r.uid || r.account,
+            account: r.account,
+            nickname: r.nickname,
+            salt: r.salt,
+            hash: r.hash,
+            password: r.password,
+            createdAt: Number(r.created_at || Date.now()),
+            updatedAt: Number(r.updated_at || Date.now()),
+            profile: parsedProfile || {}
+          };
+          memoryUsersFallback.set(clean, u);
+          if (u.account) memoryUsersFallback.set(u.account.toLowerCase(), u);
+          if (u.uid) memoryUsersFallback.set(u.uid.toLowerCase(), u);
+          return u;
         }
-        const u = {
-          uid: r.uid || r.account,
-          account: r.account,
-          nickname: r.nickname,
-          salt: r.salt,
-          hash: r.hash,
-          password: r.password,
-          createdAt: Number(r.created_at || Date.now()),
-          updatedAt: Number(r.updated_at || Date.now()),
-          profile: parsedProfile || {}
-        };
-        memoryUsersFallback.set(clean, u);
-        if (u.account) memoryUsersFallback.set(u.account.toLowerCase(), u);
-        if (u.uid) memoryUsersFallback.set(u.uid.toLowerCase(), u);
-        return u;
+      } catch (e) {
+        markNeonUnavailable(e);
       }
-    } catch (e) {
-      console.warn("Neon Postgres get user error:", e);
     }
   }
 
@@ -300,36 +352,38 @@ async function saveCloudUser(account: string, userObj: any): Promise<boolean> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const profileJson = JSON.stringify(userObj.profile || {});
-      const primaryAccount = (userObj.account || clean).trim().toLowerCase();
-      await sql`
-        INSERT INTO users (account, uid, nickname, salt, hash, password, created_at, updated_at, profile)
-        VALUES (
-          ${primaryAccount},
-          ${userObj.uid || clean},
-          ${userObj.nickname || userObj.profile?.nickname || '玩家'},
-          ${userObj.salt || ''},
-          ${userObj.hash || ''},
-          ${userObj.password || ''},
-          ${userObj.createdAt || Date.now()},
-          ${Date.now()},
-          ${profileJson}::jsonb
-        )
-        ON CONFLICT (account) DO UPDATE SET
-          uid = EXCLUDED.uid,
-          nickname = EXCLUDED.nickname,
-          salt = EXCLUDED.salt,
-          hash = EXCLUDED.hash,
-          password = EXCLUDED.password,
-          updated_at = EXCLUDED.updated_at,
-          profile = EXCLUDED.profile;
-      `;
-      return true;
-    } catch (e) {
-      console.warn("Neon Postgres save error:", e);
-      return false;
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const profileJson = JSON.stringify(userObj.profile || {});
+        const primaryAccount = (userObj.account || clean).trim().toLowerCase();
+        await sql`
+          INSERT INTO users (account, uid, nickname, salt, hash, password, created_at, updated_at, profile)
+          VALUES (
+            ${primaryAccount},
+            ${userObj.uid || clean},
+            ${userObj.nickname || userObj.profile?.nickname || '玩家'},
+            ${userObj.salt || ''},
+            ${userObj.hash || ''},
+            ${userObj.password || ''},
+            ${userObj.createdAt || Date.now()},
+            ${Date.now()},
+            ${profileJson}::jsonb
+          )
+          ON CONFLICT (account) DO UPDATE SET
+            uid = EXCLUDED.uid,
+            nickname = EXCLUDED.nickname,
+            salt = EXCLUDED.salt,
+            hash = EXCLUDED.hash,
+            password = EXCLUDED.password,
+            updated_at = EXCLUDED.updated_at,
+            profile = EXCLUDED.profile;
+        `;
+        return true;
+      } catch (e) {
+        markNeonUnavailable(e);
+        return false;
+      }
     }
   }
 
@@ -345,31 +399,33 @@ async function getAllCloudUsers(): Promise<any[]> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const rows = await sql`SELECT * FROM users ORDER BY updated_at DESC`;
-      if (rows && rows.length > 0) {
-        (rows as any[]).forEach(r => {
-          let parsedProfile = r.profile;
-          if (typeof parsedProfile === 'string') {
-            try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
-          }
-          const acc = String(r.account).toLowerCase();
-          userMap.set(acc, {
-            uid: r.uid || r.account,
-            account: r.account,
-            nickname: r.nickname,
-            salt: r.salt,
-            hash: r.hash,
-            password: r.password,
-            createdAt: Number(r.created_at || Date.now()),
-            updatedAt: Number(r.updated_at || Date.now()),
-            profile: parsedProfile || {}
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const rows = await sql`SELECT * FROM users ORDER BY updated_at DESC`;
+        if (rows && rows.length > 0) {
+          (rows as any[]).forEach(r => {
+            let parsedProfile = r.profile;
+            if (typeof parsedProfile === 'string') {
+              try { parsedProfile = JSON.parse(parsedProfile); } catch (e) { parsedProfile = {}; }
+            }
+            const acc = String(r.account).toLowerCase();
+            userMap.set(acc, {
+              uid: r.uid || r.account,
+              account: r.account,
+              nickname: r.nickname,
+              salt: r.salt,
+              hash: r.hash,
+              password: r.password,
+              createdAt: Number(r.created_at || Date.now()),
+              updatedAt: Number(r.updated_at || Date.now()),
+              profile: parsedProfile || {}
+            });
           });
-        });
+        }
+      } catch (e) {
+        markNeonUnavailable(e);
       }
-    } catch (e) {
-      console.warn("Neon Postgres getAllUsers error:", e);
     }
   }
 
@@ -397,37 +453,39 @@ async function getAllCustomStoriesFromDb(): Promise<any[]> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const rows = await sql`
-        SELECT * FROM custom_radio_stories 
-        ORDER BY created_at DESC 
-        LIMIT 200
-      `;
-      if (rows && Array.isArray(rows)) {
-        for (const r of rows) {
-          const sObj = {
-            id: r.id,
-            title: r.title,
-            titleZh: r.title_zh,
-            category: r.category || 'mc_adventure',
-            categoryName: r.category_name || '✨ 自定义故事',
-            narrator: r.narrator || 'Alex',
-            durationApprox: r.duration_approx || '3 分钟',
-            discTheme: typeof r.disc_theme === 'string' ? JSON.parse(r.disc_theme) : (r.disc_theme || {}),
-            summary: r.summary || '',
-            vocabularyLoot: typeof r.vocabulary_loot === 'string' ? JSON.parse(r.vocabulary_loot) : (r.vocabulary_loot || []),
-            paragraphs: typeof r.paragraphs === 'string' ? JSON.parse(r.paragraphs) : (r.paragraphs || []),
-            creatorAccount: r.creator_account || '',
-            createdAt: Number(r.created_at || Date.now()),
-            updatedAt: Number(r.updated_at || Date.now())
-          };
-          storiesMap.set(r.id, sObj);
-          memoryStoriesFallback.set(r.id, sObj);
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const rows = await sql`
+          SELECT * FROM custom_radio_stories 
+          ORDER BY created_at DESC 
+          LIMIT 200
+        `;
+        if (rows && Array.isArray(rows)) {
+          for (const r of rows) {
+            const sObj = {
+              id: r.id,
+              title: r.title,
+              titleZh: r.title_zh,
+              category: r.category || 'mc_adventure',
+              categoryName: r.category_name || '✨ 自定义故事',
+              narrator: r.narrator || 'Alex',
+              durationApprox: r.duration_approx || '3 分钟',
+              discTheme: typeof r.disc_theme === 'string' ? JSON.parse(r.disc_theme) : (r.disc_theme || {}),
+              summary: r.summary || '',
+              vocabularyLoot: typeof r.vocabulary_loot === 'string' ? JSON.parse(r.vocabulary_loot) : (r.vocabulary_loot || []),
+              paragraphs: typeof r.paragraphs === 'string' ? JSON.parse(r.paragraphs) : (r.paragraphs || []),
+              creatorAccount: r.creator_account || '',
+              createdAt: Number(r.created_at || Date.now()),
+              updatedAt: Number(r.updated_at || Date.now())
+            };
+            storiesMap.set(r.id, sObj);
+            memoryStoriesFallback.set(r.id, sObj);
+          }
         }
+      } catch (e) {
+        markNeonUnavailable(e);
       }
-    } catch (e) {
-      console.warn("Neon Postgres get stories error:", e);
     }
   }
 
@@ -448,50 +506,52 @@ async function saveCustomStoryToDb(story: any, creatorAccount?: string): Promise
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      const discThemeJson = JSON.stringify(storyObj.discTheme || {});
-      const vocabJson = JSON.stringify(storyObj.vocabularyLoot || []);
-      const paragraphsJson = JSON.stringify(storyObj.paragraphs || []);
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        const discThemeJson = JSON.stringify(storyObj.discTheme || {});
+        const vocabJson = JSON.stringify(storyObj.vocabularyLoot || []);
+        const paragraphsJson = JSON.stringify(storyObj.paragraphs || []);
 
-      await sql`
-        INSERT INTO custom_radio_stories (
-          id, title, title_zh, category, category_name, narrator, duration_approx,
-          disc_theme, summary, vocabulary_loot, paragraphs, creator_account, created_at, updated_at
-        ) VALUES (
-          ${sId},
-          ${storyObj.title || ''},
-          ${storyObj.titleZh || ''},
-          ${storyObj.category || 'mc_adventure'},
-          ${storyObj.categoryName || '✨ 自定义故事'},
-          ${storyObj.narrator || 'Alex'},
-          ${storyObj.durationApprox || '3 分钟'},
-          ${discThemeJson}::jsonb,
-          ${storyObj.summary || ''},
-          ${vocabJson}::jsonb,
-          ${paragraphsJson}::jsonb,
-          ${storyObj.creatorAccount || ''},
-          ${storyObj.createdAt || now},
-          ${now}
-        )
-        ON CONFLICT (id) DO UPDATE SET
-          title = EXCLUDED.title,
-          title_zh = EXCLUDED.title_zh,
-          category = EXCLUDED.category,
-          category_name = EXCLUDED.category_name,
-          narrator = EXCLUDED.narrator,
-          duration_approx = EXCLUDED.duration_approx,
-          disc_theme = EXCLUDED.disc_theme,
-          summary = EXCLUDED.summary,
-          vocabulary_loot = EXCLUDED.vocabulary_loot,
-          paragraphs = EXCLUDED.paragraphs,
-          creator_account = EXCLUDED.creator_account,
-          updated_at = EXCLUDED.updated_at;
-      `;
-      return true;
-    } catch (e) {
-      console.warn("Neon Postgres save story error:", e);
-      return false;
+        await sql`
+          INSERT INTO custom_radio_stories (
+            id, title, title_zh, category, category_name, narrator, duration_approx,
+            disc_theme, summary, vocabulary_loot, paragraphs, creator_account, created_at, updated_at
+          ) VALUES (
+            ${sId},
+            ${storyObj.title || ''},
+            ${storyObj.titleZh || ''},
+            ${storyObj.category || 'mc_adventure'},
+            ${storyObj.categoryName || '✨ 自定义故事'},
+            ${storyObj.narrator || 'Alex'},
+            ${storyObj.durationApprox || '3 分钟'},
+            ${discThemeJson}::jsonb,
+            ${storyObj.summary || ''},
+            ${vocabJson}::jsonb,
+            ${paragraphsJson}::jsonb,
+            ${storyObj.creatorAccount || ''},
+            ${storyObj.createdAt || now},
+            ${now}
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            title_zh = EXCLUDED.title_zh,
+            category = EXCLUDED.category,
+            category_name = EXCLUDED.category_name,
+            narrator = EXCLUDED.narrator,
+            duration_approx = EXCLUDED.duration_approx,
+            disc_theme = EXCLUDED.disc_theme,
+            summary = EXCLUDED.summary,
+            vocabulary_loot = EXCLUDED.vocabulary_loot,
+            paragraphs = EXCLUDED.paragraphs,
+            creator_account = EXCLUDED.creator_account,
+            updated_at = EXCLUDED.updated_at;
+        `;
+        return true;
+      } catch (e) {
+        markNeonUnavailable(e);
+        return false;
+      }
     }
   }
   return true;
@@ -503,13 +563,15 @@ async function deleteCustomStoryFromDb(id: string): Promise<boolean> {
 
   const sql = getNeonSql();
   if (sql) {
-    try {
-      await ensureNeonTable();
-      await sql`DELETE FROM custom_radio_stories WHERE id = ${id}`;
-      return true;
-    } catch (e) {
-      console.warn("Neon Postgres delete story error:", e);
-      return false;
+    const ready = await ensureNeonTable();
+    if (ready) {
+      try {
+        await sql`DELETE FROM custom_radio_stories WHERE id = ${id}`;
+        return true;
+      } catch (e) {
+        markNeonUnavailable(e);
+        return false;
+      }
     }
   }
   return true;
@@ -2245,10 +2307,14 @@ async function startServer() {
     // Initialize Neon PostgreSQL table on startup if DATABASE_URL is connected
     const sql = getNeonSql();
     if (sql) {
-      await ensureNeonTable();
-      console.log("[Neon Postgres] Server ready with Neon PostgreSQL database.");
+      const ready = await ensureNeonTable();
+      if (ready) {
+        console.log("[Neon Postgres] Server ready with Neon PostgreSQL database.");
+      } else {
+        console.log("[Neon Postgres] Database connection check failed. Using in-memory fallback.");
+      }
     } else {
-      console.log("[Neon Postgres] DATABASE_URL not set yet. Waiting for Neon database connection.");
+      console.log("[Neon Postgres] Valid DATABASE_URL not detected. Running seamlessly with in-memory store.");
     }
 
     // Ensure user '测试001' and 'test001' are configured as regular users (普通用户)

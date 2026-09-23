@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Badge } from '../types';
 import { LEVEL_TIERS, BADGES_DATA, getTierForLevel, getLevelFromXp, evaluateBadgesForProfile } from '../data/gamificationData';
-import { Trophy, Award, Flame, BookOpen, CheckCircle, Lock, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Trophy, Award, Flame, BookOpen, CheckCircle, Lock, Sparkles, ArrowRight, ShieldCheck, User } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { playEmeraldSound, playLevelUpSound, playClickSound } from '../utils/audio';
+import { MinecraftAvatar } from './MinecraftAvatar';
 
 interface AchievementsViewProps {
   profile: UserProfile;
@@ -12,6 +13,7 @@ interface AchievementsViewProps {
   onNavigateToMap?: () => void;
   onNavigateToCrafting?: () => void;
   onNavigateToChat?: () => void;
+  onOpenUserProfile?: () => void;
 }
 
 export const AchievementsView: React.FC<AchievementsViewProps> = ({
@@ -20,7 +22,8 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
   onNavigateToVocab,
   onNavigateToMap,
   onNavigateToCrafting,
-  onNavigateToChat
+  onNavigateToChat,
+  onOpenUserProfile
 }) => {
   const [filter, setFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
 
@@ -90,8 +93,31 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
       <div className="bg-white/95 border-4 border-[#487E2C] rounded-[2rem] p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] relative overflow-hidden text-[#2D2D2D]">
         <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 relative z-10">
           
-          <div className="w-20 h-20 bg-[#EEDDCC] border-4 border-[#C89D7C] rounded-2xl flex items-center justify-center text-4xl shadow-md shrink-0">
-            {profile.selectedAvatar || '👦'}
+          {/* Player Avatar Crest */}
+          <div
+            onClick={() => {
+              playClickSound();
+              onOpenUserProfile?.();
+            }}
+            className="relative group cursor-pointer shrink-0"
+            title="点击更换形象或修改个人档案"
+          >
+            <div className="w-20 h-20 bg-[#5c4033] border-4 border-[#2b1810] rounded-2xl flex items-center justify-center shadow-[4px_4px_0_0_#2b1810] relative overflow-hidden transition-transform group-hover:scale-105 active:scale-95">
+              <div className="absolute top-0 left-0 right-0 h-3 bg-[#487E2C] border-b-2 border-[#2A4718]" />
+              <div className="relative z-10 pt-1">
+                <MinecraftAvatar
+                  speaker={profile.selectedAvatar === 'alex' || profile.avatar === 'alex' ? 'Alex' : (profile.selectedAvatar === 'villager' || profile.avatar === 'villager' ? 'Villager' : 'Steve')}
+                  avatar={profile.selectedAvatar || profile.avatar}
+                  size={58}
+                  className="rounded-lg shadow-md"
+                />
+              </div>
+            </div>
+            {/* Character Badge Tag Pill */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#487E2C] hover:bg-[#355E20] border-2 border-black rounded-full text-[10px] font-mono font-black text-white whitespace-nowrap shadow-xs flex items-center space-x-1 transition-colors">
+              <span>{profile.selectedAvatar === 'alex' || profile.avatar === 'alex' ? 'Alex' : (profile.selectedAvatar === 'villager' || profile.avatar === 'villager' ? 'Villager' : 'Steve')}</span>
+              <span className="text-[9px] opacity-80">✏️</span>
+            </div>
           </div>
 
           <div className="text-center sm:text-left space-y-1.5 flex-1">

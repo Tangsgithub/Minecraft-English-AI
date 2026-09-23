@@ -82,7 +82,12 @@ export const MainStoryQuestHero: React.FC<MainStoryQuestHeroProps> = ({
               title="点击让 Steve 发声"
             >
               <div className="relative transform group-hover:scale-105 group-hover:-translate-y-1 transition-transform">
-                <MinecraftAvatar speaker={profile.nickname || 'Steve'} size={56} className="shadow-lg" />
+                <MinecraftAvatar
+                  speaker={profile.avatar === 'alex' || profile.selectedAvatar === 'alex' ? 'Alex' : 'Steve'}
+                  avatar={profile.avatar || profile.selectedAvatar}
+                  size={56}
+                  className="shadow-lg"
+                />
                 <div className="absolute -bottom-1 -right-1 bg-amber-500 border border-black rounded-md px-1 text-[9px] font-mono font-black text-black">
                   Lv.{profile.level}
                 </div>

@@ -14,11 +14,31 @@ export const MinecraftAvatar: React.FC<MinecraftAvatarProps> = ({
   className = ''
 }) => {
   const name = (speaker || '').toLowerCase();
+  const avatarLower = (avatar || '').toLowerCase();
 
-  const isAlex = name.includes('alex') || name.includes('girl') || name.includes('woman') || name.includes('alice') || name.includes('carol') || name.includes('pauline') || avatar === '👩' || avatar === '👩‍🦰';
-  const isVillager = name.includes('villager') || name.includes('trader') || name.includes('shopkeeper') || name.includes('boss');
-  const isCreeper = name.includes('creeper');
-  const isZombie = name.includes('zombie');
+  // If avatar is an emoji (e.g. 👦, 👧, 🧙) and not a character keyword
+  const isEmoji = Boolean(
+    avatar &&
+    !['steve', 'alex', 'villager', 'creeper', 'zombie', 'default'].includes(avatarLower) &&
+    /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(avatar)
+  );
+
+  if (isEmoji && avatar) {
+    return (
+      <div
+        className={`inline-flex items-center justify-center shrink-0 rounded-md border-2 border-amber-950 shadow-xs bg-[#EEDDCC] overflow-hidden ${className}`}
+        style={{ width: size, height: size, fontSize: Math.max(12, Math.round(size * 0.6)) }}
+        title={speaker}
+      >
+        <span>{avatar}</span>
+      </div>
+    );
+  }
+
+  const isAlex = name.includes('alex') || name.includes('girl') || name.includes('woman') || name.includes('alice') || name.includes('carol') || name.includes('pauline') || avatarLower === 'alex' || avatar === '👩' || avatar === '👩‍🦰';
+  const isVillager = name.includes('villager') || name.includes('trader') || name.includes('shopkeeper') || name.includes('boss') || avatarLower === 'villager';
+  const isCreeper = name.includes('creeper') || avatarLower === 'creeper';
+  const isZombie = name.includes('zombie') || avatarLower === 'zombie';
 
   if (isAlex) {
     // Pixel-perfect Minecraft Alex Head SVG
